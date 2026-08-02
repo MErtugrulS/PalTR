@@ -113,9 +113,9 @@ function CommandService:on_chat(controller_param, message_param)
             player,
             command.raw,
             true,
-            "/paltr durum | /paltr klanlar | /savas KLAN | " ..
-            "/ateskes KLAN | /ittifak KLAN | /kabul KLAN | " ..
-            "/reddet KLAN"
+            "!durum | !klanlar | !yardim | !savas KLAN | " ..
+            "!ateskes KLAN | !ittifak KLAN | !kabul KLAN | " ..
+            "!reddet KLAN"
         )
         return
     end
