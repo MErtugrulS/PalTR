@@ -131,6 +131,42 @@ function Diplomacy:reject(own, target, actor)
     return result
 end
 
+function Diplomacy:cancel(own, target, actor)
+    local relation, error_message = self:get(own, target)
+
+    if not relation then
+        return Result.err("RELATION", error_message)
+    end
+
+    local result = Rules.cancel(relation, own)
+
+    if result.ok then
+        relation.note = "Teklif iptal edildi: " .. actor
+        self:_save()
+        self:_event("PROPOSAL_CANCELLED", relation, actor)
+    end
+
+    return result
+end
+
+function Diplomacy:return_neutral(own, target, actor)
+    local relation, error_message = self:get(own, target)
+
+    if not relation then
+        return Result.err("RELATION", error_message)
+    end
+
+    local result = Rules.return_neutral(relation)
+
+    if result.ok then
+        relation.note = "Tarafsizliga gecildi: " .. actor
+        self:_save()
+        self:_event("RELATION_NEUTRALIZED", relation, actor)
+    end
+
+    return result
+end
+
 function Diplomacy:tick()
     local changed = 0
     for _, relation in pairs(self.relations) do

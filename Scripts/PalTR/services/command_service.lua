@@ -23,7 +23,9 @@ local SUCCESS_MESSAGES = {
     CEASEFIRE = "Ateskes teklifi kaydedildi",
     ALLIANCE = "Ittifak teklifi kaydedildi",
     ACCEPT = "Teklif kabul edildi",
-    REJECT = "Teklif reddedildi"
+    REJECT = "Teklif reddedildi",
+    CANCEL = "Teklif iptal edildi",
+    NEUTRALIZE = "Iliski tarafsiz duruma getirildi"
 }
 
 local function guild_name(registry, guild_key)
@@ -236,7 +238,8 @@ function CommandService:on_chat(controller_param, message_param)
             true,
             "!durum | !klanlar | !iliskiler | !yardim | " ..
             "!savas KLAN | !ateskes KLAN | !ittifak KLAN | " ..
-            "!kabul KLAN | !reddet KLAN"
+            "!kabul KLAN | !reddet KLAN | !iptal KLAN | " ..
+            "!tarafsiz KLAN"
         )
         return
     end
@@ -335,6 +338,18 @@ function CommandService:on_chat(controller_param, message_param)
         )
     elseif command.action == "REJECT" then
         result = self.diplomacy:reject(
+            player.guild_key,
+            target.key,
+            player.name
+        )
+    elseif command.action == "CANCEL" then
+        result = self.diplomacy:cancel(
+            player.guild_key,
+            target.key,
+            player.name
+        )
+    elseif command.action == "NEUTRALIZE" then
+        result = self.diplomacy:return_neutral(
             player.guild_key,
             target.key,
             player.name

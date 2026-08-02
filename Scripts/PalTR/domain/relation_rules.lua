@@ -106,6 +106,53 @@ function Rules.reject(relation, rejecter)
     return Result.ok(relation)
 end
 
+function Rules.cancel(relation, requester)
+    if relation.state ~= States.CEASEFIRE_PENDING
+        and relation.state ~= States.ALLIANCE_PENDING then
+        return Result.err(
+            "NO_PENDING_PROPOSAL",
+            "Iptal edilecek bekleyen teklif yok"
+        )
+    end
+
+    if relation.requested_by ~= requester then
+        return Result.err(
+            "NOT_REQUESTER",
+            "Yalnizca teklifi yapan klan iptal edebilir"
+        )
+    end
+
+    relation.state = relation.previous_state or States.NEUTRAL
+    relation.previous_state = States.NEUTRAL
+    relation.requested_by = ""
+    relation.accepted_by = ""
+    relation.active_at = 0
+    relation.expires_at = 0
+    relation.updated_at = Clock.now()
+
+    return Result.ok(relation)
+end
+
+function Rules.return_neutral(relation)
+    if relation.state ~= States.ALLIANCE
+        and relation.state ~= States.CEASEFIRE then
+        return Result.err(
+            "NO_ACTIVE_PEACE",
+            "Aktif ittifak veya ateskes yok"
+        )
+    end
+
+    relation.previous_state = relation.state
+    relation.state = States.NEUTRAL
+    relation.requested_by = ""
+    relation.accepted_by = ""
+    relation.active_at = 0
+    relation.expires_at = 0
+    relation.updated_at = Clock.now()
+
+    return Result.ok(relation)
+end
+
 function Rules.tick(relation)
     local now = Clock.now()
 
