@@ -7,6 +7,7 @@ local aliases = {
     ["!test"] = "TEST",
     ["!durum"] = "STATUS",
     ["!klanlar"] = "GUILDS",
+    ["!iliskiler"] = "RELATIONS",
     ["!yardim"] = "HELP",
     ["!savas"] = "DECLARE_WAR",
     ["!ateskes"] = "CEASEFIRE",
