@@ -1,0 +1,33 @@
+{
+  "ModName": "PalTR Modu",
+  "PackageName": "PalTR",
+  "Thumbnail": "thumbnail.png",
+  "Version": "0.6.0-dev",
+  "DebugMode": true,
+  "MinRevision": 101103,
+  "Author": "PalTR",
+  "Dependencies": [
+    "UE4SSExperimentalPW"
+  ],
+  "Tags": [
+    "UE4SS",
+    "Server",
+    "Diplomacy",
+    "Alpha"
+  ],
+  "InstallRule": [
+    {
+      "Type": "Lua",
+      "Targets": [
+        "./Scripts"
+      ]
+    },
+    {
+      "Type": "Lua",
+      "IsServer": true,
+      "Targets": [
+        "./Scripts"
+      ]
+    }
+  ]
+}
