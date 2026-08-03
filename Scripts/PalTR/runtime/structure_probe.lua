@@ -274,6 +274,19 @@ function StructureProbe.register(hooks, path, registry, damage_policy, logger)
                     policy_result.reason =
                         "STRUCTURE_IDENTITY_UNRESOLVED"
 
+                -- PALTR_NATIVE_FRIENDLY_FIRE_V1
+                elseif target_guild_key ==
+                    attacker_guild_key
+                then
+                    policy_result = {
+                        block = false,
+                        reason =
+                            "NATIVE_FRIENDLY_FIRE",
+                        state = "SAME_GUILD"
+                    }
+
+                    policy_label = "SKIP"
+
                 elseif damage_policy == nil
                     or type(
                         damage_policy.evaluate_player_damage
