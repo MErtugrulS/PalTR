@@ -24,7 +24,6 @@ function Policy:evaluate_player_damage(
     defender
 )
     local runtime = self.config.runtime or {}
-    local protection = self.config.protection or {}
 
     if runtime.enable_damage_enforcement ~= true then
         return decision(
@@ -59,17 +58,9 @@ function Policy:evaluate_player_damage(
     end
 
     if attacker_guild == defender_guild then
-        if protection.block_friendly_fire == true then
-            return decision(
-                true,
-                "SAME_GUILD",
-                "SAME_GUILD"
-            )
-        end
-
         return decision(
             false,
-            "FRIENDLY_FIRE_ALLOWED",
+            "SAME_GUILD_PVP",
             "SAME_GUILD"
         )
     end
@@ -87,14 +78,47 @@ function Policy:evaluate_player_damage(
         )
     end
 
+    local relations =
+        self.diplomacy.relations or {}
+
     local relation =
-        self.diplomacy.relations[
-            pair.value.key
-        ]
+        relations[pair.value.key]
 
     local state =
         relation and relation.state
         or States.NEUTRAL
+
+    if state == States.NEUTRAL then
+        return decision(
+            false,
+            "NEUTRAL_PVP",
+            state
+        )
+    end
+
+    if state == States.ALLIANCE_PENDING then
+        return decision(
+            false,
+            "ALLIANCE_PROPOSAL_NEUTRAL_PVP",
+            state
+        )
+    end
+
+    if state == States.ALLIANCE then
+        return decision(
+            true,
+            "ACTIVE_ALLIANCE",
+            state
+        )
+    end
+
+    if state == States.WAR_PENDING then
+        return decision(
+            true,
+            "WAR_PREPARATION",
+            state
+        )
+    end
 
     if state == States.WAR then
         return decision(
@@ -104,17 +128,45 @@ function Policy:evaluate_player_damage(
         )
     end
 
-    if protection.block_non_war_damage == false then
+    if state == States.CEASEFIRE_PENDING then
         return decision(
             false,
-            "NON_WAR_BLOCK_DISABLED",
+            "CEASEFIRE_PROPOSAL_ACTIVE_WAR",
+            state
+        )
+    end
+
+    if state == States.CEASEFIRE then
+        return decision(
+            true,
+            "ACTIVE_CEASEFIRE",
+            state
+        )
+    end
+
+    if state == States.PEACE_PENDING then
+        local previous =
+            relation and relation.previous_state
+            or ""
+
+        if previous == States.CEASEFIRE then
+            return decision(
+                true,
+                "PEACE_PROPOSAL_DURING_CEASEFIRE",
+                state
+            )
+        end
+
+        return decision(
+            false,
+            "PEACE_PROPOSAL_DURING_WAR",
             state
         )
     end
 
     return decision(
         true,
-        "RELATION_NOT_WAR",
+        "UNKNOWN_RELATION_STATE",
         state
     )
 end

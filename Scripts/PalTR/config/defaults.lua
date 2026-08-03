@@ -26,7 +26,7 @@ return {
     protection = {
         offline_grace_minutes = 10,
         minimum_online_defenders = 2,
-        block_friendly_fire = true,
-        block_non_war_damage = true
+        block_friendly_fire = false,
+        block_non_war_damage = false
     }
 }
