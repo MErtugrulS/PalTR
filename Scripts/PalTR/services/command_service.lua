@@ -361,12 +361,13 @@ function CommandService:on_chat(
     local command = parsed.value
 
     if command.action == "TEST" then
-        Announcer.send_private(
+        self:_respond(
             controller,
-            "[FAZ-04] OZEL MESAJ TESTI: BUNU YALNIZ SEN GORMELISIN",
-            self.logger
+            player,
+            command.raw,
+            true,
+            "[FAZ-01] SOHBET KANALI CALISIYOR"
         )
-
         return
     end
 
