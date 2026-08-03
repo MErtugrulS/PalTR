@@ -260,6 +260,8 @@ function Observer:on_player_damage(context, result_param)
         "Damage",
         "DamageAmount",
         "FinalDamage",
+        "ActualDamage",
+        "BasePower",
         "Attacker",
         "DamageCauser",
         "Instigator",
@@ -269,8 +271,33 @@ function Observer:on_player_damage(context, result_param)
         "DamageType",
         "IsDead"
     }) do
-        local value = UE.read(result, field)
-        local rendered = UE.text(value)
+        local ok_value, value = pcall(function()
+            return result[field]
+        end)
+
+        local rendered = ""
+
+        if ok_value and value ~= nil then
+            local value_type = type(value)
+
+            if value_type == "string"
+                or value_type == "number"
+                or value_type == "boolean" then
+
+                rendered = tostring(value)
+            else
+                rendered = UE.text(value)
+
+                if rendered == "" then
+                    local ok_full, full_name =
+                        pcall(UE.full_name, value)
+
+                    if ok_full and full_name ~= nil then
+                        rendered = tostring(full_name)
+                    end
+                end
+            end
+        end
 
         if rendered ~= "" then
             table.insert(
