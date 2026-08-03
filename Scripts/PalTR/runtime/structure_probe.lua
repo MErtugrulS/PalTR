@@ -1,83 +1,303 @@
 local UE = require("PalTR.runtime.ue")
-local Text = require("PalTR.core.text")
 local FileIO = require("PalTR.storage.file_io")
 local TSV = require("PalTR.storage.tsv")
 local Clock = require("PalTR.core.clock")
 
 local StructureProbe = {}
 
-local function is_candidate(path)
-    local lower = Text.lower_ascii(path)
-    if not lower:find("/script/pal.", 1, true) then return false end
+local DAMAGE_FUNCTION =
+    "/Script/Pal.PalBuildObject:OnDamage"
 
-    local class_match =
-        lower:find("mapobject", 1, true) or
-        lower:find("basecamp", 1, true) or
-        lower:find("build", 1, true) or
-        lower:find("grouporganization", 1, true)
+local function read_field(value, field)
+    local target = UE.unwrap(value)
 
-    local damage_match =
-        lower:find(":ondamage", 1, true) or
-        lower:find(":ondamaged", 1, true) or
-        lower:find(":receivedamage", 1, true) or
-        lower:find(":applydamage", 1, true)
+    if target == nil then
+        return nil
+    end
 
-    return class_match and damage_match
+    local ok, result = pcall(function()
+        return target[field]
+    end)
+
+    if ok then
+        return result
+    end
+
+    return nil
 end
 
-function StructureProbe.register(hooks, path, logger)
-    local candidates = {}
-    local ok = pcall(function()
-        ForEachUObject(function(object)
-            local full = UE.full_name(object)
-            if full:sub(1, 9) == "Function " then
-                local path_name = full:sub(10)
-                if is_candidate(path_name) then
-                    candidates[path_name] = true
-                end
-            end
-        end)
+local function guid_text(value)
+    if value == nil then
+        return ""
+    end
+
+    local ok, result = pcall(function()
+        return UE.guid(value)
+    end)
+
+    if ok and result ~= nil then
+        return tostring(result)
+    end
+
+    return ""
+end
+
+local function object_path(value)
+    local target = UE.unwrap(value)
+
+    if target == nil then
+        return ""
+    end
+
+    local ok, result = pcall(function()
+        return UE.full_name(target)
+    end)
+
+    if ok and result ~= nil then
+        return tostring(result)
+    end
+
+    return ""
+end
+
+local function scalar_text(value)
+    if value == nil then
+        return ""
+    end
+
+    local value_type = type(value)
+
+    if value_type == "string"
+        or value_type == "number"
+        or value_type == "boolean" then
+
+        return tostring(value)
+    end
+
+    local text_ok, text_value = pcall(function()
+        return UE.text(value)
+    end)
+
+    if text_ok
+        and text_value ~= nil
+        and tostring(text_value) ~= "" then
+
+        return tostring(text_value)
+    end
+
+    return tostring(value)
+end
+
+local function call_guid(object, method_name)
+    local target = UE.unwrap(object)
+
+    if target == nil then
+        return ""
+    end
+
+    local ok, result = pcall(function()
+        local method = target[method_name]
+
+        if type(method) ~= "function" then
+            return nil
+        end
+
+        return method(target)
     end)
 
     if not ok then
-        logger:warn("Yapi hasar aday taramasi basarisiz")
+        return ""
+    end
+
+    return guid_text(result)
+end
+
+local function is_zero_guid(value)
+    local compact = tostring(value or "")
+        :gsub("[^0-9A-Fa-f]", "")
+
+    return compact == ""
+        or compact == "00000000000000000000000000000000"
+end
+
+function StructureProbe.register(hooks, path, logger)
+    local registered = hooks:register(
+        "StructureDamageProbe",
+        DAMAGE_FUNCTION,
+        function(context, damaged_model_param, damage_info_param)
+            local actor = UE.unwrap(context)
+            local model = UE.unwrap(damaged_model_param)
+            local info = UE.unwrap(damage_info_param)
+
+            local model_group =
+                guid_text(
+                    read_field(
+                        model,
+                        "GroupIdBelongTo"
+                    )
+                )
+
+            local actor_group =
+                call_guid(
+                    actor,
+                    "GetGroupIdBelongTo"
+                )
+
+            local target_group = model_group
+
+            if is_zero_guid(target_group) then
+                target_group = actor_group
+            end
+
+            local attacker_group =
+                guid_text(
+                    read_field(
+                        info,
+                        "AttackerGroupID"
+                    )
+                )
+
+            local attacker =
+                read_field(
+                    info,
+                    "Attacker"
+                )
+
+            local override_owner =
+                read_field(
+                    info,
+                    "OverrideNetworkOwner"
+                )
+
+            local details = {
+                "probe=STRUCTURE_DAMAGE_V2",
+                "model_path=" .. object_path(model),
+                "model_group=" .. model_group,
+                "actor_group=" .. actor_group,
+                "base_camp=" ..
+                    guid_text(
+                        read_field(
+                            model,
+                            "BaseCampIdBelongTo"
+                        )
+                    ),
+                "build_player_uid=" ..
+                    guid_text(
+                        read_field(
+                            model,
+                            "BuildPlayerUId"
+                        )
+                    ),
+                "attacker_group=" .. attacker_group,
+                "attacker_path=" .. object_path(attacker),
+                "override_owner_path=" ..
+                    object_path(override_owner),
+                "NativeDamageValue=" ..
+                    scalar_text(
+                        read_field(
+                            info,
+                            "NativeDamageValue"
+                        )
+                    ),
+                "BasePower=" ..
+                    scalar_text(
+                        read_field(
+                            info,
+                            "BasePower"
+                        )
+                    ),
+                "PvPBuildingDamageRate=" ..
+                    scalar_text(
+                        read_field(
+                            info,
+                            "PvPBuildingDamageRate"
+                        )
+                    ),
+                "bAttackableToFriend=" ..
+                    scalar_text(
+                        read_field(
+                            info,
+                            "bAttackableToFriend"
+                        )
+                    ),
+                "NoDamage=" ..
+                    scalar_text(
+                        read_field(
+                            info,
+                            "NoDamage"
+                        )
+                    ),
+                "AttackType=" ..
+                    scalar_text(
+                        read_field(
+                            info,
+                            "AttackType"
+                        )
+                    ),
+                "WeaponType=" ..
+                    scalar_text(
+                        read_field(
+                            info,
+                            "WeaponType"
+                        )
+                    ),
+                "bIsExplosionDamage=" ..
+                    scalar_text(
+                        read_field(
+                            info,
+                            "bIsExplosionDamage"
+                        )
+                    )
+            }
+
+            FileIO.append(
+                path,
+                TSV.encode({
+                    Clock.now(),
+                    DAMAGE_FUNCTION,
+                    object_path(actor),
+                    target_group,
+                    table.concat(details, ";")
+                })
+            )
+
+            if not is_zero_guid(attacker_group)
+                or object_path(attacker) ~= "" then
+
+                logger:info(
+                    "YAPI_HASAR_PROBE" ..
+                    " | hedef_klan=" ..
+                    tostring(target_group) ..
+                    " | saldiran_klan=" ..
+                    tostring(attacker_group) ..
+                    " | saldiran=" ..
+                    object_path(attacker) ..
+                    " | NoDamage=" ..
+                    scalar_text(
+                        read_field(
+                            info,
+                            "NoDamage"
+                        )
+                    )
+                )
+            end
+        end
+    )
+
+    if not registered then
+        logger:warn(
+            "Dar yapi hasar probe hook'u kaydedilemedi"
+        )
+
         return 0
     end
 
-    local count = 0
-    for candidate in pairs(candidates) do
-        if count >= 30 then break end
+    logger:info(
+        "Dar yapi hasar probe aktif: " ..
+        DAMAGE_FUNCTION
+    )
 
-        local registered = hooks:register(
-            "StructureDamageProbe",
-            candidate,
-            function(context, ...)
-                local object = UE.unwrap(context)
-                local guild_id = ""
-                local ok_group, group_value =
-                    UE.call(object, "GetGroupIdBelongTo")
-                if ok_group then guild_id = UE.guid(group_value) end
-
-                local args = {}
-                for index, value in ipairs({...}) do
-                    table.insert(args, "p" .. index .. "=" .. UE.text(value))
-                end
-
-                FileIO.append(path, TSV.encode({
-                    Clock.now(),
-                    candidate,
-                    UE.full_name(object),
-                    guild_id,
-                    table.concat(args, ";")
-                }))
-            end
-        )
-
-        if registered then count = count + 1 end
-    end
-
-    logger:info("Yapi hasar probe hook sayisi: " .. tostring(count))
-    return count
+    return 1
 end
 
 return StructureProbe
