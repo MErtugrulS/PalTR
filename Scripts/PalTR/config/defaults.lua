@@ -7,8 +7,8 @@ return {
         player_validity_poll = true,
         enable_structure_damage_probe = true,
 
-        -- Faz-03 yalnizca diplomasi durumlarini test eder.
-        enable_damage_enforcement = false
+        -- Faz-04 oyuncu hasar politikasini uygular.
+        enable_damage_enforcement = true
     },
 
     diplomacy = {

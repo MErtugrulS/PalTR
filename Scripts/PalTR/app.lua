@@ -11,6 +11,7 @@ local DiplomacyService = require("PalTR.services.diplomacy_service")
 local StatusService = require("PalTR.services.status_service")
 local CommandService = require("PalTR.services.command_service")
 local DamageObserver = require("PalTR.services.damage_observer")
+local DamagePolicy = require("PalTR.services.damage_policy")
 local Scheduler = require("PalTR.services.scheduler")
 
 local App = {}
@@ -36,6 +37,11 @@ function App.new(config)
         diplomacy
     )
 
+    local damage_policy = DamagePolicy.new(
+        config,
+        diplomacy
+    )
+
     return setmetatable({
         config = config,
         paths = paths,
@@ -56,6 +62,7 @@ function App.new(config)
         damage = DamageObserver.new(
             paths.damage,
             registry,
+            damage_policy,
             Logger.new("Damage")
         ),
 
@@ -268,7 +275,7 @@ function App:_register_hooks()
     )
 
     self.hooks:register(
-        "EnemyPlayerDamageRequestPassive",
+        "EnemyPlayerDamageEnforcement",
         "/Script/Pal.PalPlayerController:DamageReactionComponent_ProcessDamage_ToServer_ToEnemyPlayer",
         function(context, info, defender)
             self.damage:on_enemy_player_damage_request(
@@ -348,7 +355,7 @@ function App:start()
 
             TSV.encode({
                 Clock.now(),
-                "0.7.1-dev-faz03",
+                "0.8.0-dev-faz04",
                 "STARTED"
             })
         }
@@ -356,15 +363,15 @@ function App:start()
 
     self.status:build(
         nil,
-        "PalTR Faz-03 ateskes ve baris sistemi baslatildi"
+        "PalTR Faz-04 oyuncu hasar korumasi baslatildi"
     )
 
     self.logger:info(
-        "Faz-03 ateskes ve baris sistemi baslatildi"
+        "Faz-04 oyuncu hasar korumasi baslatildi"
     )
 
-    self.logger:warn(
-        "Gercek hasar engelleme halen kapali"
+    self.logger:info(
+        "Oyuncu hasar korumasi aktif"
     )
 end
 
