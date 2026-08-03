@@ -36,36 +36,7 @@ local function controller_is_invalid(controller)
         return valid ~= true
     end
 
-    -- IsValid wrapper'i bulunamazsa controller chat hook'undan
-    -- geldigi icin cagriyi pcall korumasinda deniyoruz.
     return false
-end
-
-local function create_message_key()
-    local fname_ok, fname_value = pcall(function()
-        return FName("PalTR_PrivateProbe")
-    end)
-
-    if fname_ok then
-        return fname_value
-    end
-
-    local helpers_ok, helpers_value = pcall(function()
-        return UEHelpers.FindOrAddFName(
-            "PalTR_PrivateProbe"
-        )
-    end)
-
-    if helpers_ok then
-        return helpers_value
-    end
-
-    error(
-        "FName olusturulamadi | FName=" ..
-        tostring(fname_value) ..
-        " | UEHelpers=" ..
-        tostring(helpers_value)
-    )
 end
 
 function PrivateMessenger.send(
@@ -79,7 +50,7 @@ function PrivateMessenger.send(
         write_log(
             logger,
             "warn",
-            "OZEL_MESAJ_PROBE_HATA | controller gecersiz"
+            "OZEL_MESAJ_DEBUG_RPC_HATA | controller gecersiz"
         )
 
         return false
@@ -89,25 +60,15 @@ function PrivateMessenger.send(
         write_log(
             logger,
             "warn",
-            "OZEL_MESAJ_PROBE_HATA | mesaj bos"
+            "OZEL_MESAJ_DEBUG_RPC_HATA | mesaj bos"
         )
 
         return false
     end
 
     local sent, error_message = pcall(function()
-        local message_key = create_message_key()
-
-        controller:SendScreenLogToClient(
-            text,
-            {
-                R = 0.20,
-                G = 0.85,
-                B = 1.00,
-                A = 1.00
-            },
-            5.0,
-            message_key
+        controller:Debug_ReceiveCheatCommand_ToClient(
+            text
         )
     end)
 
@@ -115,7 +76,7 @@ function PrivateMessenger.send(
         write_log(
             logger,
             "warn",
-            "OZEL_MESAJ_PROBE_HATA | " ..
+            "OZEL_MESAJ_DEBUG_RPC_HATA | " ..
             tostring(error_message)
         )
 
@@ -125,7 +86,7 @@ function PrivateMessenger.send(
     write_log(
         logger,
         "info",
-        "OZEL_MESAJ_PROBE_OK | " .. text
+        "OZEL_MESAJ_DEBUG_RPC_OK | " .. text
     )
 
     return true
