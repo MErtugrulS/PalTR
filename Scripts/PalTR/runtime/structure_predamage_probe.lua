@@ -8,6 +8,9 @@ local StructurePreDamageProbe = {}
 local DAMAGE_FUNCTION =
     "/Script/Pal.PalNetworkMapObjectComponent:RequestDamageMapObject_ToServer"
 
+local CALC_DAMAGE_FUNCTION =
+    "/Script/Pal.PalUtility:CalcDamage"
+
 local EMPTY_GUID =
     "00000000000000000000000000000000"
 
@@ -503,12 +506,259 @@ function StructurePreDamageProbe.register(
         return 0
     end
 
+    -- PALTR_STRUCTURE_CALC_DAMAGE_RETURN_ZERO_V1
+    local calc_ok,
+        calc_pre_id,
+        calc_post_id =
+        pcall(function()
+            return RegisterHook(
+                CALC_DAMAGE_FUNCTION,
+
+                function(
+                    context,
+                    damage_info_param,
+                    defender_param,
+                    calculated_info_param
+                )
+                    return nil
+                end,
+
+                function(
+                    context,
+                    damage_info_param,
+                    defender_param,
+                    calculated_info_param
+                )
+                    local info =
+                        UE.unwrap(
+                            damage_info_param
+                        )
+
+                    local defender =
+                        UE.unwrap(
+                            defender_param
+                        )
+
+                    local defender_path =
+                        object_path(defender)
+
+                    if not defender_path:find(
+                        "BP_BuildObject_",
+                        1,
+                        true
+                    ) then
+                        return nil
+                    end
+
+                    local attacker =
+                        read_field(
+                            info,
+                            "Attacker"
+                        )
+
+                    local attacker_path =
+                        object_path(attacker)
+
+                    if not attacker_path:find(
+                        "BP_Player_",
+                        1,
+                        true
+                    ) then
+                        return nil
+                    end
+
+                    local model =
+                        read_field(
+                            defender,
+                            "MapObjectModel"
+                        )
+
+                    if model == nil then
+                        local instance_id =
+                            UE.guid(
+                                read_field(
+                                    defender,
+                                    "ModelInstanceId"
+                                )
+                            )
+
+                        if valid_guid(instance_id) then
+                            model =
+                                find_model(
+                                    instance_id,
+                                    logger
+                                )
+                        end
+                    end
+
+                    local attacker_group =
+                        UE.guid(
+                            read_field(
+                                info,
+                                "AttackerGroupID"
+                            )
+                        )
+
+                    local build_player_uid = ""
+                    local target_guild_key = ""
+                    local attacker_guild_key = ""
+                    local owner = nil
+                    local resolve_error = ""
+
+                    if model ~= nil then
+                        build_player_uid,
+                            target_guild_key,
+                            attacker_guild_key,
+                            owner,
+                            resolve_error =
+                            resolve_identity(
+                                registry,
+                                model,
+                                attacker_group
+                            )
+                    else
+                        resolve_error =
+                            "MODEL_NOT_FOUND"
+                    end
+
+                    local policy_result =
+                        evaluate_policy(
+                            damage_policy,
+                            target_guild_key,
+                            attacker_guild_key
+                        )
+
+                    local policy_label = "ALLOW"
+                    local override_return = ""
+
+                    if policy_result.block then
+                        policy_label = "BLOCK"
+                        override_return = "0"
+                    end
+
+                    local details = {
+                        "probe=STRUCTURE_CALC_DAMAGE_V1",
+
+                        "defender_path=" ..
+                            defender_path,
+
+                        "model_path=" ..
+                            object_path(model),
+
+                        "build_player_uid=" ..
+                            build_player_uid,
+
+                        "target_guild_key=" ..
+                            target_guild_key,
+
+                        "attacker_guild_key=" ..
+                            attacker_guild_key,
+
+                        "StructurePolicy=" ..
+                            policy_label,
+
+                        "StructureReason=" ..
+                            tostring(
+                                policy_result.reason or ""
+                            ),
+
+                        "RelationState=" ..
+                            tostring(
+                                policy_result.state or ""
+                            ),
+
+                        "ResolveError=" ..
+                            resolve_error,
+
+                        "attacker_group=" ..
+                            attacker_group,
+
+                        "attacker_path=" ..
+                            attacker_path,
+
+                        "NativeDamageValue=" ..
+                            scalar_text(
+                                read_field(
+                                    info,
+                                    "NativeDamageValue"
+                                )
+                            ),
+
+                        "BasePower=" ..
+                            scalar_text(
+                                read_field(
+                                    info,
+                                    "BasePower"
+                                )
+                            ),
+
+                        "OverrideReturn=" ..
+                            override_return
+                    }
+
+                    FileIO.append(
+                        path,
+                        TSV.encode({
+                            Clock.now(),
+                            CALC_DAMAGE_FUNCTION,
+                            defender_path,
+                            target_guild_key,
+                            table.concat(
+                                details,
+                                ";"
+                            )
+                        })
+                    )
+
+                    logger:info(
+                        "YAPI_CALC_DAMAGE" ..
+                        " | hedef_klan=" ..
+                        target_guild_key ..
+                        " | saldiran_klan=" ..
+                        attacker_guild_key ..
+                        " | policy=" ..
+                        policy_label ..
+                        " | reason=" ..
+                        tostring(
+                            policy_result.reason or ""
+                        ) ..
+                        " | resolve_error=" ..
+                        resolve_error ..
+                        " | override_return=" ..
+                        override_return
+                    )
+
+                    if policy_result.block then
+                        return 0
+                    end
+
+                    return nil
+                end
+            )
+        end)
+
+    if not calc_ok
+        or calc_pre_id == nil
+    then
+        logger:warn(
+            "CalcDamage hook'u kaydedilemedi: " ..
+            tostring(calc_pre_id)
+        )
+
+        return 0
+    end
+
+    logger:info(
+        "Yapi CalcDamage donus korumasi aktif: " ..
+        CALC_DAMAGE_FUNCTION
+    )
+
     logger:info(
         "Yapi pre-damage politika hook'u aktif: " ..
         DAMAGE_FUNCTION
     )
 
-    return 1
+    return 2
 end
 
 return StructurePreDamageProbe
