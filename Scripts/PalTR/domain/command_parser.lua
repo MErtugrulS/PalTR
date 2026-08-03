@@ -4,44 +4,44 @@ local Result = require("PalTR.core.result")
 local Parser = {}
 
 local aliases = {
-    ["/paltr"] = "PALTR",
-    ["!paltr"] = "PALTR",
-    ["/savas"] = "DECLARE_WAR",
+    ["!test"] = "TEST",
+
+    ["!durum"] = "STATUS",
+    ["!klanlar"] = "GUILDS",
+    ["!iliskiler"] = "RELATIONS",
+    ["!yardim"] = "HELP",
+
     ["!savas"] = "DECLARE_WAR",
-    ["/ateskes"] = "CEASEFIRE",
     ["!ateskes"] = "CEASEFIRE",
-    ["/ittifak"] = "ALLIANCE",
+    ["!ateskesboz"] = "BREAK_CEASEFIRE",
+    ["!baris"] = "PEACE",
+
     ["!ittifak"] = "ALLIANCE",
-    ["/kabul"] = "ACCEPT",
     ["!kabul"] = "ACCEPT",
-    ["/reddet"] = "REJECT",
-    ["!reddet"] = "REJECT"
+    ["!reddet"] = "REJECT",
+    ["!iptal"] = "CANCEL",
+    ["!tarafsiz"] = "NEUTRALIZE"
 }
 
 function Parser.parse(message)
     local words = Text.split_words(message)
+
     if #words == 0 then
         return Result.err("EMPTY", "Bos mesaj")
     end
 
     local action = aliases[Text.lower_ascii(words[1])]
-    if not action then
-        return Result.err("NOT_COMMAND", "PalTR komutu degil")
-    end
 
-    if action == "PALTR" then
-        local sub = Text.lower_ascii(words[2] or "durum")
-        if sub == "durum" then action = "STATUS"
-        elseif sub == "klanlar" then action = "GUILDS"
-        elseif sub == "yardim" then action = "HELP"
-        else
-            return Result.err("UNKNOWN_SUBCOMMAND", "Bilinmeyen /paltr komutu")
-        end
+    if not action then
+        return Result.err(
+            "NOT_COMMAND",
+            "PalTR komutu degil"
+        )
     end
 
     return Result.ok({
         action = action,
-        target = Text.join_from(words, action == "PALTR" and 3 or 2),
+        target = Text.join_from(words, 2),
         raw = Text.clean(message)
     })
 end

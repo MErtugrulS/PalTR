@@ -7,19 +7,25 @@ return {
         player_validity_poll = true,
         enable_structure_damage_probe = true,
 
-        -- Gercek hasar engelleme halen kapali.
+        -- Faz-03 yalnizca diplomasi durumlarini test eder.
         enable_damage_enforcement = false
     },
 
     diplomacy = {
-        war_preparation_minutes = 30,
-        war_duration_hours = 24,
+        -- Runtime savas testi icin gecici olarak 2 dakika.
+        -- Testten sonra 30 dakikaya cikarilacak.
+        war_preparation_minutes = 2,
+
+        -- Ateskes kabul edildikten sonra 12 saat surer.
+        ceasefire_duration_hours = 12,
+
+        -- Diplomasi teklifleri 24 saat cevap bekler.
         proposal_expiry_hours = 24
     },
 
     protection = {
-        offline_grace_minutes = 15,
-        minimum_online_defenders = 1,
+        offline_grace_minutes = 10,
+        minimum_online_defenders = 2,
         block_friendly_fire = true,
         block_non_war_damage = true
     }
