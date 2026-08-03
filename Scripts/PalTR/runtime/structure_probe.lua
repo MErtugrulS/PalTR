@@ -66,7 +66,7 @@ local function guid_text(value)
         end)
 
         if ok and result ~= nil then
-            local text = tostring(result)
+            local text = UE.text(result)
 
             if text ~= ""
                 and not text:find(
