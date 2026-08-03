@@ -7,19 +7,21 @@ return {
         player_validity_poll = true,
         enable_structure_damage_probe = true,
 
-        -- Gercek hasar engelleme halen kapali.
+        -- Faz-03 yalnizca diplomasi durumunu test eder.
+        -- Gercek oyuncu/yapi hasar engelleme halen kapali.
         enable_damage_enforcement = false
     },
 
     diplomacy = {
-        war_preparation_minutes = 30,
-        war_duration_hours = 24,
+        -- Runtime testi gecince 30 dakikaya cikacak.
+        war_preparation_minutes = 2,
         proposal_expiry_hours = 24
     },
 
     protection = {
-        offline_grace_minutes = 15,
-        minimum_online_defenders = 1,
+        -- Sonraki hasar/koruma fazi icin kilitlenen kurallar.
+        offline_grace_minutes = 10,
+        minimum_online_defenders = 2,
         block_friendly_fire = true,
         block_non_war_damage = true
     }

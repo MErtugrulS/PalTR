@@ -3,9 +3,9 @@ local Paths = require("PalTR.core.paths")
 local Clock = require("PalTR.core.clock")
 local FileIO = require("PalTR.storage.file_io")
 local TSV = require("PalTR.storage.tsv")
-local UE = require("PalTR.runtime.ue")
 local HookRegistry = require("PalTR.runtime.hook_registry")
 local StructureProbe = require("PalTR.runtime.structure_probe")
+local Announcer = require("PalTR.runtime.announcer")
 local RegistryService = require("PalTR.services.registry_service")
 local DiplomacyService = require("PalTR.services.diplomacy_service")
 local StatusService = require("PalTR.services.status_service")
@@ -18,13 +18,23 @@ App.__index = App
 
 function App.new(config)
     local paths = Paths.new(config.data_root)
+
     local registry = RegistryService.new(
-        paths, Logger.new("Registry")
+        paths,
+        Logger.new("Registry")
     )
+
     local diplomacy = DiplomacyService.new(
-        paths, config, Logger.new("Diplomacy")
+        paths,
+        config,
+        Logger.new("Diplomacy")
     )
-    local status = StatusService.new(paths, registry, diplomacy)
+
+    local status = StatusService.new(
+        paths,
+        registry,
+        diplomacy
+    )
 
     return setmetatable({
         config = config,
@@ -35,13 +45,20 @@ function App.new(config)
         diplomacy = diplomacy,
         status = status,
         commands = CommandService.new(
-            paths, registry, diplomacy, status,
+            paths,
+            registry,
+            diplomacy,
+            status,
             Logger.new("Commands")
         ),
         damage = DamageObserver.new(
-            paths.damage, registry, Logger.new("Damage")
+            paths.damage,
+            registry,
+            Logger.new("Damage")
         ),
-        scheduler = Scheduler.new(Logger.new("Scheduler")),
+        scheduler = Scheduler.new(
+            Logger.new("Scheduler")
+        ),
         last_guild_scan = 0
     }, App)
 end
@@ -50,28 +67,105 @@ function App:_headers()
     local files = {
         [self.paths.guilds] =
             "guild_key\tguild_name\tguild_id\tobject_path\tfirst_seen\tlast_seen",
+
         [self.paths.players] =
             "player_key\tplayer_name\tplayer_id\tplayer_uid\tguild_key\trole\tis_master\tplayer_state_path\tpawn_path\tfirst_seen\tlast_seen",
+
         [self.paths.online] =
             "player_key\tplayer_name\tguild_key\tconnected_at\tlast_seen",
+
         [self.paths.relations] =
             "pair_key\tguild_a\tguild_b\tstate\tprevious_state\trequested_by\taccepted_by\tcreated_at\tupdated_at\tactive_at\texpires_at\tnote",
+
         [self.paths.events] =
             "timestamp\tevent_type\tpair_key\tdetail",
+
         [self.paths.responses] =
             "timestamp\tplayer_name\tguild_key\tcommand\tsuccess\tmessage",
+
         [self.paths.damage] =
             "timestamp\ttarget_path\tplayer_name\tguild_key\tdetail",
+
         [self.paths.structure] =
             "timestamp\tfunction\tobject_path\tguild_id\tparameters",
+
         [self.paths.health] =
             "timestamp\tversion\tstatus"
     }
 
     for path, header in pairs(files) do
         local file = io.open(path, "r")
-        if file then file:close()
-        else FileIO.overwrite(path, { header }) end
+
+        if file then
+            file:close()
+        else
+            FileIO.overwrite(path, { header })
+        end
+    end
+end
+
+function App:_guild_name(guild_key)
+    local guild = self.registry.guilds[guild_key]
+
+    if guild and guild.name and guild.name ~= "" then
+        return guild.name
+    end
+
+    return guild_key
+end
+
+function App:_announce_relation(relation, message)
+    for _, player in pairs(
+        self.registry.runtime_players or {}
+    ) do
+        local belongs =
+            player.guild_key == relation.guild_a
+            or player.guild_key == relation.guild_b
+
+        if player.online
+            and belongs
+            and player.controller ~= nil then
+
+            Announcer.send(
+                player.controller,
+                message,
+                self.logger
+            )
+        end
+    end
+end
+
+function App:_handle_diplomacy_events(events)
+    for _, event in ipairs(events or {}) do
+        local relation = event.relation
+
+        if event.name == "WAR_STARTED" then
+            local first = self:_guild_name(
+                relation.guild_a
+            )
+            local second = self:_guild_name(
+                relation.guild_b
+            )
+
+            self:_announce_relation(
+                relation,
+                first .. " ile " .. second ..
+                " arasindaki savas basladi. " ..
+                "Savas, kabul edilmis ateskese kadar surecek."
+            )
+
+        elseif event.name == "PROPOSAL_EXPIRED" then
+            self:_announce_relation(
+                relation,
+                "Bekleyen diplomasi teklifinin suresi doldu."
+            )
+
+        elseif event.name == "WAR_MADE_INDEFINITE" then
+            self.logger:info(
+                "Eski savas kaydi suresiz savasa cevrildi: " ..
+                tostring(relation.key)
+            )
+        end
     end
 end
 
@@ -80,9 +174,17 @@ function App:_register_hooks()
         "PlayerConnected",
         "/Script/Engine.PlayerController:ServerAcknowledgePossession",
         function(context, pawn)
-            local player = self.registry:on_connected(context, pawn)
+            local player =
+                self.registry:on_connected(
+                    context,
+                    pawn
+                )
+
             self.registry:scan_guilds()
-            self.status:build(player, "Oyuncu baglandi")
+            self.status:build(
+                player,
+                "Oyuncu baglandi"
+            )
         end
     )
 
@@ -90,9 +192,13 @@ function App:_register_hooks()
         "PlayerGuildMapped",
         "/Script/Pal.PalPlayerState:OnUpdatePlayerInfoInGuildBelongTo",
         function(context, guild, uid, _player_info)
-            local player = self.registry:on_guild_update(
-                context, guild, uid
-            )
+            local player =
+                self.registry:on_guild_update(
+                    context,
+                    guild,
+                    uid
+                )
+
             if player then
                 self.status:build(
                     player,
@@ -106,7 +212,19 @@ function App:_register_hooks()
         "ChatCommand",
         "/Script/Pal.PalPlayerController:EnterChat_Receive",
         function(context, message, _chat_type)
-            self.commands:on_chat(context, message)
+            local ok, error_message = pcall(function()
+                self.commands:on_chat(
+                    context,
+                    message
+                )
+            end)
+
+            if not ok then
+                self.logger:error(
+                    "CHAT_HOOK_HATA | " ..
+                    tostring(error_message)
+                )
+            end
         end
     )
 
@@ -114,11 +232,16 @@ function App:_register_hooks()
         "PlayerDamagePassive",
         "/Script/Pal.PalPlayerCharacter:OnDamagePlayer_Server",
         function(context, damage_result)
-            self.damage:on_player_damage(context, damage_result)
+            self.damage:on_player_damage(
+                context,
+                damage_result
+            )
         end
     )
 
-    if self.config.runtime.enable_structure_damage_probe then
+    if self.config.runtime
+        .enable_structure_damage_probe then
+
         StructureProbe.register(
             self.hooks,
             self.paths.structure,
@@ -128,23 +251,39 @@ function App:_register_hooks()
 end
 
 function App:_tick()
-    self.diplomacy:tick()
+    local diplomacy_events =
+        self.diplomacy:tick()
+
+    self:_handle_diplomacy_events(
+        diplomacy_events
+    )
 
     if self.config.runtime.player_validity_poll then
-        self.registry:poll_validity(function(player)
-            FileIO.append(self.paths.events, TSV.encode({
-                Clock.now(),
-                "PLAYER_DISCONNECTED_POLL",
-                player.guild_key,
-                player.name
-            }))
-            self.status:build(player, "Oyuncu cevrimdisi algilandi")
-        end)
+        self.registry:poll_validity(
+            function(player)
+                FileIO.append(
+                    self.paths.events,
+                    TSV.encode({
+                        Clock.now(),
+                        "PLAYER_DISCONNECTED_POLL",
+                        player.guild_key,
+                        player.name
+                    })
+                )
+
+                self.status:build(
+                    player,
+                    "Oyuncu cevrimdisi algilandi"
+                )
+            end
+        )
     end
 
     local now = Clock.now()
+
     if now - self.last_guild_scan
         >= self.config.runtime.guild_scan_seconds then
+
         self.registry:scan_guilds()
         self.last_guild_scan = now
     end
@@ -158,17 +297,35 @@ function App:start()
 
     self.scheduler:start(
         self.config.runtime.scheduler_interval_ms,
-        function() self:_tick() end
+        function()
+            self:_tick()
+        end
     )
 
-    FileIO.overwrite(self.paths.health, {
-        "timestamp\tversion\tstatus",
-        TSV.encode({ Clock.now(), "0.6.0-dev", "STARTED" })
-    })
+    FileIO.overwrite(
+        self.paths.health,
+        {
+            "timestamp\tversion\tstatus",
+            TSV.encode({
+                Clock.now(),
+                "0.7.0-dev-faz03",
+                "STARTED"
+            })
+        }
+    )
 
-    self.status:build(nil, "PalTR pasif diplomasi alfa baslatildi")
-    self.logger:info("Pasif diplomasi alfa baslatildi")
-    self.logger:warn("Gercek hasar engelleme kapali")
+    self.status:build(
+        nil,
+        "PalTR Faz-03 suresiz savas sistemi baslatildi"
+    )
+
+    self.logger:info(
+        "Faz-03 suresiz savas sistemi baslatildi"
+    )
+
+    self.logger:warn(
+        "Gercek hasar engelleme halen kapali"
+    )
 end
 
 return App
