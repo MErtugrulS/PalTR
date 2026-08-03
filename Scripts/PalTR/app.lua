@@ -291,6 +291,7 @@ function App:_register_hooks()
         StructureProbe.register(
             self.hooks,
             self.paths.structure,
+            self.registry,
             Logger.new("StructureProbe")
         )
     end

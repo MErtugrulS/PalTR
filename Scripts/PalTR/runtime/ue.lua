@@ -59,23 +59,99 @@ function UE.text(value)
     return ""
 end
 
+-- PALTR_GLOBAL_GUID_V2
+local guid_library = nil
+local guid_library_checked = false
+
+local function get_guid_library()
+    if guid_library_checked then
+        return guid_library
+    end
+
+    guid_library_checked = true
+
+    if type(StaticFindObject) ~= "function" then
+        return nil
+    end
+
+    local ok, result = UE.safe(function()
+        return StaticFindObject(
+            "/Script/Engine.Default__KismetGuidLibrary"
+        )
+    end)
+
+    if not ok or result == nil then
+        return nil
+    end
+
+    guid_library = UE.unwrap(result)
+    return guid_library
+end
+
 function UE.guid(value)
     value = UE.unwrap(value)
-    if value == nil then return "" end
+
+    if value == nil then
+        return ""
+    end
+
+    local library = get_guid_library()
+
+    if library ~= nil then
+        local ok, result = UE.safe(function()
+            return library:Conv_GuidToString(value)
+        end)
+
+        if ok and result ~= nil then
+            local text = UE.text(result)
+
+            if text ~= ""
+                and not text:find(
+                    "CoreUObject.Guid",
+                    1,
+                    true
+                )
+                and not text:find(
+                    "FString:",
+                    1,
+                    true
+                )
+            then
+                return text
+            end
+        end
+    end
 
     local parts = {}
-    for _, field in ipairs({"A", "B", "C", "D"}) do
-        local direct = UE.read(value, field)
-        table.insert(parts, tonumber(UE.unwrap(direct)))
-    end
 
-    if parts[1] and parts[2] and parts[3] and parts[4] then
-        return string.format(
-            "%08X%08X%08X%08X",
-            parts[1], parts[2], parts[3], parts[4]
+    for _, field in ipairs({
+        "A",
+        "B",
+        "C",
+        "D"
+    }) do
+        local direct = UE.read(value, field)
+        table.insert(
+            parts,
+            tonumber(UE.unwrap(direct))
         )
     end
-    return UE.text(value)
+
+    if parts[1]
+        and parts[2]
+        and parts[3]
+        and parts[4]
+    then
+        return string.format(
+            "%08X%08X%08X%08X",
+            parts[1],
+            parts[2],
+            parts[3],
+            parts[4]
+        )
+    end
+
+    return ""
 end
 
 function UE.call(object, method_name, ...)

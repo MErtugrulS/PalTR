@@ -134,6 +134,97 @@ function Registry:on_guild_update(player_state_param, guild_param, uid_param)
     return matched
 end
 
+-- PALTR_STRUCTURE_IDENTITY_V1
+local function normalize_registry_id(value)
+    return tostring(value or "")
+        :gsub("[^0-9A-Fa-f]", "")
+        :upper()
+end
+
+function Registry:find_by_uid(uid)
+    local wanted = normalize_registry_id(uid)
+
+    if wanted == "" then
+        return nil
+    end
+
+    for _, player in pairs(
+        self.runtime_players or {}
+    ) do
+        if normalize_registry_id(player.uid) == wanted then
+            return player
+        end
+    end
+
+    for _, player in pairs(
+        self.players or {}
+    ) do
+        if normalize_registry_id(player.uid) == wanted then
+            return player
+        end
+    end
+
+    return nil
+end
+
+function Registry:find_guild_by_id(guild_id)
+    local wanted = normalize_registry_id(guild_id)
+
+    if wanted == "" then
+        return nil
+    end
+
+    for _, guild in pairs(
+        self.guilds or {}
+    ) do
+        if normalize_registry_id(guild.id) == wanted then
+            return guild
+        end
+    end
+
+    return nil
+end
+
+function Registry:resolve_structure_identity(
+    build_player_uid,
+    attacker_group_id
+)
+    local owner = self:find_by_uid(
+        build_player_uid
+    )
+
+    local target_guild_key = ""
+
+    if owner ~= nil then
+        target_guild_key =
+            tostring(owner.guild_key or "")
+    end
+
+    if target_guild_key == ""
+        and self.guilds[
+            tostring(build_player_uid or "")
+        ] ~= nil
+    then
+        target_guild_key =
+            tostring(build_player_uid)
+    end
+
+    local attacker_guild =
+        self:find_guild_by_id(
+            attacker_group_id
+        )
+
+    local attacker_guild_key = ""
+
+    if attacker_guild ~= nil then
+        attacker_guild_key =
+            tostring(attacker_guild.key or "")
+    end
+
+    return target_guild_key,
+        attacker_guild_key,
+        owner
+end
 function Registry:find_by_controller(controller)
     local path = UE.full_name(controller)
     for _, player in pairs(self.runtime_players) do

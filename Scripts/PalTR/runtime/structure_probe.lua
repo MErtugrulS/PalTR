@@ -161,7 +161,7 @@ local function is_zero_guid(value)
         or compact == "00000000000000000000000000000000"
 end
 
-function StructureProbe.register(hooks, path, logger)
+function StructureProbe.register(hooks, path, registry, logger)
     local registered = hooks:register(
         "StructureDamageProbe",
         DAMAGE_FUNCTION,
@@ -198,6 +198,43 @@ function StructureProbe.register(hooks, path, logger)
                     )
                 )
 
+            -- PALTR_STRUCTURE_IDENTITY_PROBE_V1
+            local build_player_uid =
+                guid_text(
+                    read_field(
+                        model,
+                        "BuildPlayerUId"
+                    )
+                )
+
+            local target_guild_key = ""
+            local attacker_guild_key = ""
+            local build_player_name = ""
+
+            if registry ~= nil
+                and type(
+                    registry.resolve_structure_identity
+                ) == "function"
+            then
+                local resolved_target,
+                    resolved_attacker,
+                    owner_player =
+                        registry:resolve_structure_identity(
+                            build_player_uid,
+                            attacker_group
+                        )
+
+                target_guild_key =
+                    tostring(resolved_target or "")
+
+                attacker_guild_key =
+                    tostring(resolved_attacker or "")
+
+                if owner_player ~= nil then
+                    build_player_name =
+                        tostring(owner_player.name or "")
+                end
+            end
             local attacker =
                 read_field(
                     info,
@@ -222,13 +259,10 @@ function StructureProbe.register(hooks, path, logger)
                             "BaseCampIdBelongTo"
                         )
                     ),
-                "build_player_uid=" ..
-                    guid_text(
-                        read_field(
-                            model,
-                            "BuildPlayerUId"
-                        )
-                    ),
+                "build_player_uid=" .. build_player_uid,
+                "build_player_name=" .. build_player_name,
+                "target_guild_key=" .. target_guild_key,
+                "attacker_guild_key=" .. attacker_guild_key,
                 "attacker_group=" .. attacker_group,
                 "attacker_path=" .. object_path(attacker),
                 "override_owner_path=" ..
@@ -297,7 +331,9 @@ function StructureProbe.register(hooks, path, logger)
                     Clock.now(),
                     DAMAGE_FUNCTION,
                     object_path(actor),
-                    target_group,
+                    target_guild_key ~= ""
+                        and target_guild_key
+                        or target_group,
                     table.concat(details, ";")
                 })
             )
@@ -311,6 +347,12 @@ function StructureProbe.register(hooks, path, logger)
                     tostring(target_group) ..
                     " | saldiran_klan=" ..
                     tostring(attacker_group) ..
+                    " | hedef_klan_anahtar=" ..
+                    tostring(target_guild_key) ..
+                    " | saldiran_klan_anahtar=" ..
+                    tostring(attacker_guild_key) ..
+                    " | yapi_sahibi=" ..
+                    tostring(build_player_name) ..
                     " | saldiran=" ..
                     object_path(attacker) ..
                     " | NoDamage=" ..
