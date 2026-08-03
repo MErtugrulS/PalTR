@@ -301,6 +301,8 @@ function App:_register_hooks()
             StructurePreDamageProbe.register(
                 self.hooks,
                 self.paths.structure,
+                self.registry,
+                self.damage_policy,
                 Logger.new("StructurePreDamage")
             )
     end
