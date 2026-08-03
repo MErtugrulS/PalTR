@@ -161,7 +161,7 @@ local function is_zero_guid(value)
         or compact == "00000000000000000000000000000000"
 end
 
-function StructureProbe.register(hooks, path, registry, logger)
+function StructureProbe.register(hooks, path, registry, damage_policy, logger)
     local registered = hooks:register(
         "StructureDamageProbe",
         DAMAGE_FUNCTION,
@@ -247,6 +247,91 @@ function StructureProbe.register(hooks, path, registry, logger)
                     "OverrideNetworkOwner"
                 )
 
+            -- PALTR_STRUCTURE_ENFORCEMENT_V1
+            local attacker_path = object_path(attacker)
+
+            local is_player_attack =
+                attacker_path:find(
+                    "BP_Player_",
+                    1,
+                    true
+                ) ~= nil
+
+            local policy_result = {
+                block = false,
+                reason = "NOT_PLAYER_ATTACK",
+                state = ""
+            }
+
+            local policy_label = "SKIP"
+            local applied = false
+            local apply_error = ""
+
+            if is_player_attack then
+                if target_guild_key == ""
+                    or attacker_guild_key == ""
+                then
+                    policy_result.reason =
+                        "STRUCTURE_IDENTITY_UNRESOLVED"
+
+                elseif damage_policy == nil
+                    or type(
+                        damage_policy.evaluate_player_damage
+                    ) ~= "function"
+                then
+                    policy_result.reason =
+                        "STRUCTURE_POLICY_UNAVAILABLE"
+
+                else
+                    local policy_ok, result =
+                        pcall(function()
+                            return damage_policy:evaluate_player_damage(
+                                {
+                                    guild_key =
+                                        attacker_guild_key
+                                },
+                                {
+                                    guild_key =
+                                        target_guild_key
+                                }
+                            )
+                        end)
+
+                    if policy_ok and result ~= nil then
+                        policy_result = result
+
+                        if policy_result.block then
+                            policy_label = "BLOCK"
+                        else
+                            policy_label = "ALLOW"
+                        end
+                    else
+                        policy_result = {
+                            block = false,
+                            reason = "STRUCTURE_POLICY_ERROR",
+                            state = ""
+                        }
+
+                        policy_label = "SKIP"
+                        apply_error = tostring(result)
+                    end
+                end
+
+                if policy_result.block then
+                    local set_ok, set_error =
+                        pcall(function()
+                            info.NoDamage = true
+                            damage_info_param:set(info)
+                        end)
+
+                    applied = set_ok
+
+                    if not set_ok then
+                        apply_error =
+                            tostring(set_error)
+                    end
+                end
+            end
             local details = {
                 "probe=STRUCTURE_DAMAGE_V2",
                 "model_path=" .. object_path(model),
@@ -263,6 +348,13 @@ function StructureProbe.register(hooks, path, registry, logger)
                 "build_player_name=" .. build_player_name,
                 "target_guild_key=" .. target_guild_key,
                 "attacker_guild_key=" .. attacker_guild_key,
+                "StructurePolicy=" .. policy_label,
+                "StructureReason=" ..
+                    tostring(policy_result.reason or ""),
+                "RelationState=" ..
+                    tostring(policy_result.state or ""),
+                "Applied=" .. tostring(applied),
+                "ApplyError=" .. apply_error,
                 "attacker_group=" .. attacker_group,
                 "attacker_path=" .. object_path(attacker),
                 "override_owner_path=" ..
@@ -353,6 +445,16 @@ function StructureProbe.register(hooks, path, registry, logger)
                     tostring(attacker_guild_key) ..
                     " | yapi_sahibi=" ..
                     tostring(build_player_name) ..
+                    " | policy=" ..
+                    tostring(policy_label) ..
+                    " | reason=" ..
+                    tostring(policy_result.reason or "") ..
+                    " | state=" ..
+                    tostring(policy_result.state or "") ..
+                    " | applied=" ..
+                    tostring(applied) ..
+                    " | apply_error=" ..
+                    tostring(apply_error) ..
                     " | saldiran=" ..
                     object_path(attacker) ..
                     " | NoDamage=" ..

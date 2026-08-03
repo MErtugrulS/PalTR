@@ -50,6 +50,7 @@ function App.new(config)
         registry = registry,
         diplomacy = diplomacy,
         status = status,
+        damage_policy = damage_policy,
 
         commands = CommandService.new(
             paths,
@@ -289,11 +290,12 @@ function App:_register_hooks()
         .enable_structure_damage_probe then
 
         StructureProbe.register(
-            self.hooks,
-            self.paths.structure,
-            self.registry,
-            Logger.new("StructureProbe")
-        )
+                self.hooks,
+                self.paths.structure,
+                self.registry,
+                self.damage_policy,
+                Logger.new("StructureProbe")
+            )
     end
 end
 
