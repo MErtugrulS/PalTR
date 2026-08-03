@@ -374,7 +374,9 @@ function StructurePreDamageProbe.register(
 
                 local set_ok, set_error =
                     pcall(function()
+                        -- PALTR_STRUCTURE_NATIVE_DAMAGE_ZERO_V1
                         info.NoDamage = true
+                        info.NativeDamageValue = 0
                         damage_info_param:set(info)
                     end)
 
