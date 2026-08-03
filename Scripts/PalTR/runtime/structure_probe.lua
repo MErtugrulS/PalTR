@@ -1,54 +1,3 @@
--- PALTR_GUID_TEXT_V1
-local paltr_raw_tostring = tostring
-
-local function paltr_read_guid_part(value, field_name)
-    local ok, field_value = pcall(function()
-        return value[field_name]
-    end)
-
-    if not ok or field_value == nil then
-        return nil
-    end
-
-    local numeric_value = tonumber(field_value)
-
-    if numeric_value == nil then
-        numeric_value = tonumber(paltr_raw_tostring(field_value))
-    end
-
-    if numeric_value == nil then
-        return nil
-    end
-
-    return numeric_value % 4294967296
-end
-
-local function paltr_value_to_string(value)
-    local raw_value = paltr_raw_tostring(value)
-
-    if type(raw_value) == "string"
-        and raw_value:find("CoreUObject.Guid", 1, true)
-    then
-        local a = paltr_read_guid_part(value, "A")
-        local b = paltr_read_guid_part(value, "B")
-        local c = paltr_read_guid_part(value, "C")
-        local d = paltr_read_guid_part(value, "D")
-
-        if a ~= nil and b ~= nil and c ~= nil and d ~= nil then
-            return string.format(
-                "%08x%08x%08x%08x",
-                a,
-                b,
-                c,
-                d
-            )
-        end
-    end
-
-    return raw_value
-end
-
-local tostring = paltr_value_to_string
 local UE = require("PalTR.runtime.ue")
 local FileIO = require("PalTR.storage.file_io")
 local TSV = require("PalTR.storage.tsv")
@@ -77,17 +26,58 @@ local function read_field(value, field)
     return nil
 end
 
+-- PALTR_KISMET_GUID_V1
+local guid_library = nil
+local guid_library_checked = false
+
+local function get_guid_library()
+    if guid_library_checked then
+        return guid_library
+    end
+
+    guid_library_checked = true
+
+    local ok, result = pcall(function()
+        return StaticFindObject(
+            "/Script/Engine.Default__KismetGuidLibrary"
+        )
+    end)
+
+    if not ok or result == nil then
+        return nil
+    end
+
+    guid_library = UE.unwrap(result)
+    return guid_library
+end
+
 local function guid_text(value)
-    if value == nil then
+    local target = UE.unwrap(value)
+
+    if target == nil then
         return ""
     end
 
-    local ok, result = pcall(function()
-        return UE.guid(value)
-    end)
+    local library = get_guid_library()
 
-    if ok and result ~= nil then
-        return tostring(result)
+    if library ~= nil then
+        local ok, result = pcall(function()
+            return library:Conv_GuidToString(target)
+        end)
+
+        if ok and result ~= nil then
+            local text = tostring(result)
+
+            if text ~= ""
+                and not text:find(
+                    "CoreUObject.Guid",
+                    1,
+                    true
+                )
+            then
+                return text
+            end
+        end
     end
 
     return ""
