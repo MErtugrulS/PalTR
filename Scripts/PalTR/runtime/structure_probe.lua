@@ -347,6 +347,13 @@ function StructureProbe.register(hooks, path, registry, damage_policy, logger)
             end
             local details = {
                 "probe=STRUCTURE_DAMAGE_V2",
+                "model_instance_id=" ..
+                    guid_text(
+                        read_field(
+                            model,
+                            "InstanceId"
+                        )
+                    ),
                 "model_path=" .. object_path(model),
                 "model_group=" .. model_group,
                 "actor_group=" .. actor_group,

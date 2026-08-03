@@ -5,6 +5,7 @@ local FileIO = require("PalTR.storage.file_io")
 local TSV = require("PalTR.storage.tsv")
 local HookRegistry = require("PalTR.runtime.hook_registry")
 local StructureProbe = require("PalTR.runtime.structure_probe")
+local StructurePreDamageProbe = require("PalTR.runtime.structure_predamage_probe")
 local Announcer = require("PalTR.runtime.announcer")
 local RegistryService = require("PalTR.services.registry_service")
 local DiplomacyService = require("PalTR.services.diplomacy_service")
@@ -295,6 +296,12 @@ function App:_register_hooks()
                 self.registry,
                 self.damage_policy,
                 Logger.new("StructureProbe")
+            )
+
+            StructurePreDamageProbe.register(
+                self.hooks,
+                self.paths.structure,
+                Logger.new("StructurePreDamage")
             )
     end
 end
