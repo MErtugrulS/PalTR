@@ -44,6 +44,7 @@ function App.new(config)
         registry = registry,
         diplomacy = diplomacy,
         status = status,
+
         commands = CommandService.new(
             paths,
             registry,
@@ -51,14 +52,17 @@ function App.new(config)
             status,
             Logger.new("Commands")
         ),
+
         damage = DamageObserver.new(
             paths.damage,
             registry,
             Logger.new("Damage")
         ),
+
         scheduler = Scheduler.new(
             Logger.new("Scheduler")
         ),
+
         last_guild_scan = 0
     }, App)
 end
@@ -143,6 +147,7 @@ function App:_handle_diplomacy_events(events)
             local first = self:_guild_name(
                 relation.guild_a
             )
+
             local second = self:_guild_name(
                 relation.guild_b
             )
@@ -151,7 +156,23 @@ function App:_handle_diplomacy_events(events)
                 relation,
                 first .. " ile " .. second ..
                 " arasindaki savas basladi. " ..
-                "Savas, kabul edilmis ateskese kadar surecek."
+                "Savas yalnizca karsilikli barisla sona erecek."
+            )
+
+        elseif event.name == "CEASEFIRE_ENDED" then
+            local first = self:_guild_name(
+                relation.guild_a
+            )
+
+            local second = self:_guild_name(
+                relation.guild_b
+            )
+
+            self:_announce_relation(
+                relation,
+                first .. " ile " .. second ..
+                " arasindaki 12 saatlik ateskes sona erdi. " ..
+                "Savas yeniden basladi."
             )
 
         elseif event.name == "PROPOSAL_EXPIRED" then
@@ -163,6 +184,12 @@ function App:_handle_diplomacy_events(events)
         elseif event.name == "WAR_MADE_INDEFINITE" then
             self.logger:info(
                 "Eski savas kaydi suresiz savasa cevrildi: " ..
+                tostring(relation.key)
+            )
+
+        elseif event.name == "CEASEFIRE_TIMER_REPAIRED" then
+            self.logger:info(
+                "Eski ateskes kaydina 12 saatlik sure eklendi: " ..
                 tostring(relation.key)
             )
         end
@@ -181,6 +208,7 @@ function App:_register_hooks()
                 )
 
             self.registry:scan_guilds()
+
             self.status:build(
                 player,
                 "Oyuncu baglandi"
@@ -306,9 +334,10 @@ function App:start()
         self.paths.health,
         {
             "timestamp\tversion\tstatus",
+
             TSV.encode({
                 Clock.now(),
-                "0.7.0-dev-faz03",
+                "0.7.1-dev-faz03",
                 "STARTED"
             })
         }
@@ -316,11 +345,11 @@ function App:start()
 
     self.status:build(
         nil,
-        "PalTR Faz-03 suresiz savas sistemi baslatildi"
+        "PalTR Faz-03 ateskes ve baris sistemi baslatildi"
     )
 
     self.logger:info(
-        "Faz-03 suresiz savas sistemi baslatildi"
+        "Faz-03 ateskes ve baris sistemi baslatildi"
     )
 
     self.logger:warn(

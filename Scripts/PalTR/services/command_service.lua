@@ -11,10 +11,15 @@ CommandService.__index = CommandService
 
 local STATE_LABELS = {
     NEUTRAL = "Tarafsiz",
+
     WAR_PENDING = "Savas hazirligi",
     WAR = "Savas",
+
     CEASEFIRE_PENDING = "Ateskes teklifi",
     CEASEFIRE = "Ateskes",
+
+    PEACE_PENDING = "Baris teklifi",
+
     ALLIANCE_PENDING = "Ittifak teklifi",
     ALLIANCE = "Ittifak"
 }
@@ -22,12 +27,25 @@ local STATE_LABELS = {
 local SUCCESS_MESSAGES = {
     DECLARE_WAR =
         "Savas ilani kaydedildi. Hazirlik suresi basladi",
-    CEASEFIRE = "Ateskes teklifi kaydedildi",
-    ALLIANCE = "Ittifak teklifi kaydedildi",
+
+    CEASEFIRE =
+        "Ateskes teklifi kaydedildi",
+
+    BREAK_CEASEFIRE =
+        "Ateskes bozuldu. Savas yeniden basladi",
+
+    PEACE =
+        "Baris teklifi kaydedildi",
+
+    ALLIANCE =
+        "Ittifak teklifi kaydedildi",
+
     ACCEPT = "Teklif kabul edildi",
     REJECT = "Teklif reddedildi",
     CANCEL = "Teklif iptal edildi",
-    NEUTRALIZE = "Iliski tarafsiz duruma getirildi"
+
+    NEUTRALIZE =
+        "Ittifak sona erdirildi"
 }
 
 local function guild_name(registry, guild_key)
@@ -118,16 +136,15 @@ function CommandService:_respond(
     self.last_response_key = response_key
     self.last_response_at = now
 
-    local line = TSV.encode({
+    FileIO.append(self.paths.responses, TSV.encode({
         Clock.now(),
         player and player.name or "",
         player and player.guild_key or "",
         raw,
         tostring(success),
         message
-    })
+    }))
 
-    FileIO.append(self.paths.responses, line)
     self.status:build(player, message)
     self.logger:info("KOMUT_SONUC | " .. message)
 
@@ -164,7 +181,8 @@ function CommandService:_require_identity(player)
 end
 
 function CommandService:_require_master(player)
-    local ok, error_message = self:_require_identity(player)
+    local ok, error_message =
+        self:_require_identity(player)
 
     if not ok then
         return false, error_message
@@ -213,10 +231,7 @@ function CommandService:_guilds_message()
     return "Klanlar: " .. table.concat(names, ", ")
 end
 
-function CommandService:_relation_entry(
-    player,
-    relation
-)
+function CommandService:_relation_entry(player, relation)
     local other_key
 
     if relation.guild_a == player.guild_key then
@@ -246,7 +261,16 @@ function CommandService:_relation_entry(
             format_duration(now - relation.active_at) ..
             ")"
 
+    elseif relation.state == States.CEASEFIRE
+        and relation.expires_at > now then
+
+        state = state ..
+            " (" ..
+            format_duration(relation.expires_at - now) ..
+            ")"
+
     elseif (relation.state == States.CEASEFIRE_PENDING
+        or relation.state == States.PEACE_PENDING
         or relation.state == States.ALLIANCE_PENDING)
         and relation.expires_at > now then
 
@@ -355,6 +379,7 @@ function CommandService:on_chat(
             true,
             "!durum | !klanlar | !iliskiler | !yardim | " ..
             "!savas KLAN | !ateskes KLAN | " ..
+            "!ateskesboz KLAN | !baris KLAN | " ..
             "!ittifak KLAN | !kabul KLAN | " ..
             "!reddet KLAN | !iptal KLAN | " ..
             "!tarafsiz KLAN"
@@ -431,6 +456,20 @@ function CommandService:on_chat(
         return
     end
 
+    local pending_state = nil
+
+    if command.action == "ACCEPT" then
+        local pending_relation =
+            self.diplomacy:get(
+                player.guild_key,
+                target.key
+            )
+
+        if pending_relation then
+            pending_state = pending_relation.state
+        end
+    end
+
     local result
 
     if command.action == "DECLARE_WAR" then
@@ -442,6 +481,20 @@ function CommandService:on_chat(
 
     elseif command.action == "CEASEFIRE" then
         result = self.diplomacy:request_ceasefire(
+            player.guild_key,
+            target.key,
+            player.name
+        )
+
+    elseif command.action == "BREAK_CEASEFIRE" then
+        result = self.diplomacy:break_ceasefire(
+            player.guild_key,
+            target.key,
+            player.name
+        )
+
+    elseif command.action == "PEACE" then
+        result = self.diplomacy:request_peace(
             player.guild_key,
             target.key,
             player.name
@@ -521,6 +574,7 @@ function CommandService:on_chat(
         self.registry,
         player.guild_key
     )
+
     local target_name = guild_name(
         self.registry,
         target.key
@@ -543,40 +597,60 @@ function CommandService:on_chat(
         self:_announce_guild(
             target.key,
             own_name ..
-            " klani ateskes teklif etti. " ..
+            " klani 12 saatlik ateskes teklif etti. " ..
             "!kabul " .. own_name ..
             " veya !reddet " .. own_name
         )
 
-    elseif command.action == "ALLIANCE" then
+    elseif command.action == "PEACE" then
         self:_announce_guild(
             target.key,
             own_name ..
-            " klani ittifak teklif etti. " ..
+            " klani kalici baris teklif etti. " ..
             "!kabul " .. own_name ..
             " veya !reddet " .. own_name
         )
 
+    elseif command.action == "BREAK_CEASEFIRE" then
+        local message_text =
+            own_name ..
+            " klani ateskesi bozdu. " ..
+            "Savas yeniden basladi."
+
+        self:_announce_guild(
+            player.guild_key,
+            message_text
+        )
+
+        self:_announce_guild(
+            target.key,
+            message_text
+        )
+
     elseif command.action == "ACCEPT" then
-        local relation =
-            self.diplomacy:get(
-                player.guild_key,
-                target.key
-            )
+        local accepted_text =
+            "Teklif kabul edildi"
 
-        local accepted_text = "Teklif kabul edildi"
-
-        if relation
-            and relation.state == States.CEASEFIRE then
+        if pending_state == States.CEASEFIRE_PENDING then
             accepted_text =
                 own_name .. " ile " .. target_name ..
-                " arasinda ateskes basladi."
-        elseif relation
-            and relation.state == States.ALLIANCE then
+                " arasinda 12 saatlik ateskes basladi."
+
+        elseif pending_state == States.PEACE_PENDING then
+            accepted_text =
+                own_name .. " ile " .. target_name ..
+                " arasindaki savas baris anlasmasiyla sona erdi."
+
+        elseif pending_state == States.ALLIANCE_PENDING then
             accepted_text =
                 own_name .. " ile " .. target_name ..
                 " ittifak kurdu."
         end
+
+        self:_announce_guild(
+            player.guild_key,
+            accepted_text
+        )
 
         self:_announce_guild(
             target.key,
@@ -586,20 +660,22 @@ function CommandService:on_chat(
     elseif command.action == "REJECT" then
         self:_announce_guild(
             target.key,
-            own_name .. " klani teklifinizi reddetti."
+            own_name ..
+            " klani teklifinizi reddetti."
         )
 
     elseif command.action == "CANCEL" then
         self:_announce_guild(
             target.key,
-            own_name .. " klani teklifini iptal etti."
+            own_name ..
+            " klani teklifini iptal etti."
         )
 
     elseif command.action == "NEUTRALIZE" then
         self:_announce_guild(
             target.key,
             own_name ..
-            " klani iliskiyi tarafsiz duruma getirdi."
+            " klani ittifaktan ayrildi."
         )
     end
 end

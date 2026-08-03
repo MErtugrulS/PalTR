@@ -5,18 +5,22 @@ local Parser = {}
 
 local aliases = {
     ["!test"] = "TEST",
+
     ["!durum"] = "STATUS",
     ["!klanlar"] = "GUILDS",
     ["!iliskiler"] = "RELATIONS",
     ["!yardim"] = "HELP",
-    ["!iptal"] = "CANCEL",
-    ["!tarafsiz"] = "NEUTRALIZE",
-    ["!tarafsız"] = "NEUTRALIZE",
+
     ["!savas"] = "DECLARE_WAR",
     ["!ateskes"] = "CEASEFIRE",
+    ["!ateskesboz"] = "BREAK_CEASEFIRE",
+    ["!baris"] = "PEACE",
+
     ["!ittifak"] = "ALLIANCE",
     ["!kabul"] = "ACCEPT",
-    ["!reddet"] = "REJECT"
+    ["!reddet"] = "REJECT",
+    ["!iptal"] = "CANCEL",
+    ["!tarafsiz"] = "NEUTRALIZE"
 }
 
 function Parser.parse(message)
@@ -29,7 +33,10 @@ function Parser.parse(message)
     local action = aliases[Text.lower_ascii(words[1])]
 
     if not action then
-        return Result.err("NOT_COMMAND", "PalTR komutu degil")
+        return Result.err(
+            "NOT_COMMAND",
+            "PalTR komutu degil"
+        )
     end
 
     return Result.ok({

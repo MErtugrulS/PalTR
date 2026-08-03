@@ -117,6 +117,32 @@ function Diplomacy:request_ceasefire(own, target, actor)
     return result
 end
 
+function Diplomacy:request_peace(own, target, actor)
+    local relation, error_message = self:get(own, target)
+
+    if not relation then
+        return Result.err("RELATION", error_message)
+    end
+
+    local result = Rules.request_peace(
+        relation,
+        own,
+        self.config
+    )
+
+    if result.ok then
+        relation.note = "Baris teklifi: " .. actor
+        self:_save()
+        self:_event(
+            "PEACE_REQUESTED",
+            relation,
+            actor
+        )
+    end
+
+    return result
+end
+
 function Diplomacy:request_alliance(own, target, actor)
     local relation, error_message = self:get(own, target)
 
@@ -157,7 +183,11 @@ function Diplomacy:accept(own, target, actor)
         )
     end
 
-    local result = Rules.accept(relation, own)
+    local result = Rules.accept(
+        relation,
+        own,
+        self.config
+    )
 
     if result.ok then
         relation.note = "Kabul eden: " .. actor
@@ -223,6 +253,28 @@ function Diplomacy:cancel(own, target, actor)
     return result
 end
 
+function Diplomacy:break_ceasefire(own, target, actor)
+    local relation, error_message = self:get(own, target)
+
+    if not relation then
+        return Result.err("RELATION", error_message)
+    end
+
+    local result = Rules.break_ceasefire(relation)
+
+    if result.ok then
+        relation.note = "Ateskesi bozan: " .. actor
+        self:_save()
+        self:_event(
+            "CEASEFIRE_BROKEN",
+            relation,
+            actor
+        )
+    end
+
+    return result
+end
+
 function Diplomacy:return_neutral(own, target, actor)
     local relation, error_message = self:get(own, target)
 
@@ -233,10 +285,10 @@ function Diplomacy:return_neutral(own, target, actor)
     local result = Rules.return_neutral(relation)
 
     if result.ok then
-        relation.note = "Tarafsizliga gecildi: " .. actor
+        relation.note = "Ittifaktan ayrilan: " .. actor
         self:_save()
         self:_event(
-            "RELATION_NEUTRALIZED",
+            "ALLIANCE_ENDED",
             relation,
             actor
         )
@@ -250,7 +302,10 @@ function Diplomacy:tick()
     local events = {}
 
     for _, relation in pairs(self.relations) do
-        local event_name = Rules.tick(relation)
+        local event_name = Rules.tick(
+            relation,
+            self.config
+        )
 
         if event_name then
             changed = changed + 1
@@ -281,6 +336,7 @@ function Diplomacy:relations_for(guild_key)
     for _, relation in pairs(self.relations) do
         if relation.guild_a == guild_key
             or relation.guild_b == guild_key then
+
             table.insert(result, relation)
         end
     end
