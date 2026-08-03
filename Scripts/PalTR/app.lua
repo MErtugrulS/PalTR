@@ -267,6 +267,17 @@ function App:_register_hooks()
         end
     )
 
+    self.hooks:register(
+        "EnemyPlayerDamageRequestPassive",
+        "/Script/Pal.PalPlayerController:DamageReactionComponent_ProcessDamage_ToServer_ToEnemyPlayer",
+        function(context, info, defender)
+            self.damage:on_enemy_player_damage_request(
+                context,
+                info,
+                defender
+            )
+        end
+    )
     if self.config.runtime
         .enable_structure_damage_probe then
 

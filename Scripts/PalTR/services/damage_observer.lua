@@ -325,4 +325,133 @@ function Observer:on_player_damage(context, result_param)
     )
 end
 
+function Observer:on_enemy_player_damage_request(
+    context,
+    info_param,
+    defender_param
+)
+    local controller = UE.unwrap(context)
+    local info = UE.unwrap(info_param)
+    local defender = UE.unwrap(defender_param)
+
+    local controller_path = UE.full_name(controller)
+    local defender_path = UE.full_name(defender)
+
+    local defender_player = nil
+
+    for _, player in pairs(
+        self.registry.runtime_players or {}
+    ) do
+        if player.pawn_path == defender_path then
+            defender_player = player
+            break
+        end
+    end
+
+    local function render_field(field)
+        if info == nil then
+            return ""
+        end
+
+        local ok_value, value = pcall(function()
+            return info[field]
+        end)
+
+        if not ok_value or value == nil then
+            return ""
+        end
+
+        local value_type = type(value)
+
+        if value_type == "string"
+            or value_type == "number"
+            or value_type == "boolean" then
+
+            return tostring(value)
+        end
+
+        local rendered = UE.text(value)
+
+        if rendered ~= "" then
+            return rendered
+        end
+
+        local ok_full, full_name = pcall(function()
+            return UE.full_name(value)
+        end)
+
+        if ok_full
+            and full_name ~= nil
+            and tostring(full_name) ~= "" then
+
+            return tostring(full_name)
+        end
+
+        local ok_guid, guid = pcall(function()
+            return UE.guid(value)
+        end)
+
+        if ok_guid
+            and guid ~= nil
+            and tostring(guid) ~= "" then
+
+            return tostring(guid)
+        end
+
+        return ""
+    end
+
+    local fields = {
+        "Hook=EnemyPlayerDamageRequest",
+        "Controller=" .. controller_path,
+        "Defender=" .. defender_path
+    }
+
+    for _, field in ipairs({
+        "NativeDamageValue",
+        "BasePower",
+        "RedirectDamageValue",
+        "AttackerLevel",
+        "AttackerGroupID",
+        "Attacker",
+        "AttackType",
+        "WeaponType",
+        "NoDamage",
+        "IsPlayerVsPlayerDamage",
+        "WeaponDamageRatePvP",
+        "PvPPlayerToGuildPalDamageRate",
+        "bAttackableToFriend",
+        "IgnoreCanProcessDamage",
+        "bApplyNativeDamageValue",
+        "bRedirectDamage",
+        "bCannotKill"
+    }) do
+        local rendered = render_field(field)
+
+        if rendered ~= "" then
+            table.insert(
+                fields,
+                field .. "=" .. rendered
+            )
+        end
+    end
+
+    FileIO.append(self.path, TSV.encode({
+        Clock.now(),
+        defender_path,
+        defender_player and defender_player.name or "",
+        defender_player and defender_player.guild_key or "",
+        table.concat(fields, ";")
+    }))
+
+    self.logger:info(
+        "Dusman oyuncu hasar istegi kaydedildi: " ..
+        (
+            defender_player
+            and defender_player.name
+            or defender_path
+        )
+    )
+end
+
 return Observer
