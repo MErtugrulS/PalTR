@@ -377,6 +377,10 @@ function StructurePreDamageProbe.register(
                         -- PALTR_STRUCTURE_NATIVE_DAMAGE_ZERO_V1
                         info.NoDamage = true
                         info.NativeDamageValue = 0
+
+                        -- PALTR_STRUCTURE_BASE_POWER_ZERO_V1
+                        info.BasePower = 0
+
                         damage_info_param:set(info)
                     end)
 
