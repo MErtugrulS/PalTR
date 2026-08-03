@@ -90,7 +90,8 @@ function Observer.new(path, registry, logger)
         path = path,
         registry = registry,
         logger = logger,
-        signature_logged = false
+        signature_logged = false,
+        no_damage_probe_used = false
     }, Observer)
 end
 
@@ -346,6 +347,88 @@ function Observer:on_enemy_player_damage_request(
             defender_player = player
             break
         end
+    end
+
+    local no_damage_probe = nil
+
+    local is_player_vs_player = false
+
+    local ok_pvp, pvp_value = pcall(function()
+        return info.IsPlayerVsPlayerDamage
+    end)
+
+    if ok_pvp and pvp_value == true then
+        is_player_vs_player = true
+    end
+
+    if not self.no_damage_probe_used
+        and defender_player ~= nil
+        and info ~= nil
+        and is_player_vs_player then
+
+        self.no_damage_probe_used = true
+
+        local ok_probe, probe_error = pcall(function()
+            local original_no_damage = info.NoDamage
+
+            info.NoDamage = true
+            info_param:set(info)
+
+            no_damage_probe = {
+                applied = true,
+                original_no_damage = original_no_damage,
+                final_no_damage = info.NoDamage
+            }
+        end)
+
+        if not ok_probe then
+            no_damage_probe = {
+                applied = false,
+                error = tostring(probe_error)
+            }
+        end
+
+        local probe_fields = {
+            "Hook=EnemyPlayerNoDamageProbe",
+            "Applied=" ..
+                tostring(no_damage_probe.applied)
+        }
+
+        if no_damage_probe.error ~= nil then
+            table.insert(
+                probe_fields,
+                "Error=" .. no_damage_probe.error
+            )
+        else
+            table.insert(
+                probe_fields,
+                "OriginalNoDamage=" ..
+                    tostring(
+                        no_damage_probe.original_no_damage
+                    )
+            )
+
+            table.insert(
+                probe_fields,
+                "FinalNoDamage=" ..
+                    tostring(
+                        no_damage_probe.final_no_damage
+                    )
+            )
+        end
+
+        FileIO.append(self.path, TSV.encode({
+            Clock.now(),
+            defender_path,
+            defender_player.name or "",
+            defender_player.guild_key or "",
+            table.concat(probe_fields, ";")
+        }))
+
+        self.logger:info(
+            "Dusman oyuncu NoDamage probe uygulandi: " ..
+            (defender_player.name or defender_path)
+        )
     end
 
     local function render_field(field)
