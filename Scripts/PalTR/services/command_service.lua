@@ -364,7 +364,8 @@ function CommandService:on_chat(
     if command.action == "PRIVATE_MESSAGE_PROBE" then
         local sent = PrivateMessenger.send(
             controller,
-            "[FAZ-04] OZEL OYUNCU MESAJ PROBE CALISIYOR",
+            player,
+            "[FAZ-04] HEDEFLI SISTEM SOHBETI CALISIYOR",
             self.logger
         )
 
@@ -375,7 +376,6 @@ function CommandService:on_chat(
 
         return
     end
-
     if command.action == "TEST" then
         self:_respond(
             controller,
