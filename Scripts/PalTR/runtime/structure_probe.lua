@@ -1,3 +1,54 @@
+-- PALTR_GUID_TEXT_V1
+local paltr_raw_tostring = tostring
+
+local function paltr_read_guid_part(value, field_name)
+    local ok, field_value = pcall(function()
+        return value[field_name]
+    end)
+
+    if not ok or field_value == nil then
+        return nil
+    end
+
+    local numeric_value = tonumber(field_value)
+
+    if numeric_value == nil then
+        numeric_value = tonumber(paltr_raw_tostring(field_value))
+    end
+
+    if numeric_value == nil then
+        return nil
+    end
+
+    return numeric_value % 4294967296
+end
+
+local function paltr_value_to_string(value)
+    local raw_value = paltr_raw_tostring(value)
+
+    if type(raw_value) == "string"
+        and raw_value:find("CoreUObject.Guid", 1, true)
+    then
+        local a = paltr_read_guid_part(value, "A")
+        local b = paltr_read_guid_part(value, "B")
+        local c = paltr_read_guid_part(value, "C")
+        local d = paltr_read_guid_part(value, "D")
+
+        if a ~= nil and b ~= nil and c ~= nil and d ~= nil then
+            return string.format(
+                "%08x%08x%08x%08x",
+                a,
+                b,
+                c,
+                d
+            )
+        end
+    end
+
+    return raw_value
+end
+
+local tostring = paltr_value_to_string
 local UE = require("PalTR.runtime.ue")
 local FileIO = require("PalTR.storage.file_io")
 local TSV = require("PalTR.storage.tsv")
