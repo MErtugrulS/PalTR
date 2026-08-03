@@ -214,18 +214,10 @@ function PrivateMessenger.send(
         end
     end
 
-    local function queue_on_game_thread()
-        if type(ExecuteInGameThread) == "function" then
-            ExecuteInGameThread(send_on_game_thread)
-        else
-            send_on_game_thread()
-        end
-    end
-
-    if type(ExecuteWithDelay) == "function" then
-        ExecuteWithDelay(150, queue_on_game_thread)
+    if type(ExecuteInGameThread) == "function" then
+        ExecuteInGameThread(send_on_game_thread)
     else
-        queue_on_game_thread()
+        send_on_game_thread()
     end
 
     write_log(
