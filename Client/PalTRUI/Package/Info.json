@@ -1,0 +1,19 @@
+{
+    "ModName":  "PalTR UI",
+    "PackageName":  "PalTRUI",
+    "Version":  "0.1.0-ui-faz-00",
+    "DebugMode":  true,
+    "MinRevision":  82182,
+    "Author":  "Rikoc Makina",
+    "Dependencies":  [
+                         "UE4SSExperimentalPW"
+                     ],
+    "InstallRule":  [
+                        {
+                            "Type":  "Lua",
+                            "Targets":  [
+                                            "./Scripts"
+                                        ]
+                        }
+                    ]
+}
