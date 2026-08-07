@@ -13,6 +13,8 @@ local StatusService = require("PalTR.services.status_service")
 local CommandService = require("PalTR.services.command_service")
 local DamageObserver = require("PalTR.services.damage_observer")
 local DamagePolicy = require("PalTR.services.damage_policy")
+local UIActionService = require("PalTR.services.ui_action_service")
+local UISnapshotService = require("PalTR.services.ui_snapshot_service")
 local Scheduler = require("PalTR.services.scheduler")
 
 local App = {}
@@ -43,6 +45,13 @@ function App.new(config)
         diplomacy
     )
 
+    local ui_actions = UIActionService.new(config)
+    local ui_snapshot = UISnapshotService.new(
+        registry,
+        diplomacy,
+        ui_actions
+    )
+
     return setmetatable({
         config = config,
         paths = paths,
@@ -52,6 +61,8 @@ function App.new(config)
         diplomacy = diplomacy,
         status = status,
         damage_policy = damage_policy,
+        ui_actions = ui_actions,
+        ui_snapshot = ui_snapshot,
 
         commands = CommandService.new(
             paths,
