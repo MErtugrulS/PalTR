@@ -3,8 +3,8 @@ local Clock = require("PalTR.core.clock")
 local Snapshot = {}
 Snapshot.__index = Snapshot
 
-function Snapshot.new(registry, diplomacy)
-    return setmetatable({ registry = registry, diplomacy = diplomacy }, Snapshot)
+function Snapshot.new(registry, diplomacy, actions)
+    return setmetatable({ registry = registry, diplomacy = diplomacy, actions = actions }, Snapshot)
 end
 
 local function guild_name(registry, key)
@@ -58,6 +58,7 @@ function Snapshot:build(player)
 
     for _, relation in ipairs(self.diplomacy:relations_for(own)) do
         local other = relation.guild_a == own and relation.guild_b or relation.guild_a
+        local action_state = self.actions and self.actions:for_relation(player, relation) or { can_manage = false, reason = "", actions = {} }
         table.insert(result.relations, {
             guild_key = other,
             guild_name = guild_name(self.registry, other),
@@ -68,7 +69,10 @@ function Snapshot:build(player)
             proposal_direction = proposal_direction(relation, own),
             active_at = relation.active_at or 0,
             expires_at = relation.expires_at or 0,
-            note = relation.note or ""
+            note = relation.note or "",
+            can_manage = action_state.can_manage,
+            action_reason = action_state.reason,
+            actions = action_state.actions
         })
     end
 
