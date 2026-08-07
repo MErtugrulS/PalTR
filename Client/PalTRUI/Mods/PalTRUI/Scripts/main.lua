@@ -1,4 +1,5 @@
 local PanelState = require("panel_state")
+local UMGProbe = require("umg_probe")
 
 local panel = PanelState.new()
 
@@ -18,5 +19,17 @@ RegisterKeyBind(Key.F6, function()
         ExecuteInGameThread(toggle_panel)
     else
         toggle_panel()
+    end
+end)
+
+
+RegisterKeyBind(Key.F7, function()
+    local function run_probe()
+        UMGProbe.scan()
+    end
+    if type(ExecuteInGameThread) == "function" then
+        ExecuteInGameThread(run_probe)
+    else
+        run_probe()
     end
 end)
