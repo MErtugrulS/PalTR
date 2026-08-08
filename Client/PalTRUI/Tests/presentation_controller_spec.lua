@@ -46,7 +46,15 @@ local renderer = {
     end
 }
 
-local controller = PresentationController.new(renderer)
+local dispatched = {}
+local action_sink = {
+    dispatch = function(_, intent)
+        table.insert(dispatched, intent)
+        return true, intent
+    end
+}
+
+local controller = PresentationController.new(renderer, action_sink)
 equal(controller:model().open, false, "initial panel state")
 equal(#rendered, 1, "initial model rendered")
 equal(rendered[1], controller:model(), "renderer receives view model")
@@ -71,6 +79,21 @@ equal(
     "server action preserved"
 )
 
+local action_dispatched, intent = controller:request_action("DECLARE_WAR")
+equal(action_dispatched, true, "offered action dispatched")
+equal(#dispatched, 1, "single action intent dispatched")
+equal(intent, dispatched[1], "action sink result preserved")
+equal(intent.guild_key, "guild-other", "selected guild dispatched")
+
+local rejected, rejection = controller:request_action("PEACE")
+equal(rejected, false, "unoffered action not dispatched")
+equal(#dispatched, 1, "rejected action does not reach sink")
+equal(
+    rejection,
+    "Aksiyon guncel sunucu snapshotinda sunulmuyor.",
+    "rejection returned"
+)
+
 local invalid_accepted, invalid = controller:apply_snapshot({})
 equal(invalid_accepted, false, "invalid snapshot rejected")
 equal(invalid.active_tab, "DIPLOMACY", "presentation state preserved")
@@ -78,5 +101,14 @@ equal(rendered[#rendered], invalid, "error model rendered")
 
 local without_renderer = PresentationController.new()
 equal(without_renderer:model().active_tab, "CLAN", "renderer is optional")
+
+local transport_missing, transport_error =
+    without_renderer:request_action("DECLARE_WAR")
+equal(transport_missing, false, "missing transport rejected")
+equal(
+    transport_error,
+    "Diplomasi kaydi secilmedi.",
+    "model validation precedes transport"
+)
 
 print("PALTR_UI_PRESENTATION_CONTROLLER_TEST_OK")

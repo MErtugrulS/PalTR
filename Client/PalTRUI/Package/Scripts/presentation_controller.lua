@@ -1,10 +1,17 @@
 local PanelState = require("panel_state")
+local ActionIntent = require("action_intent")
 
 local PresentationController = {}
 PresentationController.__index = PresentationController
 
 local null_renderer = {
     render = function() end
+}
+
+local null_action_sink = {
+    dispatch = function()
+        return false, "Client-server UI transportu hazir degil."
+    end
 }
 
 local function renderer_or_null(renderer)
@@ -15,10 +22,19 @@ local function renderer_or_null(renderer)
     return null_renderer
 end
 
-function PresentationController.new(renderer)
+local function action_sink_or_null(action_sink)
+    if type(action_sink) == "table"
+        and type(action_sink.dispatch) == "function" then
+        return action_sink
+    end
+    return null_action_sink
+end
+
+function PresentationController.new(renderer, action_sink)
     local controller = setmetatable({
         panel = PanelState.new(),
-        renderer = renderer_or_null(renderer)
+        renderer = renderer_or_null(renderer),
+        action_sink = action_sink_or_null(action_sink)
     }, PresentationController)
     controller:_render()
     return controller
@@ -54,6 +70,17 @@ function PresentationController:apply_snapshot(snapshot)
     local accepted = self.panel:apply_snapshot(snapshot)
     self:_render()
     return accepted, self:model()
+end
+
+function PresentationController:request_action(action_id)
+    local intent, error_message = ActionIntent.build(
+        self:model(),
+        action_id
+    )
+    if intent == nil then
+        return false, error_message
+    end
+    return self.action_sink:dispatch(intent)
 end
 
 return PresentationController
