@@ -378,10 +378,33 @@ function CommandService:on_chat(
         return
     end
     if command.action == "UI_TRANSPORT_PROBE" then
+        local requested_size = tonumber(command.target)
+        local kind = "PROBE"
+        local request_id = "manual"
+        local payload = "PalTR Türkçe | yüzde % | satır\niki"
+
+        if requested_size ~= nil then
+            requested_size = math.floor(requested_size)
+            if requested_size < 1 or requested_size > 2048 then
+                self:_respond(
+                    controller,
+                    player,
+                    command.raw,
+                    false,
+                    "UI probe boyutu 1-2048 arasinda olmali"
+                )
+                return
+            end
+
+            kind = "SIZE_PROBE"
+            request_id = tostring(requested_size)
+            payload = string.rep("A", requested_size)
+        end
+
         local frame = UIWire.encode(
-            "PROBE",
-            "manual",
-            "PalTR Türkçe | yüzde % | satır\niki"
+            kind,
+            request_id,
+            payload
         )
         local sent = PrivateMessenger.send(
             controller,

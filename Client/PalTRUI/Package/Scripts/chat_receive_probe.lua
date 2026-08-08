@@ -82,6 +82,18 @@ local function on_received_chat(_context, message_param)
             and frame.request_id == "manual"
             and frame.payload == WIRE_PROBE_PAYLOAD then
             print("[PalTRUI][CHAT] WIRE_PROBE_OK\n")
+        elseif frame.kind == "SIZE_PROBE" then
+            local expected_size = tonumber(frame.request_id)
+            local size_matches = expected_size ~= nil
+                and #frame.payload == expected_size
+                and frame.payload == string.rep("A", expected_size)
+
+            print(string.format(
+                "[PalTRUI][CHAT] WIRE_SIZE_PROBE | expected=%s | actual=%d | ok=%s\n",
+                tostring(expected_size),
+                #frame.payload,
+                tostring(size_matches)
+            ))
         end
     end
 end
