@@ -1,4 +1,5 @@
 local Probe = {}
+local UMGContext = require("umg_context")
 
 local function unwrap(value)
     if value == nil then return nil end
@@ -80,6 +81,7 @@ local function dump_hud_details()
 end
 
 function Probe.scan()
+    local context = UMGContext.discover()
     local result = {
         widgets = collect("UserWidget", 120),
         widget_classes = collect("WidgetBlueprintGeneratedClass", 120),
@@ -88,7 +90,8 @@ function Probe.scan()
         hud_services = collect("PalHUDService", 20),
         hud_layouts = collect("PalUIHUDLayoutBase", 20),
         pal_widgets = collect("PalUserWidget", 120),
-        stackable_widgets = collect("PalUserWidgetStackableUI", 120)
+        stackable_widgets = collect("PalUserWidgetStackableUI", 120),
+        context = context
     }
 
     dump_group("USER_WIDGET", result.widgets)
@@ -100,6 +103,13 @@ function Probe.scan()
     dump_group("PAL_WIDGET", result.pal_widgets)
     dump_group("STACKABLE_WIDGET", result.stackable_widgets)
     dump_hud_details()
+    print(string.format(
+        "[PalTRUI][UMG] PAL_CONTEXT | ready=%s | hud=%s | service=%s | layout=%s\n",
+        tostring(context.ready),
+        context.names.hud,
+        context.names.service,
+        context.names.layout
+    ))
 
     print("[PalTRUI][UMG] PALTR_UI_UMG_PROBE_OK\n")
     return result
