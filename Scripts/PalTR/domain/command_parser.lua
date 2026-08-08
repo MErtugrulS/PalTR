@@ -6,6 +6,7 @@ local Parser = {}
 local aliases = {
     ["!test"] = "TEST",
     ["!pmprobe"] = "PRIVATE_MESSAGE_PROBE",
+    ["!uiprobe"] = "UI_TRANSPORT_PROBE",
 
     ["!durum"] = "STATUS",
     ["!klanlar"] = "GUILDS",

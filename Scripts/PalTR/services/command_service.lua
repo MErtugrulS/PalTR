@@ -3,6 +3,7 @@ local States = require("PalTR.domain.states")
 local FileIO = require("PalTR.storage.file_io")
 local TSV = require("PalTR.storage.tsv")
 local Clock = require("PalTR.core.clock")
+local UIWire = require("PalTR.core.ui_wire")
 local UE = require("PalTR.runtime.ue")
 local Announcer = require("PalTR.runtime.announcer")
 local PrivateMessenger = require("PalTR.runtime.private_messenger")
@@ -374,6 +375,25 @@ function CommandService:on_chat(
             tostring(sent)
         )
 
+        return
+    end
+    if command.action == "UI_TRANSPORT_PROBE" then
+        local frame = UIWire.encode(
+            "PROBE",
+            "manual",
+            "PalTR Türkçe | yüzde % | satır\niki"
+        )
+        local sent = PrivateMessenger.send(
+            controller,
+            player,
+            frame,
+            self.logger
+        )
+
+        self.logger:info(
+            "UI_TRANSPORT_PROBE_KOMUTU | sent=" ..
+            tostring(sent)
+        )
         return
     end
     if command.action == "TEST" then

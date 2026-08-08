@@ -1,3 +1,5 @@
+local UIWire = require("ui_wire")
+
 local Probe = {
     registered = false,
     pre_hook_id = nil,
@@ -7,6 +9,8 @@ local Probe = {
 local HOOK_PATH = "/Script/Pal.PalUIChat:OnReceivedChat"
 local PRIVATE_PROBE_MARKER =
     "[FAZ-04] HEDEFLI SISTEM SOHBETI CALISIYOR"
+local WIRE_PROBE_PAYLOAD =
+    "PalTR Türkçe | yüzde % | satır\niki"
 
 local function unwrap(value)
     if value == nil then return nil end
@@ -64,6 +68,22 @@ local function on_received_chat(_context, message_param)
         #message,
         tostring(marker_seen)
     ))
+
+    local frame = UIWire.decode(message)
+    if frame ~= nil then
+        print(string.format(
+            "[PalTRUI][CHAT] WIRE_FRAME | kind=%s | request_id=%s | payload_length=%d\n",
+            frame.kind,
+            frame.request_id,
+            #frame.payload
+        ))
+
+        if frame.kind == "PROBE"
+            and frame.request_id == "manual"
+            and frame.payload == WIRE_PROBE_PAYLOAD then
+            print("[PalTRUI][CHAT] WIRE_PROBE_OK\n")
+        end
+    end
 end
 
 function Probe.register()
