@@ -1,5 +1,6 @@
 local PanelState = require("panel_state")
 local UMGProbe = require("umg_probe")
+local ChatReceiveProbe = require("chat_receive_probe")
 
 local panel = PanelState.new()
 
@@ -32,4 +33,8 @@ RegisterKeyBind(Key.F7, function()
     else
         run_probe()
     end
+end)
+
+RegisterKeyBind(Key.F8, function()
+    ChatReceiveProbe.register()
 end)
