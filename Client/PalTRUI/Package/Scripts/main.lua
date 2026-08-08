@@ -1,17 +1,17 @@
-local PanelState = require("panel_state")
+local PresentationController = require("presentation_controller")
 local UMGProbe = require("umg_probe")
 local ChatReceiveProbe = require("chat_receive_probe")
 
-local panel = PanelState.new()
+local presentation = PresentationController.new()
 
 print("[PalTRUI] yuklendi\n")
 
 local function toggle_panel()
-    local opened = panel:toggle()
+    local model = presentation:toggle()
     print(string.format(
         "[PalTRUI] PALTR_UI_F6_OK | open=%s | tab=%s\n",
-        tostring(opened),
-        tostring(panel.active_tab)
+        tostring(model.open),
+        tostring(model.active_tab)
     ))
 end
 
