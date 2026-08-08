@@ -24,6 +24,11 @@ local function text(value)
     return tostring(value)
 end
 
+local function table_or_empty(value)
+    if type(value) == "table" then return value end
+    return {}
+end
+
 local function label_for(labels, value)
     local id = text(value)
     return labels[id] or id
@@ -32,7 +37,8 @@ end
 local function copy_actions(source)
     local result = {}
 
-    for _, action in ipairs(source or {}) do
+    for _, action in ipairs(table_or_empty(source)) do
+        action = table_or_empty(action)
         table.insert(result, {
             id = text(action.id),
             label = text(action.label)
@@ -43,6 +49,7 @@ local function copy_actions(source)
 end
 
 local function member_model(member)
+    member = table_or_empty(member)
     return {
         key = text(member.key),
         name = text(member.name),
@@ -53,6 +60,7 @@ local function member_model(member)
 end
 
 local function relation_model(relation, selected_guild)
+    relation = table_or_empty(relation)
     local state = text(relation.state)
     local direction = text(relation.proposal_direction)
 
@@ -81,10 +89,12 @@ local function relation_model(relation, selected_guild)
 end
 
 local function clan_view(snapshot)
+    snapshot = table_or_empty(snapshot)
+    local guild = table_or_empty(snapshot.guild)
     local members = {}
     local online_count = 0
 
-    for _, member in ipairs(snapshot.members or {}) do
+    for _, member in ipairs(table_or_empty(snapshot.members)) do
         local item = member_model(member)
         table.insert(members, item)
         if item.online then online_count = online_count + 1 end
@@ -92,8 +102,8 @@ local function clan_view(snapshot)
 
     return {
         guild = {
-            key = text(snapshot.guild and snapshot.guild.key),
-            name = text(snapshot.guild and snapshot.guild.name)
+            key = text(guild.key),
+            name = text(guild.name)
         },
         members = members,
         member_count = #members,
@@ -108,7 +118,7 @@ local function relation_views(snapshot, selected_guild)
     local alliance = {}
     local selected_relation = nil
 
-    for _, relation in ipairs(snapshot.relations or {}) do
+    for _, relation in ipairs(table_or_empty(snapshot.relations)) do
         local item = relation_model(relation, selected_guild)
         table.insert(diplomacy, item)
 
@@ -149,8 +159,9 @@ local function tab_models(active_tab, counts)
 end
 
 function ViewModel.build(snapshot, panel)
-    snapshot = type(snapshot) == "table" and snapshot or {}
-    panel = type(panel) == "table" and panel or {}
+    snapshot = table_or_empty(snapshot)
+    panel = table_or_empty(panel)
+    local player = table_or_empty(snapshot.player)
 
     local active_tab = text(panel.active_tab)
     if active_tab == "" then active_tab = Contract.DEFAULT_TAB end
@@ -179,10 +190,10 @@ function ViewModel.build(snapshot, panel)
         selected_guild = selected_guild,
         error = text(panel.error),
         player = {
-            name = text(snapshot.player and snapshot.player.name),
-            guild_key = text(snapshot.player and snapshot.player.guild_key),
-            role = tonumber(snapshot.player and snapshot.player.role) or -1,
-            is_master = snapshot.player and snapshot.player.is_master == true or false
+            name = text(player.name),
+            guild_key = text(player.guild_key),
+            role = tonumber(player.role) or -1,
+            is_master = player.is_master == true
         },
         tabs = tab_models(active_tab, {
             CLAN = clan.member_count,

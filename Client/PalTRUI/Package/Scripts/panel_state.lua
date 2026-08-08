@@ -21,6 +21,22 @@ function PanelState:_rebuild_view_model()
     self.view_model = ViewModel.build(self.snapshot, self)
 end
 
+local function relation_exists(relations, guild_key)
+    for _, relation in ipairs(relations or {}) do
+        if type(relation) == "table"
+            and tostring(relation.guild_key or "") == guild_key then
+            return true
+        end
+    end
+    return false
+end
+
+local function first_relation_key(relations)
+    local relation = relations and relations[1]
+    if type(relation) ~= "table" then return "" end
+    return tostring(relation.guild_key or "")
+end
+
 function PanelState:toggle()
     self.open = not self.open
     self:_rebuild_view_model()
@@ -49,8 +65,8 @@ function PanelState:apply_snapshot(snapshot)
     end
     self.snapshot = snapshot
     self.error = ""
-    if self.selected_guild == "" and snapshot.relations and #snapshot.relations > 0 then
-        self.selected_guild = snapshot.relations[1].guild_key or ""
+    if not relation_exists(snapshot.relations, self.selected_guild) then
+        self.selected_guild = first_relation_key(snapshot.relations)
     end
     self:_rebuild_view_model()
     return true

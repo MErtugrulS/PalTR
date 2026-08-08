@@ -11,6 +11,10 @@ Contract.TABS = {
 function Contract.accepts(snapshot)
     return type(snapshot) == "table"
         and tonumber(snapshot.schema_version) == Contract.SCHEMA_VERSION
+        and type(snapshot.player) == "table"
+        and type(snapshot.guild) == "table"
+        and type(snapshot.members) == "table"
+        and type(snapshot.relations) == "table"
 end
 
 return Contract
