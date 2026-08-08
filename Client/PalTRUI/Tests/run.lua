@@ -7,4 +7,5 @@ package.path = directory .. "/../Package/Scripts/?.lua;" .. package.path
 dofile(directory .. "/view_model_spec.lua")
 dofile(directory .. "/action_intent_spec.lua")
 dofile(directory .. "/presentation_controller_spec.lua")
+dofile(directory .. "/renderer_host_spec.lua")
 dofile(directory .. "/ui_wire_spec.lua")
