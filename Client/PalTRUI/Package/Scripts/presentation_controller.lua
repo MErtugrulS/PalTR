@@ -72,6 +72,30 @@ function PresentationController:apply_snapshot(snapshot)
     return accepted, self:model()
 end
 
+function PresentationController:set_chat_available(available)
+    self.panel:set_chat_available(available)
+    self:_render()
+    return self:model()
+end
+
+function PresentationController:replace_chat(messages)
+    local accepted = self.panel:replace_chat(messages)
+    if accepted then self:_render() end
+    return accepted, self:model()
+end
+
+function PresentationController:append_chat(message)
+    local accepted = self.panel:append_chat(message)
+    if accepted then self:_render() end
+    return accepted, self:model()
+end
+
+function PresentationController:clear_chat()
+    self.panel:clear_chat()
+    self:_render()
+    return self:model()
+end
+
 function PresentationController:request_action(action_id)
     local intent, error_message = ActionIntent.build(
         self:model(),

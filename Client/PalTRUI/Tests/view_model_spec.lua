@@ -76,6 +76,7 @@ local relations = {
 local panel = PanelState.new()
 equal(panel.view_model.active_tab, "CLAN", "default tab")
 equal(panel.view_model.views.CHAT.available, false, "chat transport")
+equal(panel.view_model.views.CHAT.message_count, 0, "empty chat")
 
 equal(panel:apply_snapshot(snapshot(relations)), true, "valid snapshot")
 equal(panel.selected_guild, "guild-alliance", "default relation selection")
@@ -119,6 +120,28 @@ equal(
     panel.view_model.views.DIPLOMACY.relations[1].guild.key,
     "",
     "malformed relation has safe defaults"
+)
+
+panel:set_chat_available(true)
+equal(panel:append_chat({
+    id = "message-1",
+    sender = "Ada",
+    text = "Merhaba",
+    timestamp = 12346,
+    kind = "GUILD",
+    is_system = false
+}), true, "chat message accepted")
+equal(panel.view_model.views.CHAT.available, true, "chat available")
+equal(panel.view_model.views.CHAT.message_count, 1, "chat count")
+equal(panel.view_model.views.CHAT.messages[1].text, "Merhaba", "chat text")
+equal(panel.view_model.tabs[4].badge_count, 1, "chat badge")
+
+panel:clear_chat()
+equal(panel.view_model.views.CHAT.empty, true, "chat cleared")
+equal(
+    panel.view_model.views.CHAT.empty_message,
+    "Henüz sohbet mesajı yok.",
+    "available chat empty message"
 )
 
 print("PALTR_UI_VIEW_MODEL_TEST_OK")

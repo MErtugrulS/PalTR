@@ -94,6 +94,25 @@ equal(
     "rejection returned"
 )
 
+local chat_model = controller:set_chat_available(true)
+equal(chat_model.views.CHAT.available, true, "chat availability rendered")
+
+local chat_accepted, chat_populated = controller:append_chat({
+    id = "message-1",
+    sender = "Ada",
+    text = "Merhaba",
+    timestamp = 12346,
+    kind = "GUILD"
+})
+equal(chat_accepted, true, "chat append accepted")
+equal(chat_populated.views.CHAT.message_count, 1, "chat rendered")
+equal(rendered[#rendered], chat_populated, "chat model sent to renderer")
+
+local invalid_chat, unchanged_chat = controller:append_chat("invalid")
+equal(invalid_chat, false, "invalid chat rejected")
+equal(unchanged_chat.views.CHAT.message_count, 1, "chat preserved")
+equal(rendered[#rendered], chat_populated, "invalid chat not rendered")
+
 local invalid_accepted, invalid = controller:apply_snapshot({})
 equal(invalid_accepted, false, "invalid snapshot rejected")
 equal(invalid.active_tab, "DIPLOMACY", "presentation state preserved")

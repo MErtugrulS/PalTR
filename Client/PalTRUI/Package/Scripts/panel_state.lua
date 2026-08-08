@@ -1,5 +1,6 @@
 local Contract = require("contract")
 local ViewModel = require("view_model")
+local ChatState = require("chat_state")
 
 local PanelState = {}
 PanelState.__index = PanelState
@@ -10,6 +11,7 @@ function PanelState.new()
         active_tab = Contract.DEFAULT_TAB,
         selected_guild = "",
         snapshot = nil,
+        chat = ChatState.new(),
         view_model = nil,
         error = ""
     }, PanelState)
@@ -74,6 +76,28 @@ end
 
 function PanelState:select_guild(guild_key)
     self.selected_guild = tostring(guild_key or "")
+    self:_rebuild_view_model()
+end
+
+function PanelState:set_chat_available(available)
+    self.chat:set_available(available)
+    self:_rebuild_view_model()
+end
+
+function PanelState:replace_chat(messages)
+    local accepted = self.chat:replace(messages)
+    if accepted then self:_rebuild_view_model() end
+    return accepted
+end
+
+function PanelState:append_chat(message)
+    local accepted = self.chat:append(message)
+    if accepted then self:_rebuild_view_model() end
+    return accepted
+end
+
+function PanelState:clear_chat()
+    self.chat:clear()
     self:_rebuild_view_model()
 end
 

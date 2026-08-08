@@ -143,6 +143,40 @@ local function relation_views(snapshot, selected_guild)
     }
 end
 
+local function chat_view(source)
+    source = table_or_empty(source)
+    local messages = {}
+
+    for _, message in ipairs(table_or_empty(source.messages)) do
+        message = table_or_empty(message)
+        table.insert(messages, {
+            id = text(message.id),
+            sender = text(message.sender),
+            text = text(message.text),
+            timestamp = tonumber(message.timestamp) or 0,
+            kind = text(message.kind),
+            is_system = message.is_system == true
+        })
+    end
+
+    local available = source.available == true
+    local empty = #messages == 0
+    local empty_message = ""
+    if empty then
+        empty_message = available
+            and "Henüz sohbet mesajı yok."
+            or "Sohbet transport bağlantısı henüz hazır değil."
+    end
+
+    return {
+        available = available,
+        messages = messages,
+        message_count = #messages,
+        empty = empty,
+        empty_message = empty_message
+    }
+end
+
 local function tab_models(active_tab, counts)
     local result = {}
 
@@ -169,12 +203,7 @@ function ViewModel.build(snapshot, panel)
     local selected_guild = text(panel.selected_guild)
     local clan = clan_view(snapshot)
     local relation_data = relation_views(snapshot, selected_guild)
-    local chat = {
-        available = false,
-        messages = {},
-        empty = true,
-        empty_message = "Sohbet transport bağlantısı henüz hazır değil."
-    }
+    local chat = chat_view(panel.chat)
     local views = {
         CLAN = clan,
         DIPLOMACY = relation_data.diplomacy,
@@ -199,7 +228,7 @@ function ViewModel.build(snapshot, panel)
             CLAN = clan.member_count,
             DIPLOMACY = #relation_data.diplomacy.relations,
             ALLIANCE = #relation_data.alliance.relations,
-            CHAT = 0
+            CHAT = chat.message_count
         }),
         views = views,
         content = views[active_tab] or views[Contract.DEFAULT_TAB]
