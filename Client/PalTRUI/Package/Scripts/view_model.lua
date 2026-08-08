@@ -117,6 +117,7 @@ local function relation_views(snapshot, selected_guild)
     local diplomacy = {}
     local alliance = {}
     local selected_relation = nil
+    local selected_alliance = nil
 
     for _, relation in ipairs(table_or_empty(snapshot.relations)) do
         local item = relation_model(relation, selected_guild)
@@ -124,7 +125,9 @@ local function relation_views(snapshot, selected_guild)
 
         if item.selected then selected_relation = item end
         if item.status.id == "ALLIANCE" or item.status.id == "ALLIANCE_PENDING" then
-            table.insert(alliance, relation_model(relation, selected_guild))
+            local alliance_item = relation_model(relation, selected_guild)
+            table.insert(alliance, alliance_item)
+            if alliance_item.selected then selected_alliance = alliance_item end
         end
     end
 
@@ -137,6 +140,7 @@ local function relation_views(snapshot, selected_guild)
         },
         alliance = {
             relations = alliance,
+            selected_relation = selected_alliance,
             empty = #alliance == 0,
             empty_message = #alliance == 0 and "Aktif veya bekleyen ittifak bulunamadı." or ""
         }

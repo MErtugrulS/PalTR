@@ -23,20 +23,45 @@ function PanelState:_rebuild_view_model()
     self.view_model = ViewModel.build(self.snapshot, self)
 end
 
-local function relation_exists(relations, guild_key)
+local function relation_matches_tab(relation, tab_id)
+    if tab_id ~= "ALLIANCE" then return true end
+    local state = tostring(relation.state or "")
+    return state == "ALLIANCE" or state == "ALLIANCE_PENDING"
+end
+
+local function relation_exists(relations, guild_key, tab_id)
     for _, relation in ipairs(relations or {}) do
         if type(relation) == "table"
-            and tostring(relation.guild_key or "") == guild_key then
+            and tostring(relation.guild_key or "") == guild_key
+            and relation_matches_tab(relation, tab_id) then
             return true
         end
     end
     return false
 end
 
-local function first_relation_key(relations)
-    local relation = relations and relations[1]
-    if type(relation) ~= "table" then return "" end
-    return tostring(relation.guild_key or "")
+local function first_relation_key(relations, tab_id)
+    for _, relation in ipairs(relations or {}) do
+        if type(relation) == "table"
+            and relation_matches_tab(relation, tab_id) then
+            return tostring(relation.guild_key or "")
+        end
+    end
+    return ""
+end
+
+function PanelState:_normalize_relation_selection()
+    local relations = self.snapshot and self.snapshot.relations or {}
+    if not relation_exists(
+        relations,
+        self.selected_guild,
+        self.active_tab
+    ) then
+        self.selected_guild = first_relation_key(
+            relations,
+            self.active_tab
+        )
+    end
 end
 
 function PanelState:toggle()
@@ -50,6 +75,7 @@ function PanelState:set_tab(tab_id)
         if tab.id == tab_id then
             self.active_tab = tab_id
             self.error = ""
+            self:_normalize_relation_selection()
             self:_rebuild_view_model()
             return true
         end
@@ -67,16 +93,23 @@ function PanelState:apply_snapshot(snapshot)
     end
     self.snapshot = snapshot
     self.error = ""
-    if not relation_exists(snapshot.relations, self.selected_guild) then
-        self.selected_guild = first_relation_key(snapshot.relations)
-    end
+    self:_normalize_relation_selection()
     self:_rebuild_view_model()
     return true
 end
 
 function PanelState:select_guild(guild_key)
-    self.selected_guild = tostring(guild_key or "")
+    local requested = tostring(guild_key or "")
+    local relations = self.snapshot and self.snapshot.relations or {}
+    if not relation_exists(relations, requested, self.active_tab) then
+        self.error = "Seçilen klan bu sekmede bulunamadı."
+        self:_rebuild_view_model()
+        return false
+    end
+    self.selected_guild = requested
+    self.error = ""
     self:_rebuild_view_model()
+    return true
 end
 
 function PanelState:set_chat_available(available)

@@ -105,6 +105,19 @@ equal(
     "selected relation"
 )
 
+equal(panel:set_tab("ALLIANCE"), true, "alliance tab accepted")
+equal(panel.selected_guild, "guild-alliance", "alliance selection normalized")
+equal(
+    panel.view_model.views.ALLIANCE.selected_relation.guild.key,
+    "guild-alliance",
+    "alliance selected relation"
+)
+equal(panel:select_guild("guild-war"), false, "hidden relation rejected")
+equal(panel.selected_guild, "guild-alliance", "alliance selection preserved")
+
+equal(panel:set_tab("DIPLOMACY"), true, "diplomacy tab restored")
+equal(panel:select_guild("guild-war"), true, "visible relation selected")
+
 panel:apply_snapshot(snapshot({ relations[1] }))
 equal(panel.selected_guild, "guild-alliance", "stale selection is replaced")
 
