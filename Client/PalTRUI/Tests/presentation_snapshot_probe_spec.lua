@@ -25,6 +25,8 @@ equal(model.views.DIPLOMACY.action_controls.WarRequestButton.enabled,
 equal(model.views.DIPLOMACY.action_controls.AllianceRequestButton.enabled,
     true, "probe alliance action enabled")
 equal(model.views.ALLIANCE.empty, false, "probe alliance populated")
+equal(PresentationSnapshotProbe.is_active(model), true, "probe model active")
+equal(PresentationSnapshotProbe.is_active({}), false, "normal model inactive")
 
 local cycled, cycled_model, cycle_error =
     PresentationSnapshotProbe.select_next(PresentationController.new())

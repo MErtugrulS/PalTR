@@ -97,8 +97,17 @@ RegisterKeyBind(Key.F9, function()
 end)
 
 local function apply_presentation_snapshot_probe()
-    local applied, model, probe_error =
-        PresentationSnapshotProbe.apply(presentation)
+    local current_model = presentation:model()
+    local mode = PresentationSnapshotProbe.is_active(current_model)
+        and "cycle" or "apply"
+    local applied, model, probe_error
+    if mode == "cycle" then
+        applied, model, probe_error =
+            PresentationSnapshotProbe.select_next(presentation)
+    else
+        applied, model, probe_error =
+            PresentationSnapshotProbe.apply(presentation)
+    end
     if applied ~= true then
         print(string.format(
             "[PalTRUI] PALTR_UI_F10_ERROR | error=%s\n",
@@ -107,9 +116,10 @@ local function apply_presentation_snapshot_probe()
         return
     end
     print(string.format(
-        "[PalTRUI] PALTR_UI_F10_OK | tab=%s | guild=%s | probe=true\n",
+        "[PalTRUI] PALTR_UI_F10_OK | tab=%s | guild=%s | mode=%s | probe=true\n",
         tostring(model.active_tab),
-        tostring(model.selected_guild)
+        tostring(model.selected_guild),
+        mode
     ))
 end
 
@@ -119,32 +129,6 @@ if Key.F10 ~= nil then
             ExecuteInGameThread(apply_presentation_snapshot_probe)
         else
             apply_presentation_snapshot_probe()
-        end
-    end)
-end
-
-local function cycle_probe_relation()
-    local selected, model, selection_error =
-        PresentationSnapshotProbe.select_next(presentation)
-    if selected ~= true then
-        print(string.format(
-            "[PalTRUI] PALTR_UI_F11_ERROR | error=%s\n",
-            tostring(selection_error or "bilinmeyen secim probe hatasi")
-        ))
-        return
-    end
-    print(string.format(
-        "[PalTRUI] PALTR_UI_F11_OK | guild=%s | probe=true\n",
-        tostring(model.selected_guild)
-    ))
-end
-
-if Key.F11 ~= nil then
-    RegisterKeyBind(Key.F11, function()
-        if type(ExecuteInGameThread) == "function" then
-            ExecuteInGameThread(cycle_probe_relation)
-        else
-            cycle_probe_relation()
         end
     end)
 end

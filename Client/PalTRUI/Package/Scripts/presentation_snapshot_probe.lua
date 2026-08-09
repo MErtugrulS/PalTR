@@ -1,5 +1,12 @@
 local PresentationSnapshotProbe = {}
 
+function PresentationSnapshotProbe.is_active(model)
+    local player = type(model) == "table" and model.player or nil
+    return type(player) == "table"
+        and tostring(player.guild_key or "") == "probe-own"
+        and tonumber(model.generated_at) == 1000
+end
+
 function PresentationSnapshotProbe.build()
     return {
         schema_version = 1,
