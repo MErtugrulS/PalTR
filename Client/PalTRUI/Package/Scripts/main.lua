@@ -4,6 +4,7 @@ local UMGWidgetPort = require("umg_widget_port")
 local UMGProbe = require("umg_probe")
 local ChatReceiveProbe = require("chat_receive_probe")
 local UIInteractionRouter = require("ui_interaction_router")
+local PresentationSnapshotProbe = require("presentation_snapshot_probe")
 
 local presentation = PresentationController.new(
     RendererHost.new(UMGWidgetPort.new())
@@ -94,3 +95,30 @@ RegisterKeyBind(Key.F9, function()
         cycle_tab()
     end
 end)
+
+local function apply_presentation_snapshot_probe()
+    local applied, model, probe_error =
+        PresentationSnapshotProbe.apply(presentation)
+    if applied ~= true then
+        print(string.format(
+            "[PalTRUI] PALTR_UI_F10_ERROR | error=%s\n",
+            tostring(probe_error or "bilinmeyen sunum probe hatasi")
+        ))
+        return
+    end
+    print(string.format(
+        "[PalTRUI] PALTR_UI_F10_OK | tab=%s | guild=%s | probe=true\n",
+        tostring(model.active_tab),
+        tostring(model.selected_guild)
+    ))
+end
+
+if Key.F10 ~= nil then
+    RegisterKeyBind(Key.F10, function()
+        if type(ExecuteInGameThread) == "function" then
+            ExecuteInGameThread(apply_presentation_snapshot_probe)
+        else
+            apply_presentation_snapshot_probe()
+        end
+    end)
+end
