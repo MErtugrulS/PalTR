@@ -101,6 +101,47 @@ equal(deferred_loop(), false, "polling continues after resume")
 equal(execute_count, 2, "next callback queued after resume")
 guarded:stop()
 
+local watchdog_callbacks = {}
+local watchdog_loop = nil
+local watchdog_resumed = nil
+local watchdog_polls = 0
+local watchdog = UMGButtonPoller.new({
+    widget_provider = function() return {} end,
+    control_names = {},
+    sampler = {
+        sample = function()
+            watchdog_polls = watchdog_polls + 1
+            return true, {}
+        end
+    },
+    router = { handle = function() return true, { open = true } end },
+    schedule_loop = function(_, callback) watchdog_loop = callback end,
+    execute_in_game_thread = function(callback)
+        table.insert(watchdog_callbacks, callback)
+    end,
+    on_resume = function(delayed_ticks)
+        watchdog_resumed = delayed_ticks
+    end,
+    resume_after_delayed_ticks = 2,
+    pending_timeout_ticks = 3
+})
+
+equal(watchdog:start(), true, "watchdog poller started")
+equal(watchdog_loop(), false, "watchdog first callback queued")
+for _ = 1, 3 do
+    equal(watchdog_loop(), false, "watchdog pending callback observed")
+end
+equal(watchdog.game_thread_pending, false,
+    "stalled game-thread callback released by watchdog")
+equal(watchdog_loop(), false, "watchdog recovery callback queued")
+equal(#watchdog_callbacks, 2, "watchdog queues one recovery callback")
+watchdog_callbacks[1]()
+equal(watchdog_polls, 0, "stale callback does not poll")
+watchdog_callbacks[2]()
+equal(watchdog_resumed, 3, "watchdog reports stalled ticks")
+equal(watchdog_polls, 1, "recovery callback resumes polling")
+watchdog:stop()
+
 local unavailable, unavailable_error = UMGButtonPoller.new():start()
 equal(unavailable, false, "missing router rejected")
 equal(unavailable_error, "UI etkilesim router'i hazir degil.",
