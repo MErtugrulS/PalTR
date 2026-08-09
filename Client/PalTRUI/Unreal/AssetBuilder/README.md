@@ -29,4 +29,9 @@ Run the commandlet with `-UpdatePendingOffersPanel` to add the renderer-facing
 pending-offers frame to the Clan dashboard. The update adds stable heading and
 content text controls, is idempotent, and refuses partial controls.
 
+Run the commandlet with `-UpdateDashboardQuickActions` to add the renderer-facing
+quick-actions card to the Clan dashboard. Its three stable buttons navigate to
+the existing Diplomacy and Guilds presentation models without adding gameplay
+rules or transport behavior. The update is idempotent and refuses partial controls.
+
 Run the commandlet with `-Verify` to load both generated classes and check the renderer-facing widget names without modifying the assets.

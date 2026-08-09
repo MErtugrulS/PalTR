@@ -599,6 +599,113 @@ namespace PalTRUIAssetBuilder
         return true;
     }
 
+    bool UpdateDashboardQuickActions()
+    {
+        UWidgetBlueprint* Panel = LoadObject<UWidgetBlueprint>(
+            nullptr,
+            TEXT("/Game/Mods/PalTRUI/WBP_PalTRPanel.WBP_PalTRPanel")
+        );
+        if (!Panel || !Panel->WidgetTree)
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI quick actions update failed: panel asset missing."));
+            return false;
+        }
+
+        UWidgetTree* Tree = Panel->WidgetTree;
+        UVerticalBox* ClanPage = Cast<UVerticalBox>(Tree->FindWidget(TEXT("ClanPage")));
+        static const FName QuickActionWidgets[] = {
+            TEXT("DashboardQuickActionsFrame"),
+            TEXT("DashboardQuickActionsContent"),
+            TEXT("DashboardQuickActionsHeadingText"),
+            TEXT("DashboardDiplomacyButton"),
+            TEXT("DashboardDiplomacyButtonText"),
+            TEXT("DashboardOffersButton"),
+            TEXT("DashboardOffersButtonText"),
+            TEXT("DashboardGuildsButton"),
+            TEXT("DashboardGuildsButtonText")
+        };
+
+        if (!ClanPage)
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI quick actions update failed: clan page missing."));
+            return false;
+        }
+
+        int32 ExistingWidgetCount = 0;
+        for (const FName WidgetName : QuickActionWidgets)
+        {
+            ExistingWidgetCount += Tree->FindWidget(WidgetName) ? 1 : 0;
+        }
+        if (ExistingWidgetCount == UE_ARRAY_COUNT(QuickActionWidgets))
+        {
+            UE_LOG(LogTemp, Display, TEXT("PALTR_UI_QUICK_ACTIONS_UPDATE_OK | changed=false"));
+            return true;
+        }
+        if (ExistingWidgetCount != 0)
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI quick actions update refused: partial controls exist."));
+            return false;
+        }
+
+        Panel->Modify();
+        Tree->Modify();
+        ClanPage->Modify();
+
+        UBorder* Frame = Tree->ConstructWidget<UBorder>(
+            UBorder::StaticClass(),
+            TEXT("DashboardQuickActionsFrame")
+        );
+        Frame->SetBrushColor(FLinearColor(0.025f, 0.075f, 0.095f, 0.96f));
+        Frame->SetPadding(FMargin(14.0f));
+
+        UVerticalBox* Content = Tree->ConstructWidget<UVerticalBox>(
+            UVerticalBox::StaticClass(),
+            TEXT("DashboardQuickActionsContent")
+        );
+        Frame->SetContent(Content);
+
+        UTextBlock* Heading = MakeText(
+            Tree,
+            TEXT("DashboardQuickActionsHeadingText"),
+            TEXT("HIZLI ISLEMLER"),
+            20
+        );
+        Heading->SetColorAndOpacity(FSlateColor(FLinearColor(0.92f, 0.68f, 0.25f, 1.0f)));
+        AddVertical(Content, Heading, FMargin(0, 0, 0, 10));
+
+        AddVertical(
+            Content,
+            MakeTabButton(Tree, TEXT("DashboardDiplomacyButton"), TEXT("DashboardDiplomacyButtonText"), TEXT("Diplomasiyi Ac")),
+            FMargin(0, 0, 0, 8)
+        );
+        AddVertical(
+            Content,
+            MakeTabButton(Tree, TEXT("DashboardOffersButton"), TEXT("DashboardOffersButtonText"), TEXT("Teklifleri Gor")),
+            FMargin(0, 0, 0, 8)
+        );
+        AddVertical(
+            Content,
+            MakeTabButton(Tree, TEXT("DashboardGuildsButton"), TEXT("DashboardGuildsButtonText"), TEXT("Klanlari Listele"))
+        );
+        AddVertical(ClanPage, Frame, FMargin(0, 18, 0, 0));
+
+        const FLinearColor Teal(0.04f, 0.35f, 0.42f, 1.0f);
+        StyleButton(Tree, TEXT("DashboardDiplomacyButton"), Teal);
+        StyleButton(Tree, TEXT("DashboardOffersButton"), Teal);
+        StyleButton(Tree, TEXT("DashboardGuildsButton"), Teal);
+
+        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Panel);
+        FKismetEditorUtilities::CompileBlueprint(Panel);
+        if (!SaveAsset(Panel))
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI quick actions update failed while saving panel."));
+            return false;
+        }
+
+        UE_LOG(LogTemp, Display, TEXT("PALTR_UI_QUICK_ACTIONS_UPDATE_OK | changed=true"));
+        return true;
+    }
+
     bool VerifyAssets()
     {
         UBlueprint* ModActor = LoadObject<UBlueprint>(
@@ -634,6 +741,15 @@ namespace PalTRUIAssetBuilder
             TEXT("PendingOffersFrame"),
             TEXT("PendingOffersHeadingText"),
             TEXT("PendingOffersText"),
+            TEXT("DashboardQuickActionsFrame"),
+            TEXT("DashboardQuickActionsContent"),
+            TEXT("DashboardQuickActionsHeadingText"),
+            TEXT("DashboardDiplomacyButton"),
+            TEXT("DashboardDiplomacyButtonText"),
+            TEXT("DashboardOffersButton"),
+            TEXT("DashboardOffersButtonText"),
+            TEXT("DashboardGuildsButton"),
+            TEXT("DashboardGuildsButtonText"),
             TEXT("RelationList"),
             TEXT("RelationTitleText"),
             TEXT("RelationStateText"),
@@ -711,6 +827,11 @@ int32 UPalTRUIAssetBuilderCommandlet::Main(const FString& Params)
     if (FParse::Param(*Params, TEXT("UpdatePendingOffersPanel")))
     {
         return UpdatePendingOffersPanel() ? 0 : 9;
+    }
+
+    if (FParse::Param(*Params, TEXT("UpdateDashboardQuickActions")))
+    {
+        return UpdateDashboardQuickActions() ? 0 : 10;
     }
 
     const FString ModActorPackage = FString(AssetRoot) / TEXT("ModActor");
