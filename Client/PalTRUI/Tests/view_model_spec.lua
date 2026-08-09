@@ -119,9 +119,20 @@ equal(
 equal(panel.view_model.views.CLAN.name_text, "Anka", "clan name text")
 equal(
     panel.view_model.views.CLAN.summary_text,
-    "2 uye | 1 cevrimici",
+    "Lider: Ada | Üye: 2 | Çevrimiçi: 1\nSavaş: 1 | İttifak: 1 | Bekleyen: 0",
     "clan summary text"
 )
+equal(panel.view_model.views.CLAN.leader_name, "Ada", "clan leader")
+equal(panel.view_model.views.CLAN.dashboard.war_count, 1,
+    "dashboard war count")
+equal(panel.view_model.views.CLAN.dashboard.alliance_count, 1,
+    "dashboard alliance count")
+equal(panel.view_model.views.CLAN.dashboard.pending_count, 0,
+    "dashboard pending count")
+equal(panel.view_model.views.CLAN.dashboard.cards[1].id, "CLAN_STATUS",
+    "clan dashboard card")
+equal(panel.view_model.views.CLAN.dashboard.cards[2].id,
+    "DIPLOMACY_STATUS", "diplomacy dashboard card")
 equal(
     panel.view_model.views.CLAN.members_text,
     "Ada (cevrimici)\nBora",

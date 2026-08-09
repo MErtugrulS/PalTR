@@ -153,7 +153,7 @@ local model = {
             online_count = 1,
             empty = false,
             name_text = "Anka",
-            summary_text = "2 uye | 1 cevrimici",
+            summary_text = "Lider: Ada | Üye: 2 | Çevrimiçi: 1\nSavaş: 1 | İttifak: 0 | Bekleyen: 0",
             members_text = "Ada (cevrimici)\nBora",
             members = {
                 { name = "Ada", online = true },
@@ -233,7 +233,9 @@ equal(bind_error, nil, "successful bind has no error")
 equal(switch_index, 1, "diplomacy tab selected")
 equal(text_values.ConnectionStatusText, "Sunucu snapshoti hazir", "status")
 equal(text_values.ClanNameText, "Anka", "clan name")
-equal(text_values.ClanSummaryText, "2 uye | 1 cevrimici", "clan summary")
+equal(text_values.ClanSummaryText,
+    "Lider: Ada | Üye: 2 | Çevrimiçi: 1\nSavaş: 1 | İttifak: 0 | Bekleyen: 0",
+    "clan summary")
 equal(text_values.ClanMembersText, "Ada (cevrimici)\nBora", "members")
 equal(text_values.RelationListEmptyText, "Rakipler | Savas", "relations")
 equal(text_values.RelationTitleText, "Rakipler", "selected guild")

@@ -315,16 +315,56 @@ local function clan_view(snapshot)
     local guild = table_or_empty(snapshot.guild)
     local members = {}
     local online_count = 0
+    local leader_name = ""
 
     for _, member in ipairs(table_or_empty(snapshot.members)) do
         local item = member_model(member)
         table.insert(members, item)
         if item.online then online_count = online_count + 1 end
+        if item.is_master and leader_name == "" then
+            leader_name = item.name
+        end
+    end
+
+    local war_count = 0
+    local alliance_count = 0
+    local pending_count = 0
+    for _, relation in ipairs(table_or_empty(snapshot.relations)) do
+        relation = table_or_empty(relation)
+        local state = text(relation.state)
+        if state == "WAR" then war_count = war_count + 1 end
+        if state == "ALLIANCE" then alliance_count = alliance_count + 1 end
+        if string.sub(state, -8) == "_PENDING" then
+            pending_count = pending_count + 1
+        end
     end
 
     local guild_name = text(guild.name)
     local empty = #members == 0
     local empty_message = empty and "Klan üyesi bulunamadı." or ""
+
+    local clan_card = {
+        id = "CLAN_STATUS",
+        title = "Klanım",
+        value = guild_name ~= "" and guild_name or "-",
+        detail = string.format(
+            "Lider: %s | Üye: %d | Çevrimiçi: %d",
+            leader_name ~= "" and leader_name or "-",
+            #members,
+            online_count
+        )
+    }
+    local diplomacy_card = {
+        id = "DIPLOMACY_STATUS",
+        title = "Diplomasi",
+        value = string.format(
+            "Savaş: %d | İttifak: %d | Bekleyen: %d",
+            war_count,
+            alliance_count,
+            pending_count
+        ),
+        detail = ""
+    }
 
     return {
         guild = {
@@ -334,15 +374,18 @@ local function clan_view(snapshot)
         members = members,
         member_count = #members,
         online_count = online_count,
+        leader_name = leader_name,
+        dashboard = {
+            cards = { clan_card, diplomacy_card },
+            war_count = war_count,
+            alliance_count = alliance_count,
+            pending_count = pending_count
+        },
         empty = empty,
         empty_message = empty_message,
         name_text = guild_name ~= ""
             and guild_name or "Klan bilgisi bekleniyor",
-        summary_text = string.format(
-            "%d uye | %d cevrimici",
-            #members,
-            online_count
-        ),
+        summary_text = clan_card.detail .. "\n" .. diplomacy_card.value,
         members_text = empty and empty_message or member_lines(members)
     }
 end
