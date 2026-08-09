@@ -7,7 +7,7 @@ UMGAssetLoader.PANEL_CLASS_PATH =
     "/Game/Mods/PalTRUI/WBP_PalTRPanel.WBP_PalTRPanel_C"
 UMGAssetLoader.PANEL_PACKAGE_NAME =
     "/Game/Mods/PalTRUI/WBP_PalTRPanel"
-UMGAssetLoader.PANEL_ASSET_NAME = "WBP_PalTRPanel"
+UMGAssetLoader.PANEL_ASSET_NAME = "WBP_PalTRPanel_C"
 UMGAssetLoader.ASSET_REGISTRY_HELPERS_PATH =
     "/Script/AssetRegistry.Default__AssetRegistryHelpers"
 

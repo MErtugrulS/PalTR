@@ -20,6 +20,11 @@ equal(
     "/Game/Mods/PalTRUI/WBP_PalTRPanel.WBP_PalTRPanel",
     "stable full panel asset path"
 )
+equal(
+    UMGAssetLoader.PANEL_ASSET_NAME,
+    "WBP_PalTRPanel_C",
+    "stable generated panel class asset name"
+)
 local load_calls = {}
 local find_calls = 0
 local loader = UMGAssetLoader.new({
