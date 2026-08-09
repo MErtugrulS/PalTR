@@ -86,6 +86,19 @@ equal(
     "server action preserved"
 )
 
+local selection_accepted, selected, selection_rendered, selection_error =
+    controller:select_guild("guild-other")
+equal(selection_accepted, true, "visible guild selected")
+equal(selected.selected_guild, "guild-other", "selected guild returned")
+equal(selection_rendered, true, "selection reports renderer success")
+equal(selection_error, nil, "selection has no renderer error")
+
+local missing_selected, missing_model, missing_rendered =
+    controller:select_guild("guild-missing")
+equal(missing_selected, false, "missing guild rejected")
+equal(missing_model.selected_guild, "guild-other", "selection preserved")
+equal(missing_rendered, true, "rejection model rendered")
+
 local action_dispatched, intent = controller:request_action("DECLARE_WAR")
 equal(action_dispatched, true, "offered action dispatched")
 equal(#dispatched, 1, "single action intent dispatched")

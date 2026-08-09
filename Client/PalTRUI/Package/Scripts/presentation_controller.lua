@@ -63,9 +63,9 @@ function PresentationController:set_tab(tab_id)
 end
 
 function PresentationController:select_guild(guild_key)
-    self.panel:select_guild(guild_key)
-    self:_render()
-    return self:model()
+    local accepted = self.panel:select_guild(guild_key)
+    local rendered, render_error = self:_render()
+    return accepted, self:model(), rendered, render_error
 end
 
 function PresentationController:apply_snapshot(snapshot)

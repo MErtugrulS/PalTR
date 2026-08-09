@@ -74,7 +74,12 @@ function PresentationSnapshotProbe.apply(controller)
         return false, controller:model(), "Sunum probe snapshoti reddedildi."
     end
 
-    controller:select_guild("probe-neutral")
+    local selected, selection_model, selection_rendered, selection_error =
+        controller:select_guild("probe-neutral")
+    if selected ~= true or selection_rendered ~= true then
+        return false, selection_model,
+            selection_error or "Probe iliski kaydi secilemedi."
+    end
     local tab_accepted, model, rendered, render_error =
         controller:set_tab("DIPLOMACY")
     if tab_accepted ~= true or rendered ~= true then
