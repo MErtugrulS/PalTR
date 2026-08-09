@@ -50,6 +50,51 @@ equal(
 )
 equal(find_calls, 2, "class checked before and after load")
 
+local fallback_find_calls = 0
+local fallback_calls = {}
+local registry_fallback = UMGAssetLoader.new({
+    load_asset = function() end,
+    load_registered_asset = function(package_name, asset_name)
+        table.insert(fallback_calls, {
+            package_name = package_name,
+            asset_name = asset_name
+        })
+        return true
+    end,
+    find_object = function()
+        fallback_find_calls = fallback_find_calls + 1
+        if fallback_find_calls < 3 then return invalid_class end
+        return loaded_class
+    end
+})
+local fallback_loaded, fallback_class =
+    registry_fallback:load_panel_class()
+equal(fallback_loaded, true, "asset registry fallback loaded")
+equal(fallback_class, loaded_class, "fallback class returned")
+equal(#fallback_calls, 1, "asset registry fallback called once")
+equal(
+    fallback_calls[1].package_name,
+    UMGAssetLoader.PANEL_PACKAGE_NAME,
+    "fallback package name"
+)
+equal(
+    fallback_calls[1].asset_name,
+    UMGAssetLoader.PANEL_ASSET_NAME,
+    "fallback asset name"
+)
+
+local registry_failure = UMGAssetLoader.new({
+    load_asset = function() end,
+    load_registered_asset = function()
+        return false, "registry failed"
+    end,
+    find_object = function() return invalid_class end
+})
+local registry_loaded, _, registry_error =
+    registry_failure:load_panel_class()
+equal(registry_loaded, false, "asset registry failure rejected")
+equal(registry_error, "registry failed", "asset registry error preserved")
+
 local unresolved_invalid = UMGAssetLoader.new({
     load_asset = function() end,
     find_object = function() return invalid_class end
