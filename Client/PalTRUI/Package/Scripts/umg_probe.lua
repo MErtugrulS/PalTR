@@ -73,9 +73,10 @@ end
 local function dump_hud_details()
     for _, hud in ipairs(collect_objects("PalHUDInGame", 10)) do
         print(string.format(
-            "[PalTRUI][UMG] PAL_HUD_DETAIL | hud=%s | layout=%s\n",
+            "[PalTRUI][UMG] PAL_HUD_DETAIL | hud=%s | layout=%s | controller=%s\n",
             full_name(hud),
-            full_name(read_property(hud, "HUDLayout"))
+            full_name(read_property(hud, "HUDLayout")),
+            full_name(read_property(hud, "PlayerOwner"))
         ))
     end
 end
@@ -104,11 +105,12 @@ function Probe.scan()
     dump_group("STACKABLE_WIDGET", result.stackable_widgets)
     dump_hud_details()
     print(string.format(
-        "[PalTRUI][UMG] PAL_CONTEXT | ready=%s | hud=%s | service=%s | layout=%s\n",
+        "[PalTRUI][UMG] PAL_CONTEXT | ready=%s | hud=%s | service=%s | layout=%s | controller=%s\n",
         tostring(context.ready),
         context.names.hud,
         context.names.service,
-        context.names.layout
+        context.names.layout,
+        context.names.player_controller
     ))
 
     print("[PalTRUI][UMG] PALTR_UI_UMG_PROBE_OK\n")
