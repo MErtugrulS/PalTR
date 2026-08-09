@@ -1468,6 +1468,124 @@ namespace PalTRUIAssetBuilder
         return true;
     }
 
+    bool UpdateDashboardColumnLayout()
+    {
+        UWidgetBlueprint* Panel = LoadObject<UWidgetBlueprint>(
+            nullptr,
+            TEXT("/Game/Mods/PalTRUI/WBP_PalTRPanel.WBP_PalTRPanel")
+        );
+        if (!Panel || !Panel->WidgetTree)
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI dashboard column layout failed: panel asset missing."));
+            return false;
+        }
+
+        UWidgetTree* Tree = Panel->WidgetTree;
+        UVerticalBox* ClanPage = Cast<UVerticalBox>(Tree->FindWidget(TEXT("ClanPage")));
+        UHorizontalBox* Columns = Cast<UHorizontalBox>(Tree->FindWidget(TEXT("DashboardColumns")));
+        UVerticalBox* MainColumn = Cast<UVerticalBox>(Tree->FindWidget(TEXT("DashboardMainColumn")));
+        UVerticalBox* SidebarColumn = Cast<UVerticalBox>(Tree->FindWidget(TEXT("DashboardSidebarColumn")));
+        UWidget* StatusCards = Tree->FindWidget(TEXT("DashboardStatusCardsFrame"));
+        UWidget* Members = Tree->FindWidget(TEXT("ClanMembersFrame"));
+        UWidget* Relations = Tree->FindWidget(TEXT("DashboardRelationsFrame"));
+        UWidget* Offers = Tree->FindWidget(TEXT("PendingOffersFrame"));
+        UWidget* QuickActions = Tree->FindWidget(TEXT("DashboardQuickActionsFrame"));
+        if (!ClanPage || !StatusCards || !Members || !Relations || !Offers || !QuickActions)
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI dashboard column layout failed: dashboard controls missing."));
+            return false;
+        }
+
+        if (Columns && MainColumn && SidebarColumn)
+        {
+            const bool bValid = Columns->GetParent() == ClanPage
+                && MainColumn->GetParent() == Columns
+                && SidebarColumn->GetParent() == Columns
+                && StatusCards->GetParent() == MainColumn
+                && Members->GetParent() == MainColumn
+                && Relations->GetParent() == SidebarColumn
+                && Offers->GetParent() == SidebarColumn
+                && QuickActions->GetParent() == SidebarColumn;
+            if (!bValid)
+            {
+                UE_LOG(LogTemp, Error, TEXT("PalTRUI dashboard column layout refused: unexpected existing hierarchy."));
+                return false;
+            }
+            UE_LOG(LogTemp, Display, TEXT("PALTR_UI_DASHBOARD_COLUMN_LAYOUT_OK | changed=false"));
+            return true;
+        }
+        if (Columns || MainColumn || SidebarColumn)
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI dashboard column layout refused: partial controls exist."));
+            return false;
+        }
+
+        static const FName DashboardWidgetNames[] = {
+            TEXT("DashboardStatusCardsFrame"),
+            TEXT("ClanMembersFrame"),
+            TEXT("DashboardRelationsFrame"),
+            TEXT("PendingOffersFrame"),
+            TEXT("DashboardQuickActionsFrame")
+        };
+        for (const FName WidgetName : DashboardWidgetNames)
+        {
+            if (Tree->FindWidget(WidgetName)->GetParent() != ClanPage)
+            {
+                UE_LOG(LogTemp, Error, TEXT("PalTRUI dashboard column layout refused: control is outside clan page: %s"), *WidgetName.ToString());
+                return false;
+            }
+        }
+
+        Panel->Modify();
+        Tree->Modify();
+        ClanPage->Modify();
+        Columns = Tree->ConstructWidget<UHorizontalBox>(UHorizontalBox::StaticClass(), TEXT("DashboardColumns"));
+        MainColumn = Tree->ConstructWidget<UVerticalBox>(UVerticalBox::StaticClass(), TEXT("DashboardMainColumn"));
+        SidebarColumn = Tree->ConstructWidget<UVerticalBox>(UVerticalBox::StaticClass(), TEXT("DashboardSidebarColumn"));
+
+        for (UWidget* Widget : { StatusCards, Members, Relations, Offers, QuickActions })
+        {
+            Widget->Modify();
+            ClanPage->RemoveChild(Widget);
+        }
+
+        AddVertical(MainColumn, StatusCards, FMargin(0, 0, 0, 14));
+        AddVertical(MainColumn, Members);
+        AddVertical(SidebarColumn, Relations, FMargin(0, 0, 0, 14));
+        AddVertical(SidebarColumn, Offers, FMargin(0, 0, 0, 14));
+        AddVertical(SidebarColumn, QuickActions);
+
+        UHorizontalBoxSlot* MainSlot = AddHorizontal(Columns, MainColumn, FMargin(0, 0, 10, 0));
+        FSlateChildSize MainSize(ESlateSizeRule::Fill);
+        MainSize.Value = 1.65f;
+        MainSlot->SetSize(MainSize);
+        MainSlot->SetVerticalAlignment(VAlign_Fill);
+        UHorizontalBoxSlot* SidebarSlot = AddHorizontal(Columns, SidebarColumn, FMargin(10, 0, 0, 0));
+        FSlateChildSize SidebarSize(ESlateSizeRule::Fill);
+        SidebarSize.Value = 0.85f;
+        SidebarSlot->SetSize(SidebarSize);
+        SidebarSlot->SetVerticalAlignment(VAlign_Fill);
+
+        UVerticalBoxSlot* ColumnsSlot = Cast<UVerticalBoxSlot>(ClanPage->InsertChildAt(1, Columns));
+        if (!ColumnsSlot)
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI dashboard column layout failed: columns slot missing."));
+            return false;
+        }
+        ColumnsSlot->SetHorizontalAlignment(HAlign_Fill);
+        ColumnsSlot->SetPadding(FMargin(0, 0, 0, 10));
+
+        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Panel);
+        FKismetEditorUtilities::CompileBlueprint(Panel);
+        if (!SaveAsset(Panel))
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI dashboard column layout failed while saving panel."));
+            return false;
+        }
+        UE_LOG(LogTemp, Display, TEXT("PALTR_UI_DASHBOARD_COLUMN_LAYOUT_OK | changed=true | layout=main_sidebar"));
+        return true;
+    }
+
     bool UpdatePanelInputShield()
     {
         UWidgetBlueprint* Panel = LoadObject<UWidgetBlueprint>(
@@ -1873,6 +1991,9 @@ namespace PalTRUIAssetBuilder
             TEXT("DiplomacyPageScroll"),
             TEXT("AlliancePageScroll"),
             TEXT("GuildPageScroll"),
+            TEXT("DashboardColumns"),
+            TEXT("DashboardMainColumn"),
+            TEXT("DashboardSidebarColumn"),
             TEXT("ClanNameText"),
             TEXT("ClanSummaryText"),
             TEXT("ClanMembersFrame"),
@@ -2072,6 +2193,11 @@ int32 UPalTRUIAssetBuilderCommandlet::Main(const FString& Params)
     if (FParse::Param(*Params, TEXT("UpdateAllPageScrollInput")))
     {
         return UpdateAllPageScrollInput() ? 0 : 21;
+    }
+
+    if (FParse::Param(*Params, TEXT("UpdateDashboardColumnLayout")))
+    {
+        return UpdateDashboardColumnLayout() ? 0 : 22;
     }
 
     const FString ModActorPackage = FString(AssetRoot) / TEXT("ModActor");
