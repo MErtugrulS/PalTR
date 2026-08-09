@@ -156,6 +156,11 @@ end)
 
 local function apply_presentation_snapshot_probe()
     local current_model = presentation:model()
+    print("[PalTRUI] PALTR_UI_F10_STAGE | stage=begin\n")
+    if PresentationSnapshotProbe.can_apply(current_model) ~= true then
+        print("[PalTRUI] PALTR_UI_F10_BLOCKED | paneli once Tab ile kapat\n")
+        return
+    end
     local mode = PresentationSnapshotProbe.is_active(current_model)
         and "cycle" or "apply"
     local applied, model, probe_error

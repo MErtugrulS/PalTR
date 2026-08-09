@@ -1,5 +1,9 @@
 local PresentationSnapshotProbe = {}
 
+function PresentationSnapshotProbe.can_apply(model)
+    return type(model) == "table" and model.open ~= true
+end
+
 function PresentationSnapshotProbe.is_active(model)
     local player = type(model) == "table" and model.player or nil
     return type(player) == "table"

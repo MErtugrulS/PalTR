@@ -14,6 +14,12 @@ local function equal(actual, expected, label)
 end
 
 local controller = PresentationController.new()
+equal(PresentationSnapshotProbe.can_apply({ open = false }), true,
+    "closed panel accepts presentation probe")
+equal(PresentationSnapshotProbe.can_apply({ open = true }), false,
+    "open panel blocks presentation probe")
+equal(PresentationSnapshotProbe.can_apply(nil), false,
+    "missing model blocks presentation probe")
 local applied, model, apply_error = PresentationSnapshotProbe.apply(
     controller,
     SnapshotInbox.new(controller)
