@@ -2,7 +2,7 @@ local UMGAssetLoader = {}
 UMGAssetLoader.__index = UMGAssetLoader
 
 UMGAssetLoader.PANEL_ASSET_PATH =
-    "/Game/Mods/PalTRUI/WBP_PalTRPanel"
+    "/Game/Mods/PalTRUI/WBP_PalTRPanel.WBP_PalTRPanel"
 UMGAssetLoader.PANEL_CLASS_PATH =
     "/Game/Mods/PalTRUI/WBP_PalTRPanel.WBP_PalTRPanel_C"
 

@@ -15,6 +15,11 @@ local loaded_class = { name = "WBP_PalTRPanel_C" }
 local invalid_class = {
     IsValid = function() return false end
 }
+equal(
+    UMGAssetLoader.PANEL_ASSET_PATH,
+    "/Game/Mods/PalTRUI/WBP_PalTRPanel.WBP_PalTRPanel",
+    "stable full panel asset path"
+)
 local load_calls = {}
 local find_calls = 0
 local loader = UMGAssetLoader.new({
