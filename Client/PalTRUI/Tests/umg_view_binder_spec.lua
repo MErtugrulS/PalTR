@@ -57,6 +57,7 @@ local names = {
     "ConnectionStatusText",
     "HeaderGuildText",
     "HeaderRoleText",
+    "HeaderNotificationText",
     "ClanNameText",
     "ClanSummaryText",
     "ClanMembersText",
@@ -165,7 +166,8 @@ local model = {
     },
     header = {
         guild_text = "Klan: Anka",
-        role_text = "Yetki: Lider"
+        role_text = "Yetki: Lider",
+        notification_text = "Bildirim: 1"
     },
     tabs = {
         {
@@ -342,6 +344,8 @@ equal(text_values.TitleText, "PALTR DİPLOMASİ MODU", "panel title")
 equal(text_values.ConnectionStatusText, "Sunucu snapshoti hazir", "status")
 equal(text_values.HeaderGuildText, "Klan: Anka", "header guild")
 equal(text_values.HeaderRoleText, "Yetki: Lider", "header role")
+equal(text_values.HeaderNotificationText, "Bildirim: 1",
+    "header notification")
 equal(text_values.ClanNameText, "Anka", "clan name")
 equal(text_values.ClanSummaryText,
     "Lider: Ada | Üye: 2 | Çevrimiçi: 1\nSavaş: 1 | İttifak: 0 | Bekleyen: 0",

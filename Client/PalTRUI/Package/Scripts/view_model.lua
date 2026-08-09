@@ -773,7 +773,11 @@ function ViewModel.build(snapshot, panel)
                 and "Klan: " .. text(guild.name) or "Klan: -",
             role_text = schema_version == 0 and "Yetki: -"
                 or (player.is_master == true
-                    and "Yetki: Lider" or "Yetki: Uye")
+                    and "Yetki: Lider" or "Yetki: Uye"),
+            notification_text = string.format(
+                "Bildirim: %d",
+                tonumber(clan.pending_count) or 0
+            )
         },
         capabilities = {
             action_transport_ready = action_transport_ready,

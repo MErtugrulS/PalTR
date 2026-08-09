@@ -119,6 +119,8 @@ equal(panel.view_model.header.guild_text, "Klan: Anka",
     "header guild presentation")
 equal(panel.view_model.header.role_text, "Yetki: Lider",
     "header role presentation")
+equal(panel.view_model.header.notification_text, "Bildirim: 0",
+    "header notification presentation")
 equal(
     panel.view_model.connection.status_text,
     "Sunucu snapshoti hazir",
