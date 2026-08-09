@@ -18,6 +18,7 @@ local interactive_controls = {
     "ClanTabButton",
     "DiplomacyTabButton",
     "AllianceTabButton",
+    "ChatTabButton",
     "PreviousRelationButton",
     "NextRelationButton",
     "AllianceRequestButton",
