@@ -12,6 +12,25 @@ local function equal(actual, expected, label)
 end
 
 local calls = {}
+local current_model = {
+    open = true,
+    active_tab = "DIPLOMACY",
+    views = {
+        DIPLOMACY = {
+            action_controls = {
+                WarRequestButton = {
+                    action_id = "DECLARE_WAR",
+                    enabled = true
+                },
+                AllianceRequestButton = {
+                    action_id = "ALLIANCE",
+                    enabled = false,
+                    reason = "Bu aksiyon sunulmuyor."
+                }
+            }
+        }
+    }
+}
 local controller = {
     toggle = function()
         table.insert(calls, { name = "toggle" })
@@ -20,6 +39,16 @@ local controller = {
     set_tab = function(_, tab_id)
         table.insert(calls, { name = "set_tab", tab_id = tab_id })
         return true, { open = true, active_tab = tab_id }, true
+    end,
+    model = function()
+        return current_model
+    end,
+    request_action = function(_, action_id)
+        table.insert(calls, {
+            name = "request_action",
+            action_id = action_id
+        })
+        return true, { action_id = action_id }
     end
 }
 local router = UIInteractionRouter.new(controller)
@@ -45,6 +74,23 @@ equal(closed, true, "close handled")
 equal(closed_model.open, false, "close model returned")
 equal(close_rendered, true, "close rendered")
 equal(calls[#calls].name, "toggle", "close routed to toggle")
+
+local action_handled, action_model, action_dispatched, action_error =
+    router:handle("WarRequestButton")
+equal(action_handled, true, "action control handled")
+equal(action_model, current_model, "action model returned")
+equal(action_dispatched, true, "action dispatched")
+equal(action_error, nil, "action has no error")
+equal(calls[#calls].name, "request_action", "action routed")
+equal(calls[#calls].action_id, "DECLARE_WAR", "model action id used")
+
+local disabled, disabled_model, disabled_dispatched, disabled_error =
+    router:handle("AllianceRequestButton")
+equal(disabled, false, "disabled action rejected")
+equal(disabled_model, current_model, "disabled model returned")
+equal(disabled_dispatched, false, "disabled action not dispatched")
+equal(disabled_error, "Bu aksiyon sunulmuyor.", "model reason returned")
+equal(calls[#calls].action_id, "DECLARE_WAR", "disabled action not routed")
 
 local unknown, _, unknown_rendered, unknown_error =
     router:handle("UnknownButton")
