@@ -5,6 +5,7 @@ local ChatReceiveProbe = require("chat_receive_probe")
 local UIInteractionRouter = require("ui_interaction_router")
 local PresentationSnapshotProbe = require("presentation_snapshot_probe")
 local SnapshotInbox = require("snapshot_inbox")
+local SnapshotTransport = require("snapshot_transport")
 local UMGButtonPoller = require("umg_button_poller")
 
 local widget_port = UMGWidgetPort.new()
@@ -13,6 +14,7 @@ local presentation = PresentationController.new(
 )
 local interactions = UIInteractionRouter.new(presentation)
 local snapshots = SnapshotInbox.new(presentation)
+local snapshot_transport = SnapshotTransport.new()
 local interactive_controls = {
     "CloseButton",
     "ClanTabButton",
@@ -55,6 +57,30 @@ local button_poller = UMGButtonPoller.new({
         ))
     end
 })
+
+ChatReceiveProbe.register(function(frame)
+    if frame.kind ~= "SNAPSHOT_CHUNK" then return end
+    local complete, snapshot, transport_error =
+        snapshot_transport:receive(frame)
+    if transport_error ~= nil then
+        print(string.format(
+            "[PalTRUI] PALTR_UI_SNAPSHOT_TRANSPORT_ERROR | %s\n",
+            tostring(transport_error)
+        ))
+        return
+    end
+    if complete ~= true then return end
+
+    local accepted, model, rendered, receive_error =
+        snapshots:receive(snapshot)
+    print(string.format(
+        "[PalTRUI] PALTR_UI_LIVE_SNAPSHOT_%s | generated_at=%s | rendered=%s | error=%s\n",
+        accepted == true and "OK" or "ERROR",
+        tostring(model and model.generated_at or ""),
+        tostring(rendered == true),
+        tostring(receive_error or "")
+    ))
+end)
 
 PalTRUIKeybindCallbacks = PalTRUIKeybindCallbacks or {}
 local keybind_callbacks = PalTRUIKeybindCallbacks

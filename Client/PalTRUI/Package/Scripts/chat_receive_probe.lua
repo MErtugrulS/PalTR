@@ -3,7 +3,8 @@ local UIWire = require("ui_wire")
 local Probe = {
     registered = false,
     pre_hook_id = nil,
-    post_hook_id = nil
+    post_hook_id = nil,
+    frame_handler = nil
 }
 
 local HOOK_PATH = "/Script/Pal.PalUIChat:OnReceivedChat"
@@ -78,6 +79,19 @@ local function on_received_chat(_context, message_param)
             #frame.payload
         ))
 
+        if type(Probe.frame_handler) == "function" then
+            local handled, handler_error = pcall(
+                Probe.frame_handler,
+                frame
+            )
+            if not handled then
+                print(string.format(
+                    "[PalTRUI][CHAT] WIRE_HANDLER_ERROR | %s\n",
+                    tostring(handler_error)
+                ))
+            end
+        end
+
         if frame.kind == "PROBE"
             and frame.request_id == "manual"
             and frame.payload == WIRE_PROBE_PAYLOAD then
@@ -98,7 +112,10 @@ local function on_received_chat(_context, message_param)
     end
 end
 
-function Probe.register()
+function Probe.register(frame_handler)
+    if type(frame_handler) == "function" then
+        Probe.frame_handler = frame_handler
+    end
     if Probe.registered then
         print("[PalTRUI][CHAT] PROBE_ALREADY_REGISTERED\n")
         return true

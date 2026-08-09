@@ -15,6 +15,7 @@ local DamageObserver = require("PalTR.services.damage_observer")
 local DamagePolicy = require("PalTR.services.damage_policy")
 local UIActionService = require("PalTR.services.ui_action_service")
 local UISnapshotService = require("PalTR.services.ui_snapshot_service")
+local UISnapshotPublisher = require("PalTR.services.ui_snapshot_publisher")
 local Scheduler = require("PalTR.services.scheduler")
 
 local App = {}
@@ -51,6 +52,10 @@ function App.new(config)
         diplomacy,
         ui_actions
     )
+    local ui_publisher = UISnapshotPublisher.new(
+        ui_snapshot,
+        Logger.new("UITransport")
+    )
 
     return setmetatable({
         config = config,
@@ -63,6 +68,7 @@ function App.new(config)
         damage_policy = damage_policy,
         ui_actions = ui_actions,
         ui_snapshot = ui_snapshot,
+        ui_publisher = ui_publisher,
 
         commands = CommandService.new(
             paths,
@@ -233,6 +239,7 @@ function App:_register_hooks()
                 player,
                 "Oyuncu baglandi"
             )
+            self.ui_publisher:publish(player, true)
         end
     )
 
@@ -252,6 +259,7 @@ function App:_register_hooks()
                     player,
                     "Oyuncu-klan eslemesi guncellendi"
                 )
+                self.ui_publisher:publish(player, true)
             end
         end
     )
@@ -356,6 +364,10 @@ function App:_tick()
         self.registry:scan_guilds()
         self.last_guild_scan = now
     end
+
+    self.ui_publisher:publish_all(
+        self.registry.runtime_players
+    )
 end
 
 function App:start()
