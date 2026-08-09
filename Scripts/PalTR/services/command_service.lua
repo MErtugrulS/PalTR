@@ -101,7 +101,8 @@ function CommandService.new(
     registry,
     diplomacy,
     status,
-    logger
+    logger,
+    response_observer
 )
     return setmetatable({
         paths = paths,
@@ -109,6 +110,8 @@ function CommandService.new(
         diplomacy = diplomacy,
         status = status,
         logger = logger,
+        response_observer = type(response_observer) == "function"
+            and response_observer or nil,
         last_response_key = "",
         last_response_at = 0
     }, CommandService)
@@ -151,6 +154,19 @@ function CommandService:_respond(
     self.logger:info("KOMUT_SONUC | " .. message)
 
     Announcer.send(controller, message, self.logger)
+
+    if self.response_observer ~= nil then
+        local observed, observer_error = pcall(
+            self.response_observer,
+            player
+        )
+        if not observed then
+            self.logger:error(
+                "KOMUT_YANIT_SNAPSHOT_HATA | " ..
+                tostring(observer_error)
+            )
+        end
+    end
 end
 
 function CommandService:_announce_guild(guild_key, message)

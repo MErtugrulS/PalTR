@@ -75,7 +75,10 @@ function App.new(config)
             registry,
             diplomacy,
             status,
-            Logger.new("Commands")
+            Logger.new("Commands"),
+            function(player)
+                return ui_publisher:publish(player, true)
+            end
         ),
 
         damage = DamageObserver.new(
