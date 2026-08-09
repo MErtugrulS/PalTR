@@ -1,12 +1,10 @@
 local PresentationController = require("presentation_controller")
 local RendererHost = require("renderer_host")
 local UMGWidgetPort = require("umg_widget_port")
-local UMGProbe = require("umg_probe")
 local ChatReceiveProbe = require("chat_receive_probe")
 local UIInteractionRouter = require("ui_interaction_router")
 local PresentationSnapshotProbe = require("presentation_snapshot_probe")
 local SnapshotInbox = require("snapshot_inbox")
-local UMGButtonStateProbe = require("umg_button_state_probe")
 local UMGButtonPoller = require("umg_button_poller")
 
 local widget_port = UMGWidgetPort.new()
@@ -89,35 +87,7 @@ end)
 
 
 RegisterKeyBind(Key.F7, function()
-    local function run_probe()
-        UMGProbe.scan()
-        local sampled, states, sample_error =
-            UMGButtonStateProbe.sample(widget_port.widget, {
-                table.unpack(interactive_controls)
-            })
-        if sampled ~= true then
-            print(string.format(
-                "[PalTRUI][UMG] BUTTON_STATE_ERROR | %s\n",
-                tostring(sample_error)
-            ))
-            return
-        end
-        for _, state in ipairs(states) do
-            print(string.format(
-                "[PalTRUI][UMG] BUTTON_STATE | control=%s | available=%s | pressed=%s | hovered_available=%s | hovered=%s\n",
-                state.control,
-                tostring(state.available),
-                tostring(state.pressed),
-                tostring(state.hovered_available),
-                tostring(state.hovered)
-            ))
-        end
-    end
-    if type(ExecuteInGameThread) == "function" then
-        ExecuteInGameThread(run_probe)
-    else
-        run_probe()
-    end
+    print("[PalTRUI][UMG] F7_PROBE_DISABLED | runtime guvenligi\n")
 end)
 
 RegisterKeyBind(Key.F8, function()
