@@ -13,14 +13,21 @@ end
 
 local hud = { name = "hud" }
 local cursor_calls = {}
-local controller = {
-    name = "controller",
-    bShowMouseCursor = false,
-    SetShowMouseCursor = function(self, visible)
-        table.insert(cursor_calls, visible)
-        self.bShowMouseCursor = visible
+local controller_cursor = false
+local controller = { name = "controller" }
+setmetatable(controller, {
+    __index = function(_, key)
+        if key == "bShowMouseCursor" then return controller_cursor end
+    end,
+    __newindex = function(target, key, value)
+        if key == "bShowMouseCursor" then
+            table.insert(cursor_calls, value)
+            controller_cursor = value
+            return
+        end
+        rawset(target, key, value)
     end
-}
+})
 local panel_class = { name = "WBP_PalTRPanel_C" }
 local create_calls = {}
 local viewport_calls = {}

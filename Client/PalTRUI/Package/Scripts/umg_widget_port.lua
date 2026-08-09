@@ -37,7 +37,7 @@ local function set_mouse_cursor(player_controller, visible)
     end
 
     local changed, change_error = pcall(function()
-        player_controller:SetShowMouseCursor(visible)
+        player_controller.bShowMouseCursor = visible
     end)
     if not changed then
         return false,
@@ -45,6 +45,12 @@ local function set_mouse_cursor(player_controller, visible)
                 .. tostring(change_error)
     end
     return true
+end
+
+local function report_cursor_warning(message)
+    if type(print) == "function" then
+        print("PALTR_UI_CURSOR_WARN | " .. tostring(message))
+    end
 end
 
 function UMGWidgetPort.new(dependencies)
@@ -105,7 +111,7 @@ function UMGWidgetPort:open(model)
         read_mouse_cursor_state(context.player_controller)
     local cursor_ready, cursor_error =
         set_mouse_cursor(context.player_controller, true)
-    if cursor_ready ~= true then return false, cursor_error end
+    if cursor_ready ~= true then report_cursor_warning(cursor_error) end
 
     local added = pcall(function()
         widget:AddToViewport(UMGWidgetPort.Z_ORDER)
@@ -166,7 +172,7 @@ function UMGWidgetPort:close()
     self.last_model = nil
     self.player_controller = nil
     self.previous_mouse_cursor = nil
-    if cursor_restored ~= true then return false, cursor_error end
+    if cursor_restored ~= true then report_cursor_warning(cursor_error) end
     return true
 end
 
