@@ -212,12 +212,12 @@ equal(panel:apply_snapshot(invalid), false, "invalid snapshot shape")
 equal(panel.view_model.error, "Sunucu UI veri sürümü uyumsuz.", "contract error")
 
 local malformed_relation = snapshot({ "invalid" })
-equal(panel:apply_snapshot(malformed_relation), true, "malformed relation is isolated")
-equal(#panel.view_model.views.DIPLOMACY.relations, 1, "relation slot is preserved")
+equal(panel:apply_snapshot(malformed_relation), false, "malformed relation rejected")
+equal(#panel.view_model.views.DIPLOMACY.relations, 1, "previous snapshot preserved")
 equal(
     panel.view_model.views.DIPLOMACY.relations[1].guild.key,
-    "",
-    "malformed relation has safe defaults"
+    "guild-alliance",
+    "malformed relation does not reach presentation"
 )
 
 panel:set_chat_available(true)
