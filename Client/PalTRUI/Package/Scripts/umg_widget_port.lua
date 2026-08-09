@@ -62,8 +62,14 @@ function UMGWidgetPort:open(model)
             context.player_controller
         )
     end)
-    if not created or not valid_object(widget) then
-        return false, "PalTR panel widgeti olusturulamadi."
+    if not created then
+        return false,
+            "PalTR panel Create cagrisi hata verdi: " .. tostring(widget)
+    end
+    if not valid_object(widget) then
+        return false,
+            "PalTR panel Create cagrisi gecersiz widget dondurdu: "
+                .. tostring(widget)
     end
 
     local bound, bind_error = self.view_binder:bind(widget, model)

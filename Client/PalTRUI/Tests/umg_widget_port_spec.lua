@@ -138,7 +138,16 @@ local failed_create = UMGWidgetPort.new({
 })
 local created, create_error = failed_create:open(first_model)
 equal(created, false, "create exception rejected")
-equal(create_error, "PalTR panel widgeti olusturulamadi.", "create error")
+equal(
+    string.find(create_error, "Create cagrisi hata verdi:", 1, true) ~= nil,
+    true,
+    "create error category"
+)
+equal(
+    string.find(create_error, "create failed", 1, true) ~= nil,
+    true,
+    "create error detail"
+)
 
 local invalid_widget = UMGWidgetPort.new({
     context_provider = context_provider,
@@ -149,7 +158,11 @@ local invalid_widget = UMGWidgetPort.new({
 })
 local valid, valid_error = invalid_widget:open(first_model)
 equal(valid, false, "invalid widget rejected")
-equal(valid_error, "PalTR panel widgeti olusturulamadi.", "invalid error")
+equal(
+    valid_error,
+    "PalTR panel Create cagrisi gecersiz widget dondurdu: nil",
+    "invalid error"
+)
 
 local rejected_bind = UMGWidgetPort.new({
     context_provider = context_provider,
