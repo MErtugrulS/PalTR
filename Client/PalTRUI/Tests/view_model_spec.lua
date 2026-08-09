@@ -129,6 +129,14 @@ equal(panel.view_model.views.CLAN.dashboard.alliance_count, 1,
     "dashboard alliance count")
 equal(panel.view_model.views.CLAN.dashboard.pending_count, 0,
     "dashboard pending count")
+equal(panel.view_model.views.CLAN.dashboard.relations_empty, false,
+    "dashboard relations available")
+equal(string.find(
+    panel.view_model.views.CLAN.dashboard.relations_text,
+    "Rakipler",
+    1,
+    true
+) ~= nil, true, "dashboard relation preview")
 equal(panel.view_model.views.CLAN.pending_empty, true,
     "dashboard pending offers empty")
 equal(panel.view_model.views.CLAN.pending_text, "Bekleyen teklif yok.",

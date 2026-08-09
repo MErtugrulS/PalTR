@@ -68,6 +68,7 @@ local names = {
     "DashboardDiplomacyCardTitleText",
     "DashboardDiplomacyCardValueText",
     "DashboardDiplomacyCardDetailText",
+    "DashboardRelationsText",
     "RelationListEmptyText",
     "RelationTitleText",
     "RelationStateText",
@@ -179,6 +180,7 @@ local model = {
             members_text = "Ada (cevrimici)\nBora",
             pending_text = "Teklifçiler | İttifak teklifi bekliyor | Gelen teklif",
             dashboard = {
+                relations_text = "Rakipler | Savas\nTeklifciler | Ittifak teklifi bekliyor",
                 cards = {
                     {
                         id = "CLAN_STATUS",
@@ -326,6 +328,9 @@ equal(text_values.DashboardDiplomacyCardTitleText, "Diplomasi",
 equal(text_values.DashboardDiplomacyCardValueText,
     "Savas: 1 | Ittifak: 0 | Bekleyen: 1",
     "diplomacy dashboard card value")
+equal(text_values.DashboardRelationsText,
+    "Rakipler | Savas\nTeklifciler | Ittifak teklifi bekliyor",
+    "dashboard relation preview")
 equal(text_values.RelationListEmptyText, "Rakipler | Savas", "relations")
 equal(text_values.RelationTitleText, "Rakipler", "selected guild")
 equal(text_values.RelationStateText, "Savas", "relation state")

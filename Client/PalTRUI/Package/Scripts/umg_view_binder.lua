@@ -240,6 +240,13 @@ function UMGViewBinder:bind(panel, model)
     end
 
     local dashboard = table_or_empty(clan.dashboard)
+    local relations_updated, relations_error = self:_set_text(
+        controls,
+        "DashboardRelationsText",
+        dashboard.relations_text
+    )
+    if not relations_updated then return false, relations_error end
+
     for _, card in ipairs(table_or_empty(dashboard.cards)) do
         card = table_or_empty(card)
         for _, field in ipairs({

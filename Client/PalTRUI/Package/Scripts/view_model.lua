@@ -353,6 +353,7 @@ local function clan_view(snapshot)
     local alliance_count = 0
     local pending_count = 0
     local pending_offers = {}
+    local relation_preview_lines = {}
     for _, relation in ipairs(table_or_empty(snapshot.relations)) do
         relation = table_or_empty(relation)
         local state = text(relation.state)
@@ -371,6 +372,14 @@ local function clan_view(snapshot)
                     relation.proposal_direction
                 )
             })
+        end
+        local relation_name = text(relation.guild_name)
+        if relation_name ~= "" then
+            table.insert(relation_preview_lines, string.format(
+                "%s | %s",
+                relation_name,
+                label_for(state_labels, state)
+            ))
         end
     end
 
@@ -453,7 +462,11 @@ local function clan_view(snapshot)
             cards = { clan_card, diplomacy_card },
             war_count = war_count,
             alliance_count = alliance_count,
-            pending_count = pending_count
+            pending_count = pending_count,
+            relations_empty = #relation_preview_lines == 0,
+            relations_text = #relation_preview_lines == 0
+                and "Iliski kaydi yok."
+                or table.concat(relation_preview_lines, "\n")
         },
         pending_offers = pending_offers,
         pending_count = pending_count,
