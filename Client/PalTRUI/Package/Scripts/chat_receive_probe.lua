@@ -52,6 +52,16 @@ local function text(value)
     return tostring(value)
 end
 
+function Probe.suppress_transport_frame(message_param, frame)
+    if type(frame) ~= "table" then return false end
+    local message = unwrap(message_param)
+    if message == nil then return false end
+    local cleared = pcall(function()
+        message.Message = ""
+    end)
+    return cleared == true
+end
+
 local function on_received_chat(_context, message_param)
     local message = text(read(message_param, "Message"))
     local category = text(read(message_param, "Category"))
@@ -72,6 +82,7 @@ local function on_received_chat(_context, message_param)
 
     local frame = UIWire.decode(message)
     if frame ~= nil then
+        Probe.suppress_transport_frame(message_param, frame)
         print(string.format(
             "[PalTRUI][CHAT] WIRE_FRAME | kind=%s | request_id=%s | payload_length=%d\n",
             frame.kind,
