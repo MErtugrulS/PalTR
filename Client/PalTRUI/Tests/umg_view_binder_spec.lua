@@ -59,6 +59,9 @@ local names = {
     "ClanSummaryText",
     "ClanMembersText",
     "PendingOffersText",
+    "DashboardDiplomacyButtonText",
+    "DashboardOffersButtonText",
+    "DashboardGuildsButtonText",
     "RelationListEmptyText",
     "RelationTitleText",
     "RelationStateText",
@@ -72,6 +75,18 @@ for _, name in ipairs(names) do
     table.insert(controls, text_widget(name))
 end
 for _, action in ipairs({
+    {
+        control = "DashboardDiplomacyButton",
+        text_control = "DashboardDiplomacyButtonText"
+    },
+    {
+        control = "DashboardOffersButton",
+        text_control = "DashboardOffersButtonText"
+    },
+    {
+        control = "DashboardGuildsButton",
+        text_control = "DashboardGuildsButtonText"
+    },
     {
         control = "WarRequestButton",
         text_control = "WarRequestButtonText"
@@ -157,6 +172,26 @@ local model = {
             summary_text = "Lider: Ada | Üye: 2 | Çevrimiçi: 1\nSavaş: 1 | İttifak: 0 | Bekleyen: 0",
             members_text = "Ada (cevrimici)\nBora",
             pending_text = "Teklifçiler | İttifak teklifi bekliyor | Gelen teklif",
+            quick_actions = {
+                DashboardDiplomacyButton = {
+                    control = "DashboardDiplomacyButton",
+                    text_control = "DashboardDiplomacyButtonText",
+                    label = "Diplomasiyi Ac",
+                    enabled = true
+                },
+                DashboardOffersButton = {
+                    control = "DashboardOffersButton",
+                    text_control = "DashboardOffersButtonText",
+                    label = "Teklifleri Gor",
+                    enabled = true
+                },
+                DashboardGuildsButton = {
+                    control = "DashboardGuildsButton",
+                    text_control = "DashboardGuildsButtonText",
+                    label = "Klanlari Listele",
+                    enabled = false
+                }
+            },
             members = {
                 { name = "Ada", online = true },
                 { name = "Bora", online = false }
@@ -243,6 +278,14 @@ equal(text_values.ClanMembersText, "Ada (cevrimici)\nBora", "members")
 equal(text_values.PendingOffersText,
     "Teklifçiler | İttifak teklifi bekliyor | Gelen teklif",
     "pending offers")
+equal(text_values.DashboardDiplomacyButtonText, "Diplomasiyi Ac",
+    "dashboard diplomacy label")
+equal(enabled_values.DashboardDiplomacyButton, true,
+    "dashboard diplomacy enabled")
+equal(text_values.DashboardOffersButtonText, "Teklifleri Gor",
+    "dashboard offers label")
+equal(enabled_values.DashboardGuildsButton, false,
+    "dashboard guilds disabled")
 equal(text_values.RelationListEmptyText, "Rakipler | Savas", "relations")
 equal(text_values.RelationTitleText, "Rakipler", "selected guild")
 equal(text_values.RelationStateText, "Savas", "relation state")

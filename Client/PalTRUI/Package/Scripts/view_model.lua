@@ -90,6 +90,29 @@ local relation_navigation_definitions = {
     }
 }
 
+local dashboard_action_definitions = {
+    {
+        control = "DashboardDiplomacyButton",
+        text_control = "DashboardDiplomacyButtonText",
+        label = "Diplomasiyi Ac",
+        target_tab = "DIPLOMACY"
+    },
+    {
+        control = "DashboardOffersButton",
+        text_control = "DashboardOffersButtonText",
+        label = "Teklifleri Gor",
+        target_tab = "DIPLOMACY",
+        requires_pending = true
+    },
+    {
+        control = "DashboardGuildsButton",
+        text_control = "DashboardGuildsButtonText",
+        label = "Klanlari Listele",
+        target_tab = "GUILDS",
+        requires_guilds = true
+    }
+}
+
 local function text(value)
     if value == nil then return "" end
     return tostring(value)
@@ -389,6 +412,27 @@ local function clan_view(snapshot)
         ),
         detail = ""
     }
+    local quick_actions = {}
+    local guild_count = #table_or_empty(snapshot.guilds)
+    for _, definition in ipairs(dashboard_action_definitions) do
+        local enabled = true
+        local reason = ""
+        if definition.requires_pending and pending_count == 0 then
+            enabled = false
+            reason = "Bekleyen teklif yok."
+        elseif definition.requires_guilds and guild_count == 0 then
+            enabled = false
+            reason = "Listelenecek klan yok."
+        end
+        quick_actions[definition.control] = {
+            control = definition.control,
+            text_control = definition.text_control,
+            label = definition.label,
+            target_tab = definition.target_tab,
+            enabled = enabled,
+            reason = reason
+        }
+    end
 
     return {
         guild = {
@@ -411,6 +455,7 @@ local function clan_view(snapshot)
         pending_text = pending_count == 0
             and "Bekleyen teklif yok."
             or table.concat(pending_lines, "\n"),
+        quick_actions = quick_actions,
         empty = empty,
         empty_message = empty_message,
         name_text = guild_name ~= ""

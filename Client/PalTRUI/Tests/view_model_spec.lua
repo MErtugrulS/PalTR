@@ -137,6 +137,10 @@ equal(panel.view_model.views.CLAN.dashboard.cards[1].id, "CLAN_STATUS",
     "clan dashboard card")
 equal(panel.view_model.views.CLAN.dashboard.cards[2].id,
     "DIPLOMACY_STATUS", "diplomacy dashboard card")
+equal(panel.view_model.views.CLAN.quick_actions.DashboardOffersButton.enabled,
+    false, "pending quick action disabled")
+equal(panel.view_model.views.CLAN.quick_actions.DashboardOffersButton.reason,
+    "Bekleyen teklif yok.", "pending quick action reason")
 
 local pending_relations = {
     relations[1],
@@ -164,6 +168,8 @@ equal(pending_panel.view_model.views.CLAN.pending_offers[1].guild_key,
 equal(pending_panel.view_model.views.CLAN.pending_text,
     "Teklifçiler | İttifak teklifi bekliyor | Gelen teklif",
     "pending offer presentation text")
+equal(pending_panel.view_model.views.CLAN.quick_actions.DashboardOffersButton.enabled,
+    true, "pending quick action enabled")
 equal(
     panel.view_model.views.CLAN.members_text,
     "Ada (cevrimici)\nBora",

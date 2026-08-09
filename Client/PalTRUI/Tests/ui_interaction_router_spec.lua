@@ -22,6 +22,19 @@ local current_model = {
         { id = "GUILDS", control = "ChatTabButton" }
     },
     views = {
+        CLAN = {
+            quick_actions = {
+                DashboardGuildsButton = {
+                    target_tab = "GUILDS",
+                    enabled = true
+                },
+                DashboardOffersButton = {
+                    target_tab = "DIPLOMACY",
+                    enabled = false,
+                    reason = "Bekleyen teklif yok."
+                }
+            }
+        },
         DIPLOMACY = {
             navigation_controls = {
                 PreviousRelationButton = {
@@ -91,6 +104,21 @@ for control_name, tab_id in pairs(tab_controls) do
     equal(rendered, true, control_name .. " rendered")
     equal(route_error, nil, control_name .. " has no error")
 end
+
+
+local quick_handled, quick_model, quick_rendered, quick_error =
+    router:handle("DashboardGuildsButton")
+equal(quick_handled, true, "dashboard quick action handled")
+equal(quick_model.active_tab, "GUILDS", "dashboard target tab")
+equal(quick_rendered, true, "dashboard quick action rendered")
+equal(quick_error, nil, "dashboard quick action has no error")
+
+local quick_disabled, _, quick_disabled_rendered, quick_disabled_error =
+    router:handle("DashboardOffersButton")
+equal(quick_disabled, false, "disabled dashboard action rejected")
+equal(quick_disabled_rendered, false, "disabled dashboard action not rendered")
+equal(quick_disabled_error, "Bekleyen teklif yok.",
+    "disabled dashboard reason")
 
 local closed, closed_model, close_rendered =
     router:handle("CloseButton")

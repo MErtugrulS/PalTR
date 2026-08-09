@@ -222,6 +222,23 @@ function UMGViewBinder:bind(panel, model)
         if not state_updated then return false, state_error end
     end
 
+    for _, quick_action in pairs(table_or_empty(clan.quick_actions)) do
+        quick_action = table_or_empty(quick_action)
+        local label_updated, label_error = self:_set_text(
+            controls,
+            text(quick_action.text_control),
+            quick_action.label
+        )
+        if not label_updated then return false, label_error end
+
+        local state_updated, state_error = self:_set_enabled(
+            controls,
+            text(quick_action.control),
+            quick_action.enabled
+        )
+        if not state_updated then return false, state_error end
+    end
+
     for _, action_control in pairs(
         table_or_empty(diplomacy.action_controls)
     ) do

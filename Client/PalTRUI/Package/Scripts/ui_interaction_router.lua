@@ -45,6 +45,15 @@ local function navigation_control(controller, control_name)
     return model, controls[control_name]
 end
 
+local function dashboard_control(controller, control_name)
+    local model = current_model(controller)
+    local views = type(model) == "table" and model.views or nil
+    local clan = type(views) == "table" and views.CLAN or nil
+    local controls = type(clan) == "table" and clan.quick_actions or nil
+    if type(controls) ~= "table" then return model, nil end
+    return model, controls[control_name]
+end
+
 function UIInteractionRouter.new(controller)
     return setmetatable({
         controller = valid_controller(controller) and controller or nil
@@ -68,6 +77,23 @@ function UIInteractionRouter:handle(control_name)
     local model = current_model(self.controller)
     local tab_id = tab_id_for_control(model, name)
     if tab_id == nil then
+        local dashboard_model, dashboard = dashboard_control(
+            self.controller,
+            name
+        )
+        if type(dashboard) == "table" then
+            if dashboard.enabled ~= true then
+                return false, dashboard_model, false,
+                    tostring(dashboard.reason or "Hizli islem kullanilamaz.")
+            end
+            local accepted, target_model, rendered, render_error =
+                self.controller:set_tab(dashboard.target_tab)
+            if accepted ~= true or rendered ~= true then
+                return false, target_model, rendered, render_error
+            end
+            return true, target_model, true
+        end
+
         local navigation_model, navigation = navigation_control(
             self.controller,
             name
