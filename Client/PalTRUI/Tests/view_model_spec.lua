@@ -379,6 +379,12 @@ equal(panel.view_model.views.GUILDS.guild_count, 2,
     "guild catalog count")
 equal(panel.view_model.views.GUILDS.active_count, 1,
     "active guild count")
+equal(panel.view_model.views.GUILDS.registered_count, 1,
+    "registered guild count")
+equal(string.find(panel.view_model.views.GUILDS.active_text,
+    "Gezginler", 1, true) ~= nil, true, "active guild group")
+equal(string.find(panel.view_model.views.GUILDS.registered_text,
+    "Uykudakiler", 1, true) ~= nil, true, "registered guild group")
 equal(panel.view_model.views.GUILDS.list_text,
     "Gezginler | Aktif | 4 uye | 2 cevrimici\nUykudakiler | Kayitli | 3 uye | 0 cevrimici",
     "guild catalog presentation text")

@@ -78,7 +78,10 @@ local names = {
     "AllianceTitleText",
     "AllianceStateText",
     "AllianceDescriptionText",
-    "ChatEmptyText"
+    "ChatEmptyText",
+    "GuildCatalogSummaryText",
+    "GuildCatalogActiveText",
+    "GuildCatalogRegisteredText"
 }
 local controls = { switcher }
 for _, name in ipairs(names) do
@@ -314,7 +317,10 @@ local model = {
         },
         GUILDS = {
             empty = false,
+            summary_text = "2 klan | 1 aktif",
             list_text = "Gezginler | Aktif | 4 uye | 2 cevrimici",
+            active_text = "Gezginler | Aktif | 4 uye | 2 cevrimici",
+            registered_text = "Uykudakiler | Kayitli | 3 uye | 0 cevrimici",
             guilds = {
                 { name = "Gezginler", active = true }
             }
@@ -372,6 +378,13 @@ equal(enabled_values.NextAllianceButton, false,
     "alliance next disabled")
 equal(text_values.ChatEmptyText,
     "Gezginler | Aktif | 4 uye | 2 cevrimici", "guild catalog")
+equal(text_values.GuildCatalogSummaryText, "2 klan | 1 aktif",
+    "guild catalog summary")
+equal(text_values.GuildCatalogActiveText,
+    "Gezginler | Aktif | 4 uye | 2 cevrimici", "active guild catalog")
+equal(text_values.GuildCatalogRegisteredText,
+    "Uykudakiler | Kayitli | 3 uye | 0 cevrimici",
+    "registered guild catalog")
 equal(text_values.ClanTabText, "Klanim (2)", "clan tab label")
 equal(enabled_values.ClanTabButton, true, "inactive tab enabled")
 equal(text_values.DiplomacyTabText, "Diplomasi (1)", "diplomacy tab label")

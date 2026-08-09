@@ -616,14 +616,18 @@ local function guild_catalog_view(snapshot)
     end)
 
     local lines = {}
+    local active_lines = {}
+    local registered_lines = {}
     for _, guild in ipairs(guilds) do
-        table.insert(lines, string.format(
+        local line = string.format(
             "%s | %s | %d uye | %d cevrimici",
             guild.name ~= "" and guild.name or guild.key,
             guild.active and "Aktif" or "Kayitli",
             guild.member_count,
             guild.online_count
-        ))
+        )
+        table.insert(lines, line)
+        table.insert(guild.active and active_lines or registered_lines, line)
     end
 
     local empty = #guilds == 0
@@ -632,6 +636,7 @@ local function guild_catalog_view(snapshot)
         guilds = guilds,
         guild_count = #guilds,
         active_count = active_count,
+        registered_count = #guilds - active_count,
         empty = empty,
         empty_message = empty_message,
         summary_text = string.format(
@@ -640,7 +645,11 @@ local function guild_catalog_view(snapshot)
             active_count
         ),
         list_text = empty and empty_message
-            or table.concat(lines, "\n")
+            or table.concat(lines, "\n"),
+        active_text = #active_lines == 0
+            and "Aktif klan yok." or table.concat(active_lines, "\n"),
+        registered_text = #registered_lines == 0
+            and "Kayitli klan yok." or table.concat(registered_lines, "\n")
     }
 end
 

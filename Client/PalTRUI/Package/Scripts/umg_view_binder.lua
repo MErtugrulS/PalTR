@@ -196,7 +196,10 @@ function UMGViewBinder:bind(panel, model)
         { "AllianceTitleText", alliance.title_text },
         { "AllianceStateText", alliance.state_text },
         { "AllianceDescriptionText", alliance.description_text },
-        { "ChatEmptyText", guilds.list_text }
+        { "ChatEmptyText", guilds.list_text },
+        { "GuildCatalogSummaryText", guilds.summary_text },
+        { "GuildCatalogActiveText", guilds.active_text },
+        { "GuildCatalogRegisteredText", guilds.registered_text }
     }
 
     for _, binding in ipairs(bindings) do
