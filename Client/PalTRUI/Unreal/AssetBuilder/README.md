@@ -34,4 +34,10 @@ quick-actions card to the Clan dashboard. Its three stable buttons navigate to
 the existing Diplomacy and Guilds presentation models without adding gameplay
 rules or transport behavior. The update is idempotent and refuses partial controls.
 
+Run the commandlet with `-UpdateDashboardStatusCards` to add side-by-side Clan
+and Diplomacy status cards below the Clan heading. The cards consume only the
+existing presentation model, preserve the detailed member and offer sections,
+and collapse the superseded single-block summary. The update is idempotent and
+refuses partial controls.
+
 Run the commandlet with `-Verify` to load both generated classes and check the renderer-facing widget names without modifying the assets.

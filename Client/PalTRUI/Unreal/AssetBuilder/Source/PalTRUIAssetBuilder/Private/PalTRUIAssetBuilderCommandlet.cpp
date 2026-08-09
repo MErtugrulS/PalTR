@@ -706,6 +706,137 @@ namespace PalTRUIAssetBuilder
         return true;
     }
 
+    bool UpdateDashboardStatusCards()
+    {
+        UWidgetBlueprint* Panel = LoadObject<UWidgetBlueprint>(
+            nullptr,
+            TEXT("/Game/Mods/PalTRUI/WBP_PalTRPanel.WBP_PalTRPanel")
+        );
+        if (!Panel || !Panel->WidgetTree)
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI status cards update failed: panel asset missing."));
+            return false;
+        }
+
+        UWidgetTree* Tree = Panel->WidgetTree;
+        UVerticalBox* ClanPage = Cast<UVerticalBox>(Tree->FindWidget(TEXT("ClanPage")));
+        static const FName StatusCardWidgets[] = {
+            TEXT("DashboardStatusCardsFrame"),
+            TEXT("DashboardClanCardFrame"),
+            TEXT("DashboardClanCardContent"),
+            TEXT("DashboardClanCardTitleText"),
+            TEXT("DashboardClanCardValueText"),
+            TEXT("DashboardClanCardDetailText"),
+            TEXT("DashboardDiplomacyCardFrame"),
+            TEXT("DashboardDiplomacyCardContent"),
+            TEXT("DashboardDiplomacyCardTitleText"),
+            TEXT("DashboardDiplomacyCardValueText"),
+            TEXT("DashboardDiplomacyCardDetailText")
+        };
+        if (!ClanPage)
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI status cards update failed: clan page missing."));
+            return false;
+        }
+
+        int32 ExistingWidgetCount = 0;
+        for (const FName WidgetName : StatusCardWidgets)
+        {
+            ExistingWidgetCount += Tree->FindWidget(WidgetName) ? 1 : 0;
+        }
+        if (ExistingWidgetCount == UE_ARRAY_COUNT(StatusCardWidgets))
+        {
+            UE_LOG(LogTemp, Display, TEXT("PALTR_UI_STATUS_CARDS_UPDATE_OK | changed=false"));
+            return true;
+        }
+        if (ExistingWidgetCount != 0)
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI status cards update refused: partial controls exist."));
+            return false;
+        }
+
+        UTextBlock* LegacyName = Cast<UTextBlock>(Tree->FindWidget(TEXT("ClanNameText")));
+        UTextBlock* LegacySummary = Cast<UTextBlock>(Tree->FindWidget(TEXT("ClanSummaryText")));
+        if (!LegacyName || !LegacySummary)
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI status cards update failed: legacy clan summary missing."));
+            return false;
+        }
+
+        Panel->Modify();
+        Tree->Modify();
+        ClanPage->Modify();
+        LegacyName->Modify();
+        LegacySummary->Modify();
+
+        UHorizontalBox* Cards = Tree->ConstructWidget<UHorizontalBox>(
+            UHorizontalBox::StaticClass(),
+            TEXT("DashboardStatusCardsFrame")
+        );
+
+        const FLinearColor ClanColor(0.025f, 0.20f, 0.18f, 0.96f);
+        UBorder* ClanFrame = Tree->ConstructWidget<UBorder>(
+            UBorder::StaticClass(),
+            TEXT("DashboardClanCardFrame")
+        );
+        ClanFrame->SetBrushColor(ClanColor);
+        ClanFrame->SetPadding(FMargin(16.0f));
+        UVerticalBox* ClanContent = Tree->ConstructWidget<UVerticalBox>(
+            UVerticalBox::StaticClass(),
+            TEXT("DashboardClanCardContent")
+        );
+        ClanFrame->SetContent(ClanContent);
+        UTextBlock* ClanTitle = MakeText(Tree, TEXT("DashboardClanCardTitleText"), TEXT("KLANIM"), 18);
+        ClanTitle->SetColorAndOpacity(FSlateColor(FLinearColor(0.35f, 0.90f, 0.82f, 1.0f)));
+        AddVertical(ClanContent, ClanTitle, FMargin(0, 0, 0, 8));
+        AddVertical(ClanContent, MakeText(Tree, TEXT("DashboardClanCardValueText"), TEXT("-"), 24), FMargin(0, 0, 0, 8));
+        AddVertical(ClanContent, MakeText(Tree, TEXT("DashboardClanCardDetailText"), TEXT("Klan bilgisi bekleniyor."), 15));
+        UHorizontalBoxSlot* ClanSlot = AddHorizontal(Cards, ClanFrame, FMargin(0, 0, 8, 0));
+        ClanSlot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
+
+        const FLinearColor DiplomacyColor(0.035f, 0.13f, 0.20f, 0.96f);
+        UBorder* DiplomacyFrame = Tree->ConstructWidget<UBorder>(
+            UBorder::StaticClass(),
+            TEXT("DashboardDiplomacyCardFrame")
+        );
+        DiplomacyFrame->SetBrushColor(DiplomacyColor);
+        DiplomacyFrame->SetPadding(FMargin(16.0f));
+        UVerticalBox* DiplomacyContent = Tree->ConstructWidget<UVerticalBox>(
+            UVerticalBox::StaticClass(),
+            TEXT("DashboardDiplomacyCardContent")
+        );
+        DiplomacyFrame->SetContent(DiplomacyContent);
+        UTextBlock* DiplomacyTitle = MakeText(Tree, TEXT("DashboardDiplomacyCardTitleText"), TEXT("DIPLOMASI"), 18);
+        DiplomacyTitle->SetColorAndOpacity(FSlateColor(FLinearColor(0.92f, 0.68f, 0.25f, 1.0f)));
+        AddVertical(DiplomacyContent, DiplomacyTitle, FMargin(0, 0, 0, 8));
+        AddVertical(DiplomacyContent, MakeText(Tree, TEXT("DashboardDiplomacyCardValueText"), TEXT("Savas: 0 | Ittifak: 0 | Bekleyen: 0"), 18), FMargin(0, 0, 0, 8));
+        AddVertical(DiplomacyContent, MakeText(Tree, TEXT("DashboardDiplomacyCardDetailText"), TEXT(""), 15));
+        UHorizontalBoxSlot* DiplomacySlot = AddHorizontal(Cards, DiplomacyFrame, FMargin(8, 0, 0, 0));
+        DiplomacySlot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
+
+        UVerticalBoxSlot* CardsSlot = Cast<UVerticalBoxSlot>(ClanPage->InsertChildAt(1, Cards));
+        if (!CardsSlot)
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI status cards update failed: card slot could not be inserted."));
+            return false;
+        }
+        CardsSlot->SetPadding(FMargin(0, 0, 0, 16));
+        CardsSlot->SetHorizontalAlignment(HAlign_Fill);
+        LegacyName->SetVisibility(ESlateVisibility::Collapsed);
+        LegacySummary->SetVisibility(ESlateVisibility::Collapsed);
+
+        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Panel);
+        FKismetEditorUtilities::CompileBlueprint(Panel);
+        if (!SaveAsset(Panel))
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI status cards update failed while saving panel."));
+            return false;
+        }
+
+        UE_LOG(LogTemp, Display, TEXT("PALTR_UI_STATUS_CARDS_UPDATE_OK | changed=true"));
+        return true;
+    }
+
     bool VerifyAssets()
     {
         UBlueprint* ModActor = LoadObject<UBlueprint>(
@@ -750,6 +881,17 @@ namespace PalTRUIAssetBuilder
             TEXT("DashboardOffersButtonText"),
             TEXT("DashboardGuildsButton"),
             TEXT("DashboardGuildsButtonText"),
+            TEXT("DashboardStatusCardsFrame"),
+            TEXT("DashboardClanCardFrame"),
+            TEXT("DashboardClanCardContent"),
+            TEXT("DashboardClanCardTitleText"),
+            TEXT("DashboardClanCardValueText"),
+            TEXT("DashboardClanCardDetailText"),
+            TEXT("DashboardDiplomacyCardFrame"),
+            TEXT("DashboardDiplomacyCardContent"),
+            TEXT("DashboardDiplomacyCardTitleText"),
+            TEXT("DashboardDiplomacyCardValueText"),
+            TEXT("DashboardDiplomacyCardDetailText"),
             TEXT("RelationList"),
             TEXT("RelationTitleText"),
             TEXT("RelationStateText"),
@@ -832,6 +974,11 @@ int32 UPalTRUIAssetBuilderCommandlet::Main(const FString& Params)
     if (FParse::Param(*Params, TEXT("UpdateDashboardQuickActions")))
     {
         return UpdateDashboardQuickActions() ? 0 : 10;
+    }
+
+    if (FParse::Param(*Params, TEXT("UpdateDashboardStatusCards")))
+    {
+        return UpdateDashboardStatusCards() ? 0 : 11;
     }
 
     const FString ModActorPackage = FString(AssetRoot) / TEXT("ModActor");
