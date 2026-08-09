@@ -1,5 +1,6 @@
 local UMGAssetLoader = require("umg_asset_loader")
 local UMGContext = require("umg_context")
+local UMGViewBinder = require("umg_view_binder")
 
 local UMGWidgetPort = {}
 UMGWidgetPort.__index = UMGWidgetPort
@@ -27,6 +28,7 @@ function UMGWidgetPort.new(dependencies)
     return setmetatable({
         asset_loader = dependencies.asset_loader or UMGAssetLoader.new(),
         context_provider = dependencies.context_provider or UMGContext,
+        view_binder = dependencies.view_binder or UMGViewBinder.new(),
         find_object = dependencies.find_object or default_find_object,
         widget = nil,
         last_model = nil
@@ -64,6 +66,9 @@ function UMGWidgetPort:open(model)
         return false, "PalTR panel widgeti olusturulamadi."
     end
 
+    local bound, bind_error = self.view_binder:bind(widget, model)
+    if bound ~= true then return false, bind_error end
+
     local added = pcall(function()
         widget:AddToViewport(UMGWidgetPort.Z_ORDER)
     end)
@@ -80,6 +85,8 @@ function UMGWidgetPort:update(model)
     if not valid_object(self.widget) then
         return false, "PalTR panel widgeti acik degil."
     end
+    local bound, bind_error = self.view_binder:bind(self.widget, model)
+    if bound ~= true then return false, bind_error end
     self.last_model = model
     return true
 end

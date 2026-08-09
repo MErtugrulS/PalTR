@@ -49,10 +49,19 @@ local asset_loader = {
         return true, panel_class
     end
 }
+local bound_models = {}
+local view_binder = {
+    bind = function(_, bound_widget, model)
+        equal(bound_widget, widget, "binder receives widget")
+        table.insert(bound_models, model)
+        return true
+    end
+}
 local find_calls = {}
 local port = UMGWidgetPort.new({
     context_provider = context_provider,
     asset_loader = asset_loader,
+    view_binder = view_binder,
     find_object = function(path)
         table.insert(find_calls, path)
         return library
@@ -69,6 +78,7 @@ equal(create_calls[1].world_context, hud, "hud is world context")
 equal(create_calls[1].widget_type, panel_class, "panel class passed")
 equal(create_calls[1].owning_player, controller, "owning player passed")
 equal(viewport_calls[1], UMGWidgetPort.Z_ORDER, "stable viewport order")
+equal(bound_models[1], first_model, "initial model bound before viewport")
 equal(port.last_model, first_model, "open model retained")
 
 equal(port:open(first_model), true, "open widget reused")
@@ -76,6 +86,7 @@ equal(#create_calls, 1, "open does not duplicate widget")
 
 local diplomacy = { open = true, active_tab = "DIPLOMACY" }
 equal(port:update(diplomacy), true, "open widget accepts update")
+equal(bound_models[2], diplomacy, "updated model bound")
 equal(port.last_model, diplomacy, "updated model retained")
 equal(port:close(), true, "widget closed")
 equal(remove_calls, 1, "widget removed once")
@@ -139,6 +150,19 @@ local invalid_widget = UMGWidgetPort.new({
 local valid, valid_error = invalid_widget:open(first_model)
 equal(valid, false, "invalid widget rejected")
 equal(valid_error, "PalTR panel widgeti olusturulamadi.", "invalid error")
+
+local rejected_bind = UMGWidgetPort.new({
+    context_provider = context_provider,
+    asset_loader = asset_loader,
+    view_binder = {
+        bind = function() return false, "bind failed" end
+    },
+    find_object = function() return library end
+})
+local bind_opened, bind_error = rejected_bind:open(first_model)
+equal(bind_opened, false, "failed initial bind rejected")
+equal(bind_error, "bind failed", "bind error preserved")
+equal(rejected_bind.widget, nil, "failed bind does not retain widget")
 
 local unopened = UMGWidgetPort.new({})
 local updated, update_error = unopened:update(first_model)
