@@ -36,6 +36,9 @@ function Contract.validate(snapshot)
     if tonumber(snapshot.schema_version) ~= Contract.SCHEMA_VERSION then
         return false, "schema_version"
     end
+    if type(snapshot.generated_at) ~= "number" then
+        return false, "generated_at"
+    end
     if type(snapshot.player) ~= "table" then return false, "player" end
     if type(snapshot.guild) ~= "table" then return false, "guild" end
     if type(snapshot.members) ~= "table" then return false, "members" end

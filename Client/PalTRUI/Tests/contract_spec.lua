@@ -13,6 +13,7 @@ end
 
 local valid = {
     schema_version = 1,
+    generated_at = 100,
     player = { name = "Ada", guild_key = "own", role = 1, is_master = true },
     guild = { key = "own", name = "Anka" },
     members = {
@@ -38,6 +39,7 @@ equal(Contract.accepts(valid), true, "accepts uses validation")
 
 local malformed_relation = {
     schema_version = 1,
+    generated_at = 100,
     player = {},
     guild = {},
     members = {},
@@ -50,6 +52,7 @@ equal(relation_error, "relations.item", "relation error path")
 
 local malformed_action = {
     schema_version = 1,
+    generated_at = 100,
     player = {},
     guild = {},
     members = {},
