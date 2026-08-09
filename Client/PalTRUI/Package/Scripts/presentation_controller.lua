@@ -1,6 +1,7 @@
 local PanelState = require("panel_state")
 local ActionIntent = require("action_intent")
 local ActionOutbox = require("action_outbox")
+local RelationNavigator = require("relation_navigator")
 
 local PresentationController = {}
 PresentationController.__index = PresentationController
@@ -67,6 +68,10 @@ function PresentationController:select_guild(guild_key)
     local accepted = self.panel:select_guild(guild_key)
     local rendered, render_error = self:_render()
     return accepted, self:model(), rendered, render_error
+end
+
+function PresentationController:navigate_relation(step)
+    return RelationNavigator.select(self, step)
 end
 
 function PresentationController:apply_snapshot(snapshot)

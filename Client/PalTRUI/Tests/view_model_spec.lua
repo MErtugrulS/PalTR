@@ -182,6 +182,16 @@ equal(
     "Aksiyon güncel snapshotta sunulmuyor.",
     "disabled action reason"
 )
+local navigation_controls =
+    panel.view_model.views.DIPLOMACY.navigation_controls
+equal(navigation_controls.PreviousRelationButton.enabled, true,
+    "previous relation enabled")
+equal(navigation_controls.PreviousRelationButton.step, -1,
+    "previous relation step")
+equal(navigation_controls.NextRelationButton.enabled, true,
+    "next relation enabled")
+equal(navigation_controls.NextRelationButton.step, 1,
+    "next relation step")
 
 panel:select_guild("guild-war")
 equal(
@@ -205,6 +215,11 @@ equal(panel:select_guild("guild-war"), true, "visible relation selected")
 
 panel:apply_snapshot(snapshot({ relations[1] }))
 equal(panel.selected_guild, "guild-alliance", "stale selection is replaced")
+equal(
+    panel.view_model.views.DIPLOMACY.navigation_controls.NextRelationButton.enabled,
+    false,
+    "single relation navigation disabled"
+)
 
 local invalid = snapshot()
 invalid.members = "invalid"

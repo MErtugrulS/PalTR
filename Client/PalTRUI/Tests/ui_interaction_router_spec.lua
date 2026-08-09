@@ -23,6 +23,17 @@ local current_model = {
     },
     views = {
         DIPLOMACY = {
+            navigation_controls = {
+                PreviousRelationButton = {
+                    step = -1,
+                    enabled = true
+                },
+                NextRelationButton = {
+                    step = 1,
+                    enabled = false,
+                    reason = "Gezinme kapali."
+                }
+            },
             action_controls = {
                 WarRequestButton = {
                     action_id = "DECLARE_WAR",
@@ -55,6 +66,13 @@ local controller = {
             action_id = action_id
         })
         return true, { action_id = action_id }
+    end,
+    navigate_relation = function(_, step)
+        table.insert(calls, {
+            name = "navigate_relation",
+            step = step
+        })
+        return true, current_model
     end
 }
 local router = UIInteractionRouter.new(controller)
@@ -80,6 +98,22 @@ equal(closed, true, "close handled")
 equal(closed_model.open, false, "close model returned")
 equal(close_rendered, true, "close rendered")
 equal(calls[#calls].name, "toggle", "close routed to toggle")
+
+local navigated, navigation_model, navigation_rendered,
+    navigation_error = router:handle("PreviousRelationButton")
+equal(navigated, true, "navigation control handled")
+equal(navigation_model, current_model, "navigation model returned")
+equal(navigation_rendered, true, "navigation rendered")
+equal(navigation_error, nil, "navigation has no error")
+equal(calls[#calls].name, "navigate_relation", "navigation routed")
+equal(calls[#calls].step, -1, "navigation model step used")
+
+local navigation_disabled, _, navigation_dispatched,
+    navigation_disabled_error = router:handle("NextRelationButton")
+equal(navigation_disabled, false, "disabled navigation rejected")
+equal(navigation_dispatched, false, "disabled navigation not dispatched")
+equal(navigation_disabled_error, "Gezinme kapali.",
+    "disabled navigation reason returned")
 
 local action_handled, action_model, action_dispatched, action_error =
     router:handle("WarRequestButton")

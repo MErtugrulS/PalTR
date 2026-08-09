@@ -35,6 +35,16 @@ local function action_control(controller, control_name)
     return model, controls[control_name]
 end
 
+local function navigation_control(controller, control_name)
+    local model = current_model(controller)
+    local views = type(model) == "table" and model.views or nil
+    local diplomacy = type(views) == "table" and views.DIPLOMACY or nil
+    local controls = type(diplomacy) == "table"
+        and diplomacy.navigation_controls or nil
+    if type(controls) ~= "table" then return model, nil end
+    return model, controls[control_name]
+end
+
 function UIInteractionRouter.new(controller)
     return setmetatable({
         controller = valid_controller(controller) and controller or nil
@@ -58,6 +68,27 @@ function UIInteractionRouter:handle(control_name)
     local model = current_model(self.controller)
     local tab_id = tab_id_for_control(model, name)
     if tab_id == nil then
+        local navigation_model, navigation = navigation_control(
+            self.controller,
+            name
+        )
+        if type(navigation) == "table" then
+            if navigation.enabled ~= true then
+                return false, navigation_model, false,
+                    tostring(navigation.reason or "Iliski gezinmesi kullanilamaz.")
+            end
+            if type(self.controller.navigate_relation) ~= "function" then
+                return false, navigation_model, false,
+                    "UI iliski navigator'i hazir degil."
+            end
+            local navigated, navigated_model, navigation_error =
+                self.controller:navigate_relation(navigation.step)
+            if navigated ~= true then
+                return false, navigated_model, false, navigation_error
+            end
+            return true, navigated_model, true
+        end
+
         local action_model, action = action_control(self.controller, name)
         if type(action) ~= "table" then
             return false, nil, false,

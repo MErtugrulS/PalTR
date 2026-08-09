@@ -75,6 +75,21 @@ local action_control_definitions = {
     }
 }
 
+local relation_navigation_definitions = {
+    {
+        control = "PreviousRelationButton",
+        text_control = "PreviousRelationButtonText",
+        label = "Onceki",
+        step = -1
+    },
+    {
+        control = "NextRelationButton",
+        text_control = "NextRelationButtonText",
+        label = "Sonraki",
+        step = 1
+    }
+}
+
 local function text(value)
     if value == nil then return "" end
     return tostring(value)
@@ -139,6 +154,23 @@ local function action_control_models(relation, action_transport_ready)
             label = label ~= "" and label or definition.default_label,
             enabled = enabled,
             reason = reason
+        }
+    end
+    return result
+end
+
+local function relation_navigation_controls(relation_count)
+    local result = {}
+    local enabled = tonumber(relation_count) ~= nil and relation_count > 1
+    for _, definition in ipairs(relation_navigation_definitions) do
+        result[definition.control] = {
+            control = definition.control,
+            text_control = definition.text_control,
+            label = definition.label,
+            step = definition.step,
+            enabled = enabled,
+            reason = enabled and ""
+                or "Gezinmek icin en az iki klan gerekli."
         }
     end
     return result
@@ -316,6 +348,7 @@ local function relation_views(snapshot, selected_guild, action_transport_ready)
                 selected_relation,
                 action_transport_ready
             ),
+            navigation_controls = relation_navigation_controls(#diplomacy),
             empty = diplomacy_empty,
             empty_message = diplomacy_empty_message,
             list_text = diplomacy_empty
