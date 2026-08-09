@@ -60,6 +60,8 @@ local names = {
     "HeaderNotificationText",
     "ClanNameText",
     "ClanSummaryText",
+    "ClanMembersHeadingText",
+    "ClanMembersStatusText",
     "ClanMembersText",
     "PendingOffersText",
     "DashboardDiplomacyButtonText",
@@ -196,6 +198,9 @@ local model = {
             guild = { name = "Anka" },
             member_count = 2,
             online_count = 1,
+            offline_count = 1,
+            members_heading_text = "KLAN ÜYELERİ (2)",
+            members_status_text = "1 çevrimiçi | 1 çevrimdışı",
             empty = false,
             name_text = "Anka",
             summary_text = "Lider: Ada | Üye: 2 | Çevrimiçi: 1\nSavaş: 1 | İttifak: 0 | Bekleyen: 0",
@@ -351,6 +356,10 @@ equal(text_values.ClanSummaryText,
     "Lider: Ada | Üye: 2 | Çevrimiçi: 1\nSavaş: 1 | İttifak: 0 | Bekleyen: 0",
     "clan summary")
 equal(text_values.ClanMembersText, "Ada (cevrimici)\nBora", "members")
+equal(text_values.ClanMembersHeadingText, "KLAN ÜYELERİ (2)",
+    "member panel heading")
+equal(text_values.ClanMembersStatusText, "1 çevrimiçi | 1 çevrimdışı",
+    "member panel status")
 equal(text_values.PendingOffersText,
     "Teklifçiler | İttifak teklifi bekliyor | Gelen teklif",
     "pending offers")

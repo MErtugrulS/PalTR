@@ -189,6 +189,8 @@ function UMGViewBinder:bind(panel, model)
         { "HeaderNotificationText", header.notification_text },
         { "ClanNameText", clan.name_text },
         { "ClanSummaryText", clan.summary_text },
+        { "ClanMembersHeadingText", clan.members_heading_text },
+        { "ClanMembersStatusText", clan.members_status_text },
         { "ClanMembersText", clan.members_text },
         { "PendingOffersText", clan.pending_text },
         { "RelationListEmptyText", diplomacy.list_text },

@@ -64,4 +64,9 @@ Run the commandlet with `-UpdateFooterHints` to add a static F6/Tab usage strip 
 the bottom of the existing panel layout. It does not register or alter input
 behavior. The update is idempotent and refuses partial controls.
 
+Run the commandlet with `-UpdateClanMembersPanel` to wrap the existing Clan member
+list in a renderer-facing card with dynamic member-count and presence summary
+controls. It preserves the existing member list control, is idempotent, and
+refuses partial or unexpected widget hierarchies.
+
 Run the commandlet with `-Verify` to load both generated classes and check the renderer-facing widget names without modifying the assets.

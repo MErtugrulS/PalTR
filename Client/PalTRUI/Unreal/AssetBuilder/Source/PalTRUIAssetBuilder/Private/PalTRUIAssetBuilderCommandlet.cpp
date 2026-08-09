@@ -1233,6 +1233,113 @@ namespace PalTRUIAssetBuilder
         return true;
     }
 
+    bool UpdateClanMembersPanel()
+    {
+        UWidgetBlueprint* Panel = LoadObject<UWidgetBlueprint>(
+            nullptr,
+            TEXT("/Game/Mods/PalTRUI/WBP_PalTRPanel.WBP_PalTRPanel")
+        );
+        if (!Panel || !Panel->WidgetTree)
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI clan members panel update failed: panel asset missing."));
+            return false;
+        }
+
+        UWidgetTree* Tree = Panel->WidgetTree;
+        UVerticalBox* ClanPage = Cast<UVerticalBox>(Tree->FindWidget(TEXT("ClanPage")));
+        UTextBlock* Members = Cast<UTextBlock>(Tree->FindWidget(TEXT("ClanMembersText")));
+        static const FName MemberPanelWidgets[] = {
+            TEXT("ClanMembersFrame"),
+            TEXT("ClanMembersContent"),
+            TEXT("ClanMembersHeadingText"),
+            TEXT("ClanMembersStatusText")
+        };
+        if (!ClanPage || !Members)
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI clan members panel update failed: clan page or member list missing."));
+            return false;
+        }
+
+        int32 ExistingWidgetCount = 0;
+        for (const FName WidgetName : MemberPanelWidgets)
+        {
+            ExistingWidgetCount += Tree->FindWidget(WidgetName) ? 1 : 0;
+        }
+        if (ExistingWidgetCount == UE_ARRAY_COUNT(MemberPanelWidgets))
+        {
+            UE_LOG(LogTemp, Display, TEXT("PALTR_UI_CLAN_MEMBERS_PANEL_UPDATE_OK | changed=false"));
+            return true;
+        }
+        if (ExistingWidgetCount != 0 || Members->GetParent() != ClanPage)
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI clan members panel update refused: partial or unexpected hierarchy."));
+            return false;
+        }
+
+        const int32 MemberIndex = ClanPage->GetChildIndex(Members);
+        if (MemberIndex < 0)
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI clan members panel update failed: member slot missing."));
+            return false;
+        }
+
+        Panel->Modify();
+        Tree->Modify();
+        ClanPage->Modify();
+        Members->Modify();
+        ClanPage->RemoveChild(Members);
+
+        UBorder* Frame = Tree->ConstructWidget<UBorder>(
+            UBorder::StaticClass(),
+            TEXT("ClanMembersFrame")
+        );
+        Frame->SetBrushColor(FLinearColor(0.025f, 0.11f, 0.13f, 0.96f));
+        Frame->SetPadding(FMargin(16.0f));
+        UVerticalBox* Content = Tree->ConstructWidget<UVerticalBox>(
+            UVerticalBox::StaticClass(),
+            TEXT("ClanMembersContent")
+        );
+        Frame->SetContent(Content);
+        UTextBlock* Heading = MakeText(
+            Tree,
+            TEXT("ClanMembersHeadingText"),
+            TEXT("KLAN ÜYELERİ (0)"),
+            20
+        );
+        Heading->SetColorAndOpacity(FSlateColor(FLinearColor(0.35f, 0.90f, 0.82f, 1.0f)));
+        UTextBlock* Status = MakeText(
+            Tree,
+            TEXT("ClanMembersStatusText"),
+            TEXT("0 çevrimiçi | 0 çevrimdışı"),
+            15
+        );
+        Status->SetColorAndOpacity(FSlateColor(FLinearColor(0.78f, 0.84f, 0.82f, 1.0f)));
+        AddVertical(Content, Heading, FMargin(0, 0, 0, 6));
+        AddVertical(Content, Status, FMargin(0, 0, 0, 12));
+        AddVertical(Content, Members);
+
+        UVerticalBoxSlot* MemberSlot = Cast<UVerticalBoxSlot>(
+            ClanPage->InsertChildAt(MemberIndex, Frame)
+        );
+        if (!MemberSlot)
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI clan members panel update failed: panel slot could not be inserted."));
+            return false;
+        }
+        MemberSlot->SetPadding(FMargin(0, 0, 0, 14));
+        MemberSlot->SetHorizontalAlignment(HAlign_Fill);
+
+        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Panel);
+        FKismetEditorUtilities::CompileBlueprint(Panel);
+        if (!SaveAsset(Panel))
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI clan members panel update failed while saving panel."));
+            return false;
+        }
+        UE_LOG(LogTemp, Display, TEXT("PALTR_UI_CLAN_MEMBERS_PANEL_UPDATE_OK | changed=true"));
+        return true;
+    }
+
     bool UpdateFooterHints()
     {
         UWidgetBlueprint* Panel = LoadObject<UWidgetBlueprint>(
@@ -1325,6 +1432,10 @@ namespace PalTRUIAssetBuilder
             TEXT("ContentSwitcher"),
             TEXT("ClanNameText"),
             TEXT("ClanSummaryText"),
+            TEXT("ClanMembersFrame"),
+            TEXT("ClanMembersContent"),
+            TEXT("ClanMembersHeadingText"),
+            TEXT("ClanMembersStatusText"),
             TEXT("ClanMembersText"),
             TEXT("PendingOffersFrame"),
             TEXT("PendingOffersHeadingText"),
@@ -1493,6 +1604,11 @@ int32 UPalTRUIAssetBuilderCommandlet::Main(const FString& Params)
     if (FParse::Param(*Params, TEXT("UpdateFooterHints")))
     {
         return UpdateFooterHints() ? 0 : 16;
+    }
+
+    if (FParse::Param(*Params, TEXT("UpdateClanMembersPanel")))
+    {
+        return UpdateClanMembersPanel() ? 0 : 17;
     }
 
     const FString ModActorPackage = FString(AssetRoot) / TEXT("ModActor");
