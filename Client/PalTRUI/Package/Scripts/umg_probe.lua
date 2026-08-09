@@ -1,5 +1,6 @@
 local Probe = {}
 local UMGContext = require("umg_context")
+local UMGAssetLoader = require("umg_asset_loader")
 
 local function unwrap(value)
     if value == nil then return nil end
@@ -81,8 +82,39 @@ local function dump_hud_details()
     end
 end
 
+function Probe.function_names(panel_class)
+    local names = {}
+    if panel_class == nil then return names, "Panel sinifi bulunamadi." end
+
+    local iterated, iterate_error = pcall(function()
+        panel_class:ForEachFunction(function(ufunction)
+            local read, function_name = pcall(function()
+                return ufunction:GetFName():ToString()
+            end)
+            if read and function_name ~= nil then
+                table.insert(names, tostring(function_name))
+            end
+        end)
+    end)
+    if not iterated then
+        return names,
+            "Panel UFunction listesi okunamadi: " .. tostring(iterate_error)
+    end
+    table.sort(names)
+    return names
+end
+
+local function collect_panel_functions()
+    local loaded, panel_class, load_error =
+        UMGAssetLoader.new():load_panel_class()
+    if loaded ~= true then return {}, load_error end
+    return Probe.function_names(panel_class)
+end
+
 function Probe.scan()
     local context = UMGContext.discover()
+    local panel_functions, panel_function_error =
+        collect_panel_functions()
     local result = {
         widgets = collect("UserWidget", 120),
         widget_classes = collect("WidgetBlueprintGeneratedClass", 120),
@@ -92,7 +124,9 @@ function Probe.scan()
         hud_layouts = collect("PalUIHUDLayoutBase", 20),
         pal_widgets = collect("PalUserWidget", 120),
         stackable_widgets = collect("PalUserWidgetStackableUI", 120),
-        context = context
+        context = context,
+        panel_functions = panel_functions,
+        panel_function_error = panel_function_error
     }
 
     dump_group("USER_WIDGET", result.widgets)
@@ -103,6 +137,13 @@ function Probe.scan()
     dump_group("HUD_LAYOUT", result.hud_layouts)
     dump_group("PAL_WIDGET", result.pal_widgets)
     dump_group("STACKABLE_WIDGET", result.stackable_widgets)
+    dump_group("PALTR_PANEL_FUNCTION", result.panel_functions)
+    if result.panel_function_error ~= nil then
+        print(string.format(
+            "[PalTRUI][UMG] PALTR_PANEL_FUNCTION_ERROR | %s\n",
+            tostring(result.panel_function_error)
+        ))
+    end
     dump_hud_details()
     print(string.format(
         "[PalTRUI][UMG] PAL_CONTEXT | ready=%s | hud=%s | service=%s | layout=%s | controller=%s\n",
