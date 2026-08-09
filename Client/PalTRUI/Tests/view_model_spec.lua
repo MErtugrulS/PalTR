@@ -137,6 +137,40 @@ equal(string.find(
     1,
     true
 ) ~= nil, true, "dashboard relation preview")
+
+local overflow_relations = {}
+for _, relation in ipairs(relations) do
+    table.insert(overflow_relations, relation)
+end
+table.insert(overflow_relations, {
+    guild_key = "guild-four",
+    guild_name = "Dordunculer",
+    state = "NEUTRAL",
+    can_manage = false,
+    actions = {}
+})
+table.insert(overflow_relations, {
+    guild_key = "guild-five",
+    guild_name = "Besinciler",
+    state = "NEUTRAL",
+    can_manage = false,
+    actions = {}
+})
+local overflow_panel = PanelState.new({ action_transport_ready = true })
+equal(overflow_panel:apply_snapshot(snapshot(overflow_relations)), true,
+    "overflow snapshot")
+equal(string.find(
+    overflow_panel.view_model.views.CLAN.dashboard.relations_text,
+    "+1 klan daha",
+    1,
+    true
+) ~= nil, true, "dashboard relation preview is bounded")
+equal(string.find(
+    overflow_panel.view_model.views.CLAN.dashboard.relations_text,
+    "Besinciler",
+    1,
+    true
+) == nil, true, "dashboard overflow relation stays in full list only")
 equal(panel.view_model.views.CLAN.pending_empty, true,
     "dashboard pending offers empty")
 equal(panel.view_model.views.CLAN.pending_text, "Bekleyen teklif yok.",

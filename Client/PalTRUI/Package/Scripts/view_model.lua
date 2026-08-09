@@ -354,6 +354,7 @@ local function clan_view(snapshot)
     local pending_count = 0
     local pending_offers = {}
     local relation_preview_lines = {}
+    local relation_preview_count = 0
     for _, relation in ipairs(table_or_empty(snapshot.relations)) do
         relation = table_or_empty(relation)
         local state = text(relation.state)
@@ -375,12 +376,22 @@ local function clan_view(snapshot)
         end
         local relation_name = text(relation.guild_name)
         if relation_name ~= "" then
-            table.insert(relation_preview_lines, string.format(
-                "%s | %s",
-                relation_name,
-                label_for(state_labels, state)
-            ))
+            relation_preview_count = relation_preview_count + 1
+            if relation_preview_count <= 4 then
+                table.insert(relation_preview_lines, string.format(
+                    "%s | %s",
+                    relation_name,
+                    label_for(state_labels, state)
+                ))
+            end
         end
+    end
+
+    if relation_preview_count > 4 then
+        table.insert(relation_preview_lines, string.format(
+            "+%d klan daha",
+            relation_preview_count - 4
+        ))
     end
 
     local pending_lines = {}
