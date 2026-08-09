@@ -15,6 +15,7 @@ function PanelState.new(options)
         chat = ChatState.new(),
         view_model = nil,
         error = "",
+        action_status = "",
         action_transport_ready = options.action_transport_ready == true
     }, PanelState)
     state:_rebuild_view_model()
@@ -123,7 +124,17 @@ function PanelState:apply_snapshot(snapshot)
     end
     self.snapshot = snapshot
     self.error = ""
+    self.action_status = ""
     self:_normalize_relation_selection()
+    self:_rebuild_view_model()
+    return true
+end
+
+function PanelState:set_action_pending(action_id)
+    local requested = tostring(action_id or "")
+    if requested == "" then return false end
+    self.error = ""
+    self.action_status = "İstek sunucuya gönderildi; yeni snapshot bekleniyor."
     self:_rebuild_view_model()
     return true
 end

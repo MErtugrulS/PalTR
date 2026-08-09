@@ -122,7 +122,11 @@ function PresentationController:request_action(action_id)
     if intent == nil then
         return false, error_message
     end
-    return self.action_sink:dispatch(intent)
+    local dispatched, dispatch_result = self.action_sink:dispatch(intent)
+    if dispatched ~= true then return false, dispatch_result end
+    self.panel:set_action_pending(intent.action_id)
+    self:_render()
+    return true, dispatch_result
 end
 
 return PresentationController

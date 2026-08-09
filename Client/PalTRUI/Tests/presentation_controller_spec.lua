@@ -122,6 +122,19 @@ equal(action_dispatched, true, "offered action dispatched")
 equal(#dispatched, 1, "single action intent dispatched")
 equal(intent, dispatched[1], "action sink result preserved")
 equal(intent.guild_key, "guild-other", "selected guild dispatched")
+equal(
+    controller:model().connection.status_text,
+    "İstek sunucuya gönderildi; yeni snapshot bekleniyor.",
+    "queued action status rendered"
+)
+equal(rendered[#rendered], controller:model(),
+    "queued action model rendered")
+
+local refreshed_snapshot = snapshot()
+refreshed_snapshot.generated_at = 101
+controller:apply_snapshot(refreshed_snapshot)
+equal(controller:model().connection.status_text, "Sunucu snapshoti hazir",
+    "new snapshot clears queued action status")
 
 local rejected, rejection = controller:request_action("PEACE")
 equal(rejected, false, "unoffered action not dispatched")

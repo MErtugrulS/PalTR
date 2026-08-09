@@ -792,6 +792,7 @@ function ViewModel.build(snapshot, panel)
     local selected_guild = text(panel.selected_guild)
     local schema_version = tonumber(snapshot.schema_version) or 0
     local panel_error = text(panel.error)
+    local action_status = text(panel.action_status)
     local clan = clan_view(snapshot)
     local action_transport_ready = panel.action_transport_ready == true
     local relation_data = relation_views(
@@ -819,6 +820,7 @@ function ViewModel.build(snapshot, panel)
         connection = {
             ready = schema_version > 0 and panel_error == "",
             status_text = panel_error ~= "" and panel_error
+                or (action_status ~= "" and action_status)
                 or (schema_version > 0
                     and "Sunucu snapshoti hazir"
                     or "Sunucu baglantisi bekleniyor")
