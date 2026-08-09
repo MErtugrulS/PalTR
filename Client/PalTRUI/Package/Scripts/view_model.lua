@@ -729,6 +729,7 @@ function ViewModel.build(snapshot, panel)
     snapshot = table_or_empty(snapshot)
     panel = table_or_empty(panel)
     local player = table_or_empty(snapshot.player)
+    local guild = table_or_empty(snapshot.guild)
 
     local active_tab = text(panel.active_tab)
     if active_tab == "" then active_tab = Contract.DEFAULT_TAB end
@@ -766,6 +767,13 @@ function ViewModel.build(snapshot, panel)
                 or (schema_version > 0
                     and "Sunucu snapshoti hazir"
                     or "Sunucu baglantisi bekleniyor")
+        },
+        header = {
+            guild_text = text(guild.name) ~= ""
+                and "Klan: " .. text(guild.name) or "Klan: -",
+            role_text = schema_version == 0 and "Yetki: -"
+                or (player.is_master == true
+                    and "Yetki: Lider" or "Yetki: Uye")
         },
         capabilities = {
             action_transport_ready = action_transport_ready,

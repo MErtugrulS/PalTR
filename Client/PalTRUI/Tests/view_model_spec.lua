@@ -115,6 +115,10 @@ equal(
 panel:set_tab("DIPLOMACY")
 equal(panel.view_model.content, panel.view_model.views.DIPLOMACY, "active content")
 equal(panel.view_model.connection.ready, true, "snapshot connection ready")
+equal(panel.view_model.header.guild_text, "Klan: Anka",
+    "header guild presentation")
+equal(panel.view_model.header.role_text, "Yetki: Lider",
+    "header role presentation")
 equal(
     panel.view_model.connection.status_text,
     "Sunucu snapshoti hazir",

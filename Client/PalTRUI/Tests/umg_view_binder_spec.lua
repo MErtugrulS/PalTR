@@ -55,6 +55,8 @@ end
 local names = {
     "TitleText",
     "ConnectionStatusText",
+    "HeaderGuildText",
+    "HeaderRoleText",
     "ClanNameText",
     "ClanSummaryText",
     "ClanMembersText",
@@ -160,6 +162,10 @@ local model = {
     connection = {
         ready = true,
         status_text = "Sunucu snapshoti hazir"
+    },
+    header = {
+        guild_text = "Klan: Anka",
+        role_text = "Yetki: Lider"
     },
     tabs = {
         {
@@ -334,6 +340,8 @@ equal(bind_error, nil, "successful bind has no error")
 equal(switch_index, 1, "diplomacy tab selected")
 equal(text_values.TitleText, "PALTR DİPLOMASİ MODU", "panel title")
 equal(text_values.ConnectionStatusText, "Sunucu snapshoti hazir", "status")
+equal(text_values.HeaderGuildText, "Klan: Anka", "header guild")
+equal(text_values.HeaderRoleText, "Yetki: Lider", "header role")
 equal(text_values.ClanNameText, "Anka", "clan name")
 equal(text_values.ClanSummaryText,
     "Lider: Ada | Üye: 2 | Çevrimiçi: 1\nSavaş: 1 | İttifak: 0 | Bekleyen: 0",

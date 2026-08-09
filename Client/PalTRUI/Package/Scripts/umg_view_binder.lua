@@ -179,10 +179,13 @@ function UMGViewBinder:bind(panel, model)
     local alliance = table_or_empty(views.ALLIANCE)
     local guilds = table_or_empty(views.GUILDS)
     local connection = table_or_empty(model.connection)
+    local header = table_or_empty(model.header)
 
     local bindings = {
         { "TitleText", "PALTR DİPLOMASİ MODU" },
         { "ConnectionStatusText", connection.status_text },
+        { "HeaderGuildText", header.guild_text },
+        { "HeaderRoleText", header.role_text },
         { "ClanNameText", clan.name_text },
         { "ClanSummaryText", clan.summary_text },
         { "ClanMembersText", clan.members_text },
