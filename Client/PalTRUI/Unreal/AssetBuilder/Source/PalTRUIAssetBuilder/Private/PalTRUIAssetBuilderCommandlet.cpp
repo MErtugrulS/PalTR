@@ -1264,7 +1264,18 @@ namespace PalTRUIAssetBuilder
         if (Scroll && Scroll->GetChildAt(0) == ClanPage
             && Scroll->GetParent() == Switcher)
         {
-            UE_LOG(LogTemp, Display, TEXT("PALTR_UI_CLAN_SCROLL_UPDATE_OK | changed=false"));
+            Panel->Modify();
+            Scroll->Modify();
+            Scroll->SetConsumeMouseWheel(EConsumeMouseWheel::Always);
+            Scroll->SetAllowOverscroll(false);
+            FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Panel);
+            FKismetEditorUtilities::CompileBlueprint(Panel);
+            if (!SaveAsset(Panel))
+            {
+                UE_LOG(LogTemp, Error, TEXT("PalTRUI clan scroll input update failed while saving panel."));
+                return false;
+            }
+            UE_LOG(LogTemp, Display, TEXT("PALTR_UI_CLAN_SCROLL_UPDATE_OK | changed=true | consume_wheel=always"));
             return true;
         }
         if (Scroll || ClanPage->GetParent() != Switcher)
@@ -1294,6 +1305,8 @@ namespace PalTRUIAssetBuilder
         Scroll->SetScrollBarVisibility(ESlateVisibility::Visible);
         Scroll->SetScrollbarThickness(FVector2D(7.0f, 7.0f));
         Scroll->SetAlwaysShowScrollbar(false);
+        Scroll->SetConsumeMouseWheel(EConsumeMouseWheel::Always);
+        Scroll->SetAllowOverscroll(false);
         Scroll->AddChild(ClanPage);
         if (!Switcher->InsertChildAt(PageIndex, Scroll))
         {
