@@ -364,15 +364,19 @@ local function tab_models(active_tab, counts)
 
     for _, tab in ipairs(Contract.TABS) do
         local definition = tab_control_definitions[tab.id] or {}
+        local badge_count = counts[tab.id] or 0
         table.insert(result, {
             id = tab.id,
             label = tab.label,
+            display_label = badge_count > 0
+                and string.format("%s (%d)", tab.label, badge_count)
+                or tab.label,
             control = definition.control or "",
             text_control = definition.text_control or "",
             page_index = tonumber(definition.page_index) or -1,
             active = tab.id == active_tab,
             enabled = tab.id ~= active_tab,
-            badge_count = counts[tab.id] or 0
+            badge_count = badge_count
         })
     end
 

@@ -115,6 +115,7 @@ local model = {
         {
             id = "CLAN",
             label = "Klanim",
+            display_label = "Klanim (2)",
             control = "ClanTabButton",
             text_control = "ClanTabText",
             page_index = 0,
@@ -124,6 +125,7 @@ local model = {
         {
             id = "DIPLOMACY",
             label = "Diplomasi",
+            display_label = "Diplomasi (1)",
             control = "DiplomacyTabButton",
             text_control = "DiplomacyTabText",
             page_index = 1,
@@ -212,9 +214,9 @@ equal(text_values.RelationStateText, "Savas", "relation state")
 equal(text_values.RelationDescriptionText, "Sinir catismasi", "relation detail")
 equal(text_values.AllianceMembersText, "Ittifak yok.", "empty alliance")
 equal(text_values.ChatEmptyText, "Ada: Merhaba", "chat messages")
-equal(text_values.ClanTabText, "Klanim", "clan tab label")
+equal(text_values.ClanTabText, "Klanim (2)", "clan tab label")
 equal(enabled_values.ClanTabButton, true, "inactive tab enabled")
-equal(text_values.DiplomacyTabText, "Diplomasi", "diplomacy tab label")
+equal(text_values.DiplomacyTabText, "Diplomasi (1)", "diplomacy tab label")
 equal(enabled_values.DiplomacyTabButton, false, "active tab disabled")
 equal(text_values.WarRequestButtonText, "Savas Ilan Et", "war label")
 equal(enabled_values.WarRequestButton, true, "war button enabled")

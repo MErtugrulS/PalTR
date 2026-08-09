@@ -209,7 +209,7 @@ function UMGViewBinder:bind(panel, model)
         local label_updated, label_error = self:_set_text(
             controls,
             text(tab.text_control),
-            tab.label
+            tab.display_label
         )
         if not label_updated then return false, label_error end
 
