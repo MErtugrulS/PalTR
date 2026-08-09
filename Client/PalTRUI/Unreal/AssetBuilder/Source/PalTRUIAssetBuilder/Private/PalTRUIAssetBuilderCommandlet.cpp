@@ -1878,6 +1878,7 @@ namespace PalTRUIAssetBuilder
         UBorder* Background = Cast<UBorder>(Tree->FindWidget(TEXT("PanelBackground")));
         UVerticalBox* Layout = Cast<UVerticalBox>(Tree->FindWidget(TEXT("PanelLayout")));
         UBorder* HeaderFrame = Cast<UBorder>(Tree->FindWidget(TEXT("HeaderFrame")));
+        UHorizontalBox* HeaderRow = Cast<UHorizontalBox>(Tree->FindWidget(TEXT("HeaderRow")));
         UBorder* TabFrame = Cast<UBorder>(Tree->FindWidget(TEXT("TabFrame")));
         UHorizontalBox* TabBar = Cast<UHorizontalBox>(Tree->FindWidget(TEXT("TabBar")));
         UBorder* ContentFrame = Cast<UBorder>(Tree->FindWidget(TEXT("ContentFrame")));
@@ -1889,7 +1890,7 @@ namespace PalTRUIAssetBuilder
         UVerticalBox* DiplomacyCard = Cast<UVerticalBox>(Tree->FindWidget(TEXT("DashboardDiplomacyCardContent")));
         UBorder* QuickActions = Cast<UBorder>(Tree->FindWidget(TEXT("DashboardQuickActionsFrame")));
         const bool bHasExistingNavigation = Tree->FindWidget(TEXT("LeftNavigation")) != nullptr;
-        if (!Background || !Layout || !HeaderFrame || !ContentFrame || !FooterFrame
+        if (!Background || !Layout || !HeaderFrame || !HeaderRow || !ContentFrame || !FooterFrame
             || !StatusCards || !MainColumn || !Sidebar || !ClanCard || !DiplomacyCard || !QuickActions
             || (!bHasExistingNavigation && (!TabFrame || !TabBar)))
         {
@@ -1917,7 +1918,7 @@ namespace PalTRUIAssetBuilder
             ArtImage = Tree->ConstructWidget<UImage>(UImage::StaticClass(), TEXT("PanelArtImage"));
             ContentPadding = Tree->ConstructWidget<UBorder>(UBorder::StaticClass(), TEXT("PanelArtContentPadding"));
             ContentPadding->SetBrushColor(FLinearColor(0, 0, 0, 0));
-            ContentPadding->SetPadding(FMargin(28.0f, 24.0f));
+            ContentPadding->SetPadding(FMargin(16.0f, 12.0f));
             ContentPadding->SetContent(Layout);
             ArtOverlay->AddChildToOverlay(ArtImage);
             ArtOverlay->AddChildToOverlay(ContentPadding);
@@ -1932,16 +1933,44 @@ namespace PalTRUIAssetBuilder
             UE_LOG(LogTemp, Error, TEXT("PalTRUI art dashboard update refused: partial art overlay."));
             return false;
         }
+        ContentPadding->SetPadding(FMargin(16.0f, 12.0f));
         ArtImage->Modify();
         ArtImage->SetBrushFromTexture(PanelTexture, true);
-        ArtImage->SetColorAndOpacity(FLinearColor(1.0f, 1.0f, 1.0f, 0.84f));
+        ArtImage->SetColorAndOpacity(FLinearColor::White);
         Background->SetBrushColor(FLinearColor(0, 0, 0, 0));
         Background->SetPadding(FMargin(0));
-        if (UCanvasPanelSlot* BackgroundSlot = Cast<UCanvasPanelSlot>(Background->Slot))
+        if (UButton* InputShield = Cast<UButton>(Tree->FindWidget(TEXT("PanelInputShield"))))
+        {
+            if (UCanvasPanelSlot* ShieldSlot = Cast<UCanvasPanelSlot>(InputShield->Slot))
+            {
+                ShieldSlot->Modify();
+                ShieldSlot->SetSize(FVector2D(1500.0f, 840.0f));
+            }
+        }
+        else if (UCanvasPanelSlot* BackgroundSlot = Cast<UCanvasPanelSlot>(Background->Slot))
         {
             BackgroundSlot->Modify();
             BackgroundSlot->SetSize(FVector2D(1500.0f, 840.0f));
         }
+
+        USizeBox* HeaderCrestSpacer = Cast<USizeBox>(Tree->FindWidget(TEXT("HeaderCrestSpacer")));
+        if (!HeaderCrestSpacer)
+        {
+            HeaderCrestSpacer = Tree->ConstructWidget<USizeBox>(USizeBox::StaticClass(), TEXT("HeaderCrestSpacer"));
+            HeaderCrestSpacer->SetWidthOverride(122.0f);
+            UHorizontalBoxSlot* CrestSlot = Cast<UHorizontalBoxSlot>(HeaderRow->InsertChildAt(0, HeaderCrestSpacer));
+            if (!CrestSlot)
+            {
+                UE_LOG(LogTemp, Error, TEXT("PalTRUI art dashboard update failed: header crest spacer slot."));
+                return false;
+            }
+        }
+        else if (HeaderCrestSpacer->GetParent() != HeaderRow)
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI art dashboard update refused: header crest spacer moved."));
+            return false;
+        }
+        HeaderCrestSpacer->SetWidthOverride(122.0f);
 
         UHorizontalBox* BodyRow = Cast<UHorizontalBox>(Tree->FindWidget(TEXT("PanelBodyRow")));
         USizeBox* NavigationSize = Cast<USizeBox>(Tree->FindWidget(TEXT("LeftNavigationSize")));
@@ -1957,7 +1986,7 @@ namespace PalTRUIAssetBuilder
             }
             BodyRow = Tree->ConstructWidget<UHorizontalBox>(UHorizontalBox::StaticClass(), TEXT("PanelBodyRow"));
             NavigationSize = Tree->ConstructWidget<USizeBox>(USizeBox::StaticClass(), TEXT("LeftNavigationSize"));
-            NavigationSize->SetWidthOverride(238.0f);
+            NavigationSize->SetWidthOverride(278.0f);
             NavigationFrame = Tree->ConstructWidget<UBorder>(UBorder::StaticClass(), TEXT("LeftNavigationFrame"));
             NavigationFrame->SetBrushColor(FLinearColor(0.01f, 0.035f, 0.05f, 0.18f));
             NavigationFrame->SetPadding(FMargin(12.0f));
@@ -2008,6 +2037,7 @@ namespace PalTRUIAssetBuilder
             UE_LOG(LogTemp, Error, TEXT("PalTRUI art dashboard update refused: partial navigation shell."));
             return false;
         }
+        NavigationSize->SetWidthOverride(278.0f);
 
         auto EnsureCardIcon = [Tree](
             UVerticalBox* Card,
@@ -2165,17 +2195,31 @@ namespace PalTRUIAssetBuilder
             return false;
         }
 
-        HeaderFrame->SetBrushColor(FLinearColor(0.01f, 0.025f, 0.04f, 0.18f));
-        ContentFrame->SetBrushColor(FLinearColor(0.01f, 0.025f, 0.04f, 0.08f));
-        FooterFrame->SetBrushColor(FLinearColor(0.01f, 0.025f, 0.04f, 0.12f));
-        StyleFrame(Tree, TEXT("DashboardClanCardFrame"), FLinearColor(0.02f, 0.16f, 0.16f, 0.18f), FMargin(14.0f));
-        StyleFrame(Tree, TEXT("DashboardDiplomacyCardFrame"), FLinearColor(0.02f, 0.10f, 0.17f, 0.18f), FMargin(14.0f));
-        StyleFrame(Tree, TEXT("DashboardRelationsFrame"), FLinearColor(0.10f, 0.075f, 0.025f, 0.16f), FMargin(14.0f));
-        StyleFrame(Tree, TEXT("PendingOffersFrame"), FLinearColor(0.10f, 0.075f, 0.025f, 0.16f), FMargin(14.0f));
-        StyleFrame(Tree, TEXT("DashboardQuickActionsFrame"), FLinearColor(0.02f, 0.07f, 0.09f, 0.18f), FMargin(14.0f));
+        HeaderFrame->SetBrushColor(FLinearColor(0.008f, 0.02f, 0.035f, 0.72f));
+        HeaderFrame->SetPadding(FMargin(8.0f, 8.0f));
+        ContentFrame->SetBrushColor(FLinearColor(0.008f, 0.02f, 0.035f, 0.30f));
+        FooterFrame->SetBrushColor(FLinearColor(0.008f, 0.02f, 0.035f, 0.72f));
+        NavigationFrame->SetBrushColor(FLinearColor(0.008f, 0.02f, 0.035f, 0.36f));
+        StyleFrame(Tree, TEXT("DashboardClanCardFrame"), FLinearColor(0.02f, 0.12f, 0.15f, 0.28f), FMargin(14.0f));
+        StyleFrame(Tree, TEXT("DashboardDiplomacyCardFrame"), FLinearColor(0.02f, 0.08f, 0.14f, 0.28f), FMargin(14.0f));
+        StyleFrame(Tree, TEXT("DashboardRelationsFrame"), FLinearColor(0.08f, 0.055f, 0.018f, 0.34f), FMargin(14.0f));
+        StyleFrame(Tree, TEXT("PendingOffersFrame"), FLinearColor(0.08f, 0.055f, 0.018f, 0.34f), FMargin(14.0f));
+        StyleFrame(Tree, TEXT("DashboardQuickActionsFrame"), FLinearColor(0.01f, 0.05f, 0.075f, 0.32f), FMargin(14.0f));
+        for (const FName NavigationButton : {
+            FName(TEXT("ClanTabButton")),
+            FName(TEXT("DiplomacyTabButton")),
+            FName(TEXT("AllianceTabButton")),
+            FName(TEXT("ChatTabButton"))
+        })
+        {
+            StyleButton(Tree, NavigationButton, FLinearColor(0.01f, 0.055f, 0.075f, 0.96f));
+        }
         if (UTextBlock* Title = Cast<UTextBlock>(Tree->FindWidget(TEXT("TitleText"))))
         {
             Title->SetText(FText::FromString(TEXT("PALTR PANEL")));
+            FSlateFontInfo TitleFont = Title->GetFont();
+            TitleFont.Size = 30;
+            Title->SetFont(TitleFont);
         }
 
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Panel);
@@ -2629,6 +2673,7 @@ namespace PalTRUIAssetBuilder
             TEXT("LeftNavigationFrame"),
             TEXT("LeftNavigation"),
             TEXT("LeftNavigationHeadingText"),
+            TEXT("HeaderCrestSpacer"),
             TEXT("DashboardClanIcon"),
             TEXT("DashboardDiplomacyIcon"),
             TEXT("DashboardProtectionCardFrame"),

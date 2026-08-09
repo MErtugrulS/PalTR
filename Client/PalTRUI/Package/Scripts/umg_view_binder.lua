@@ -182,7 +182,7 @@ function UMGViewBinder:bind(panel, model)
     local header = table_or_empty(model.header)
 
     local bindings = {
-        { "TitleText", "PALTR DİPLOMASİ MODU" },
+        { "TitleText", "PALTR PANEL" },
         { "ConnectionStatusText", connection.status_text },
         { "HeaderGuildText", header.guild_text },
         { "HeaderRoleText", header.role_text },
