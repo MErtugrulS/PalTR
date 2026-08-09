@@ -333,12 +333,23 @@ local function chat_view(source)
             or "Sohbet transport bağlantısı henüz hazır değil."
     end
 
+    local lines = {}
+    for _, message in ipairs(messages) do
+        table.insert(lines, string.format(
+            "%s: %s",
+            message.sender,
+            message.text
+        ))
+    end
+
     return {
         available = available,
         messages = messages,
         message_count = #messages,
         empty = empty,
-        empty_message = empty_message
+        empty_message = empty_message,
+        messages_text = empty
+            and empty_message or table.concat(lines, "\n")
     }
 end
 

@@ -186,6 +186,7 @@ local model = {
         },
         CHAT = {
             empty = false,
+            messages_text = "Ada: Merhaba",
             messages = {
                 { sender = "Ada", text = "Merhaba" }
             }

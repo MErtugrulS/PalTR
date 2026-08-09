@@ -66,19 +66,6 @@ local function collect_widgets(widget, controls, depth)
     end
 end
 
-local function join_messages(messages)
-    local lines = {}
-    for _, message in ipairs(table_or_empty(messages)) do
-        message = table_or_empty(message)
-        table.insert(lines, string.format(
-            "%s: %s",
-            text(message.sender),
-            text(message.text)
-        ))
-    end
-    return table.concat(lines, "\n")
-end
-
 local function valid_object(object)
     if object == nil then return false end
     local checked, valid = pcall(function()
@@ -206,8 +193,7 @@ function UMGViewBinder:bind(panel, model)
         { "RelationDescriptionText", diplomacy.description_text },
         { "AllianceSummaryText", alliance.summary_text },
         { "AllianceMembersText", alliance.members_text },
-        { "ChatEmptyText", chat.empty == true
-            and text(chat.empty_message) or join_messages(chat.messages) }
+        { "ChatEmptyText", chat.messages_text }
     }
 
     for _, binding in ipairs(bindings) do

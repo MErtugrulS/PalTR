@@ -127,6 +127,11 @@ equal(
     "Ada (cevrimici)\nBora",
     "clan members text"
 )
+equal(
+    panel.view_model.views.CHAT.messages_text,
+    panel.view_model.views.CHAT.empty_message,
+    "empty chat presentation text"
+)
 equal(panel.view_model.tabs[1].control, "ClanTabButton", "clan tab control")
 equal(panel.view_model.tabs[1].enabled, true, "inactive tab enabled")
 equal(
