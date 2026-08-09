@@ -177,7 +177,7 @@ function UMGViewBinder:bind(panel, model)
     local clan = table_or_empty(views.CLAN)
     local diplomacy = table_or_empty(views.DIPLOMACY)
     local alliance = table_or_empty(views.ALLIANCE)
-    local chat = table_or_empty(views.CHAT)
+    local guilds = table_or_empty(views.GUILDS)
     local connection = table_or_empty(model.connection)
 
     local bindings = {
@@ -192,7 +192,7 @@ function UMGViewBinder:bind(panel, model)
         { "RelationDescriptionText", diplomacy.description_text },
         { "AllianceSummaryText", alliance.summary_text },
         { "AllianceMembersText", alliance.members_text },
-        { "ChatEmptyText", chat.messages_text }
+        { "ChatEmptyText", guilds.list_text }
     }
 
     for _, binding in ipairs(bindings) do

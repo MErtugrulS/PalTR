@@ -45,7 +45,7 @@ local tab_cycle = {
     { id = "CLAN", control = "ClanTabButton" },
     { id = "DIPLOMACY", control = "DiplomacyTabButton" },
     { id = "ALLIANCE", control = "AllianceTabButton" },
-    { id = "CHAT", control = "ChatTabButton" }
+    { id = "GUILDS", control = "ChatTabButton" }
 }
 
 print("[PalTRUI] yuklendi\n")

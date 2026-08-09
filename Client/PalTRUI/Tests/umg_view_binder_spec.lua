@@ -217,11 +217,11 @@ local model = {
             members_text = "Ittifak yok.",
             relations = {}
         },
-        CHAT = {
+        GUILDS = {
             empty = false,
-            messages_text = "Ada: Merhaba",
-            messages = {
-                { sender = "Ada", text = "Merhaba" }
+            list_text = "Gezginler | Aktif | 4 uye | 2 cevrimici",
+            guilds = {
+                { name = "Gezginler", active = true }
             }
         }
     }
@@ -240,7 +240,8 @@ equal(text_values.RelationTitleText, "Rakipler", "selected guild")
 equal(text_values.RelationStateText, "Savas", "relation state")
 equal(text_values.RelationDescriptionText, "Sinir catismasi", "relation detail")
 equal(text_values.AllianceMembersText, "Ittifak yok.", "empty alliance")
-equal(text_values.ChatEmptyText, "Ada: Merhaba", "chat messages")
+equal(text_values.ChatEmptyText,
+    "Gezginler | Aktif | 4 uye | 2 cevrimici", "guild catalog")
 equal(text_values.ClanTabText, "Klanim (2)", "clan tab label")
 equal(enabled_values.ClanTabButton, true, "inactive tab enabled")
 equal(text_values.DiplomacyTabText, "Diplomasi (1)", "diplomacy tab label")

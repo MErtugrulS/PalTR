@@ -19,7 +19,7 @@ local current_model = {
         { id = "CLAN", control = "ClanTabButton" },
         { id = "DIPLOMACY", control = "DiplomacyTabButton" },
         { id = "ALLIANCE", control = "AllianceTabButton" },
-        { id = "CHAT", control = "ChatTabButton" }
+        { id = "GUILDS", control = "ChatTabButton" }
     },
     views = {
         DIPLOMACY = {
@@ -51,7 +51,7 @@ local current_model = {
 local controller = {
     toggle = function()
         table.insert(calls, { name = "toggle" })
-        return { open = false, active_tab = "CHAT" }, true
+        return { open = false, active_tab = "GUILDS" }, true
     end,
     set_tab = function(_, tab_id)
         table.insert(calls, { name = "set_tab", tab_id = tab_id })
@@ -81,7 +81,7 @@ local tab_controls = {
     ClanTabButton = "CLAN",
     DiplomacyTabButton = "DIPLOMACY",
     AllianceTabButton = "ALLIANCE",
-    ChatTabButton = "CHAT"
+    ChatTabButton = "GUILDS"
 }
 for control_name, tab_id in pairs(tab_controls) do
     local handled, model, rendered, route_error =
@@ -154,7 +154,7 @@ local failed_handled, failed_model,
     failed_rendered, failed_error =
     failed:handle("ChatTabButton")
 equal(failed_handled, false, "renderer failure rejects interaction")
-equal(failed_model.active_tab, "CHAT", "failed interaction model returned")
+equal(failed_model.active_tab, "GUILDS", "failed interaction model returned")
 equal(failed_rendered, false, "renderer failure returned")
 equal(failed_error, "renderer failed", "renderer error preserved")
 

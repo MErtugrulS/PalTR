@@ -35,7 +35,7 @@ local tab_control_definitions = {
         text_control = "AllianceTabText",
         page_index = 2
     },
-    CHAT = {
+    GUILDS = {
         control = "ChatTabButton",
         text_control = "ChatTabText",
         page_index = 3
@@ -415,6 +415,57 @@ local function relation_views(snapshot, selected_guild, action_transport_ready)
     }
 end
 
+local function guild_catalog_view(snapshot)
+    local guilds = {}
+    local active_count = 0
+
+    for _, guild in ipairs(table_or_empty(snapshot.guilds)) do
+        guild = table_or_empty(guild)
+        local item = {
+            key = text(guild.key),
+            name = text(guild.name),
+            member_count = tonumber(guild.member_count) or 0,
+            online_count = tonumber(guild.online_count) or 0,
+            active = guild.active == true
+        }
+        if item.active then active_count = active_count + 1 end
+        table.insert(guilds, item)
+    end
+
+    table.sort(guilds, function(a, b)
+        if a.active ~= b.active then return a.active end
+        return string.lower(a.name) < string.lower(b.name)
+    end)
+
+    local lines = {}
+    for _, guild in ipairs(guilds) do
+        table.insert(lines, string.format(
+            "%s | %s | %d uye | %d cevrimici",
+            guild.name ~= "" and guild.name or guild.key,
+            guild.active and "Aktif" or "Kayitli",
+            guild.member_count,
+            guild.online_count
+        ))
+    end
+
+    local empty = #guilds == 0
+    local empty_message = empty and "Klan kaydi bulunamadi." or ""
+    return {
+        guilds = guilds,
+        guild_count = #guilds,
+        active_count = active_count,
+        empty = empty,
+        empty_message = empty_message,
+        summary_text = string.format(
+            "%d klan | %d aktif",
+            #guilds,
+            active_count
+        ),
+        list_text = empty and empty_message
+            or table.concat(lines, "\n")
+    }
+end
+
 local function chat_view(source)
     source = table_or_empty(source)
     local messages = {}
@@ -502,11 +553,13 @@ function ViewModel.build(snapshot, panel)
         selected_guild,
         action_transport_ready
     )
+    local guilds = guild_catalog_view(snapshot)
     local chat = chat_view(panel.chat)
     local views = {
         CLAN = clan,
         DIPLOMACY = relation_data.diplomacy,
         ALLIANCE = relation_data.alliance,
+        GUILDS = guilds,
         CHAT = chat
     }
 
@@ -540,7 +593,7 @@ function ViewModel.build(snapshot, panel)
             CLAN = clan.member_count,
             DIPLOMACY = #relation_data.diplomacy.relations,
             ALLIANCE = #relation_data.alliance.relations,
-            CHAT = chat.message_count
+            GUILDS = guilds.active_count
         }),
         views = views,
         content = views[active_tab] or views[Contract.DEFAULT_TAB]

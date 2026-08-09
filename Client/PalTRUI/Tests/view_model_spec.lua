@@ -276,6 +276,17 @@ equal(panel.view_model.views.DIPLOMACY.selected_relation.permissions.can_manage,
     false, "catalog guild does not infer permissions")
 equal(panel:select_guild("guild-inactive"), false,
     "inactive guild is not selectable")
+equal(panel.view_model.views.GUILDS.guild_count, 2,
+    "guild catalog count")
+equal(panel.view_model.views.GUILDS.active_count, 1,
+    "active guild count")
+equal(panel.view_model.views.GUILDS.list_text,
+    "Gezginler | Aktif | 4 uye | 2 cevrimici\nUykudakiler | Kayitli | 3 uye | 0 cevrimici",
+    "guild catalog presentation text")
+equal(panel:set_tab("GUILDS"), true, "guild catalog tab accepted")
+equal(panel.view_model.active_tab, "GUILDS", "guild catalog tab active")
+equal(panel.view_model.content, panel.view_model.views.GUILDS,
+    "guild catalog content selected")
 
 panel:set_chat_available(true)
 equal(panel:append_chat({
@@ -289,7 +300,7 @@ equal(panel:append_chat({
 equal(panel.view_model.views.CHAT.available, true, "chat available")
 equal(panel.view_model.views.CHAT.message_count, 1, "chat count")
 equal(panel.view_model.views.CHAT.messages[1].text, "Merhaba", "chat text")
-equal(panel.view_model.tabs[4].badge_count, 1, "chat badge")
+equal(panel.view_model.tabs[4].badge_count, 1, "active guild badge")
 
 panel:clear_chat()
 equal(panel.view_model.views.CHAT.empty, true, "chat cleared")

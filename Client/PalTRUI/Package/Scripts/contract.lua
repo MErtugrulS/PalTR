@@ -5,7 +5,7 @@ Contract.TABS = {
     { id = "CLAN", label = "Klanım" },
     { id = "DIPLOMACY", label = "Diplomasi" },
     { id = "ALLIANCE", label = "İttifak" },
-    { id = "CHAT", label = "Sohbet" }
+    { id = "GUILDS", label = "Klanlar" }
 }
 
 function Contract.accepts(snapshot)
