@@ -1233,6 +1233,67 @@ namespace PalTRUIAssetBuilder
         return true;
     }
 
+    bool UpdateFooterHints()
+    {
+        UWidgetBlueprint* Panel = LoadObject<UWidgetBlueprint>(
+            nullptr,
+            TEXT("/Game/Mods/PalTRUI/WBP_PalTRPanel.WBP_PalTRPanel")
+        );
+        if (!Panel || !Panel->WidgetTree)
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI footer update failed: panel asset missing."));
+            return false;
+        }
+        UWidgetTree* Tree = Panel->WidgetTree;
+        UVerticalBox* Layout = Cast<UVerticalBox>(Tree->FindWidget(TEXT("PanelLayout")));
+        UBorder* Frame = Cast<UBorder>(Tree->FindWidget(TEXT("FooterFrame")));
+        UTextBlock* Hint = Cast<UTextBlock>(Tree->FindWidget(TEXT("FooterHintText")));
+        if (!Layout)
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI footer update failed: panel layout missing."));
+            return false;
+        }
+        if (Frame && Hint)
+        {
+            UE_LOG(LogTemp, Display, TEXT("PALTR_UI_FOOTER_UPDATE_OK | changed=false"));
+            return true;
+        }
+        if (Frame || Hint)
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI footer update refused: partial controls exist."));
+            return false;
+        }
+
+        Panel->Modify();
+        Tree->Modify();
+        Layout->Modify();
+        Frame = Tree->ConstructWidget<UBorder>(
+            UBorder::StaticClass(),
+            TEXT("FooterFrame")
+        );
+        Frame->SetBrushColor(FLinearColor(0.015f, 0.035f, 0.045f, 0.98f));
+        Frame->SetPadding(FMargin(12.0f, 8.0f));
+        Hint = MakeText(
+            Tree,
+            TEXT("FooterHintText"),
+            TEXT("F6  Panel   |   Tab  Kapat"),
+            15
+        );
+        Hint->SetColorAndOpacity(FSlateColor(FLinearColor(0.92f, 0.68f, 0.25f, 1.0f)));
+        Frame->SetContent(Hint);
+        AddVertical(Layout, Frame, FMargin(0, 12, 0, 0));
+
+        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Panel);
+        FKismetEditorUtilities::CompileBlueprint(Panel);
+        if (!SaveAsset(Panel))
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI footer update failed while saving panel."));
+            return false;
+        }
+        UE_LOG(LogTemp, Display, TEXT("PALTR_UI_FOOTER_UPDATE_OK | changed=true"));
+        return true;
+    }
+
     bool VerifyAssets()
     {
         UBlueprint* ModActor = LoadObject<UBlueprint>(
@@ -1318,6 +1379,8 @@ namespace PalTRUIAssetBuilder
             TEXT("HeaderRoleText"),
             TEXT("HeaderNotificationFrame"),
             TEXT("HeaderNotificationText"),
+            TEXT("FooterFrame"),
+            TEXT("FooterHintText"),
             TEXT("RelationList"),
             TEXT("RelationTitleText"),
             TEXT("RelationStateText"),
@@ -1425,6 +1488,11 @@ int32 UPalTRUIAssetBuilderCommandlet::Main(const FString& Params)
     if (FParse::Param(*Params, TEXT("UpdateHeaderStatusBadges")))
     {
         return UpdateHeaderStatusBadges() ? 0 : 15;
+    }
+
+    if (FParse::Param(*Params, TEXT("UpdateFooterHints")))
+    {
+        return UpdateFooterHints() ? 0 : 16;
     }
 
     const FString ModActorPackage = FString(AssetRoot) / TEXT("ModActor");

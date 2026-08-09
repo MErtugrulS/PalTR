@@ -60,4 +60,8 @@ Role, and pending-offer Notification badges to the existing header row. The valu
 come only from the current snapshot presentation model. The update is idempotent
 and refuses partial controls.
 
+Run the commandlet with `-UpdateFooterHints` to add a static F6/Tab usage strip to
+the bottom of the existing panel layout. It does not register or alter input
+behavior. The update is idempotent and refuses partial controls.
+
 Run the commandlet with `-Verify` to load both generated classes and check the renderer-facing widget names without modifying the assets.
