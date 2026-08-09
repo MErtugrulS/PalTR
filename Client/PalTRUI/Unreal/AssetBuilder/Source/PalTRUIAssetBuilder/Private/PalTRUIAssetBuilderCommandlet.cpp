@@ -1937,7 +1937,10 @@ namespace PalTRUIAssetBuilder
         ArtImage->Modify();
         ArtImage->SetBrushFromTexture(PanelTexture, true);
         ArtImage->SetColorAndOpacity(FLinearColor::White);
-        Background->SetBrushColor(FLinearColor(0, 0, 0, 0));
+        // Runtime fallback: the imported ornamental texture may fail to draw on
+        // some UE4SS/Palworld builds. Keep the panel independently opaque so
+        // gameplay never bleeds through the dashboard.
+        Background->SetBrushColor(FLinearColor(0.008f, 0.025f, 0.045f, 0.995f));
         Background->SetPadding(FMargin(0));
         if (UButton* InputShield = Cast<UButton>(Tree->FindWidget(TEXT("PanelInputShield"))))
         {
@@ -2132,7 +2135,7 @@ namespace PalTRUIAssetBuilder
                 TEXT("DashboardProtectionIconSize"), TEXT("DashboardProtectionIcon"), ProtectionIcon,
                 TEXT("DashboardProtectionCardValueText"), TEXT("YAKINDA"),
                 TEXT("DashboardProtectionCardDetailText"), TEXT("Offline koruma ve baskin penceresi hazirlaniyor."),
-                FLinearColor(0.18f, 0.12f, 0.035f, 0.22f)
+                FLinearColor(0.18f, 0.12f, 0.035f, 0.96f)
             )
             || !AddMockCard(
                 TEXT("DashboardBuildingsCardFrame"), TEXT("DashboardBuildingsCardContent"),
@@ -2140,7 +2143,7 @@ namespace PalTRUIAssetBuilder
                 TEXT("DashboardBuildingsIconSize"), TEXT("DashboardBuildingsIcon"), BuildingsIcon,
                 TEXT("DashboardBuildingsCardValueText"), TEXT("YAKINDA"),
                 TEXT("DashboardBuildingsCardDetailText"), TEXT("Us ve yapi takibi sonraki fazda baglanacak."),
-                FLinearColor(0.16f, 0.085f, 0.025f, 0.22f)
+                FLinearColor(0.16f, 0.085f, 0.025f, 0.96f)
             ))
         {
             UE_LOG(LogTemp, Error, TEXT("PalTRUI art dashboard update failed: mock card hierarchy."));
@@ -2194,17 +2197,20 @@ namespace PalTRUIAssetBuilder
             UE_LOG(LogTemp, Error, TEXT("PalTRUI art dashboard update refused: partial lower row."));
             return false;
         }
+        RecentFrame->SetBrushColor(FLinearColor(0.012f, 0.045f, 0.07f, 0.97f));
 
-        HeaderFrame->SetBrushColor(FLinearColor(0.008f, 0.02f, 0.035f, 0.72f));
+        HeaderFrame->SetBrushColor(FLinearColor(0.008f, 0.02f, 0.035f, 0.99f));
         HeaderFrame->SetPadding(FMargin(8.0f, 8.0f));
-        ContentFrame->SetBrushColor(FLinearColor(0.008f, 0.02f, 0.035f, 0.30f));
-        FooterFrame->SetBrushColor(FLinearColor(0.008f, 0.02f, 0.035f, 0.72f));
-        NavigationFrame->SetBrushColor(FLinearColor(0.008f, 0.02f, 0.035f, 0.36f));
-        StyleFrame(Tree, TEXT("DashboardClanCardFrame"), FLinearColor(0.02f, 0.12f, 0.15f, 0.28f), FMargin(14.0f));
-        StyleFrame(Tree, TEXT("DashboardDiplomacyCardFrame"), FLinearColor(0.02f, 0.08f, 0.14f, 0.28f), FMargin(14.0f));
-        StyleFrame(Tree, TEXT("DashboardRelationsFrame"), FLinearColor(0.08f, 0.055f, 0.018f, 0.34f), FMargin(14.0f));
-        StyleFrame(Tree, TEXT("PendingOffersFrame"), FLinearColor(0.08f, 0.055f, 0.018f, 0.34f), FMargin(14.0f));
-        StyleFrame(Tree, TEXT("DashboardQuickActionsFrame"), FLinearColor(0.01f, 0.05f, 0.075f, 0.32f), FMargin(14.0f));
+        ContentFrame->SetBrushColor(FLinearColor(0.008f, 0.025f, 0.045f, 0.965f));
+        FooterFrame->SetBrushColor(FLinearColor(0.008f, 0.02f, 0.035f, 0.99f));
+        NavigationFrame->SetBrushColor(FLinearColor(0.006f, 0.025f, 0.04f, 0.985f));
+        StyleFrame(Tree, TEXT("DashboardClanCardFrame"), FLinearColor(0.02f, 0.16f, 0.16f, 0.96f), FMargin(14.0f));
+        StyleFrame(Tree, TEXT("DashboardDiplomacyCardFrame"), FLinearColor(0.025f, 0.10f, 0.17f, 0.96f), FMargin(14.0f));
+        StyleFrame(Tree, TEXT("DashboardProtectionCardFrame"), FLinearColor(0.18f, 0.12f, 0.035f, 0.96f), FMargin(14.0f));
+        StyleFrame(Tree, TEXT("DashboardBuildingsCardFrame"), FLinearColor(0.16f, 0.085f, 0.025f, 0.96f), FMargin(14.0f));
+        StyleFrame(Tree, TEXT("DashboardRelationsFrame"), FLinearColor(0.075f, 0.055f, 0.02f, 0.97f), FMargin(14.0f));
+        StyleFrame(Tree, TEXT("PendingOffersFrame"), FLinearColor(0.075f, 0.055f, 0.02f, 0.97f), FMargin(14.0f));
+        StyleFrame(Tree, TEXT("DashboardQuickActionsFrame"), FLinearColor(0.01f, 0.055f, 0.08f, 0.97f), FMargin(14.0f));
         for (const FName NavigationButton : {
             FName(TEXT("ClanTabButton")),
             FName(TEXT("DiplomacyTabButton")),
