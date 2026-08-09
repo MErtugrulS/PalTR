@@ -122,3 +122,29 @@ if Key.F10 ~= nil then
         end
     end)
 end
+
+local function cycle_probe_relation()
+    local selected, model, selection_error =
+        PresentationSnapshotProbe.select_next(presentation)
+    if selected ~= true then
+        print(string.format(
+            "[PalTRUI] PALTR_UI_F11_ERROR | error=%s\n",
+            tostring(selection_error or "bilinmeyen secim probe hatasi")
+        ))
+        return
+    end
+    print(string.format(
+        "[PalTRUI] PALTR_UI_F11_OK | guild=%s | probe=true\n",
+        tostring(model.selected_guild)
+    ))
+end
+
+if Key.F11 ~= nil then
+    RegisterKeyBind(Key.F11, function()
+        if type(ExecuteInGameThread) == "function" then
+            ExecuteInGameThread(cycle_probe_relation)
+        else
+            cycle_probe_relation()
+        end
+    end)
+end

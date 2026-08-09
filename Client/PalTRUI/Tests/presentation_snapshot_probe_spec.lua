@@ -26,6 +26,22 @@ equal(model.views.DIPLOMACY.action_controls.AllianceRequestButton.enabled,
     true, "probe alliance action enabled")
 equal(model.views.ALLIANCE.empty, false, "probe alliance populated")
 
+local cycled, cycled_model, cycle_error =
+    PresentationSnapshotProbe.select_next(PresentationController.new())
+equal(cycled, false, "empty relation cycle rejected")
+equal(cycle_error, "Secilebilir diplomasi kaydi bulunamadi.",
+    "empty relation cycle error")
+
+local cycle_controller = PresentationController.new()
+PresentationSnapshotProbe.apply(cycle_controller)
+local selected_next, next_model, next_error =
+    PresentationSnapshotProbe.select_next(cycle_controller)
+equal(selected_next, true, "next relation selected")
+equal(next_error, nil, "next relation has no error")
+equal(next_model.selected_guild, "probe-alliance", "relation wraps")
+equal(next_model.views.DIPLOMACY.title_text, "Müttefikler",
+    "selected relation rendered")
+
 local rejected, _, rejection = PresentationSnapshotProbe.apply()
 equal(rejected, false, "missing controller rejected")
 equal(rejection, "UI sunum controller'i hazir degil.",

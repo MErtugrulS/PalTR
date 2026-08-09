@@ -88,4 +88,45 @@ function PresentationSnapshotProbe.apply(controller)
     return true, model
 end
 
+function PresentationSnapshotProbe.select_next(controller)
+    if type(controller) ~= "table"
+        or type(controller.model) ~= "function"
+        or type(controller.select_guild) ~= "function" then
+        return false, nil, "UI sunum controller'i hazir degil."
+    end
+
+    local model = controller:model()
+    local views = type(model) == "table" and model.views or nil
+    local diplomacy = type(views) == "table" and views.DIPLOMACY or nil
+    local relations = type(diplomacy) == "table"
+        and diplomacy.relations or nil
+    if type(relations) ~= "table" or #relations == 0 then
+        return false, model, "Secilebilir diplomasi kaydi bulunamadi."
+    end
+
+    local selected_guild = tostring(model.selected_guild or "")
+    local next_index = 1
+    for index, relation in ipairs(relations) do
+        local guild = type(relation) == "table" and relation.guild or nil
+        if type(guild) == "table"
+            and tostring(guild.key or "") == selected_guild then
+            next_index = index % #relations + 1
+            break
+        end
+    end
+
+    local next_relation = relations[next_index]
+    local next_guild = type(next_relation) == "table"
+        and next_relation.guild or nil
+    local guild_key = type(next_guild) == "table"
+        and tostring(next_guild.key or "") or ""
+    local accepted, selected_model, rendered, selection_error =
+        controller:select_guild(guild_key)
+    if accepted ~= true or rendered ~= true then
+        return false, selected_model,
+            selection_error or "Probe iliski kaydi secilemedi."
+    end
+    return true, selected_model
+end
+
 return PresentationSnapshotProbe
