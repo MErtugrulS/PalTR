@@ -43,6 +43,9 @@ equal(next_error, nil, "next relation has no error")
 equal(next_model.selected_guild, "probe-alliance", "relation wraps")
 equal(next_model.views.DIPLOMACY.title_text, "Müttefikler",
     "selected relation rendered")
+equal(next_model.views.DIPLOMACY.list_text,
+    "> Müttefikler | İttifak\n  Tarafsızlar | Tarafsız",
+    "selected relation marked")
 
 local rejected, _, rejection = PresentationSnapshotProbe.apply()
 equal(rejected, false, "missing controller rejected")

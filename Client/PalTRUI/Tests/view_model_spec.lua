@@ -146,7 +146,7 @@ equal(panel.view_model.tabs[2].page_index, 1, "diplomacy page index")
 panel:select_guild("guild-neutral")
 equal(
     panel.view_model.views.DIPLOMACY.list_text,
-    "Müttefikler | İttifak\nRakipler | Savaş\nTarafsızlar | Tarafsız",
+    "  Müttefikler | İttifak\n  Rakipler | Savaş\n> Tarafsızlar | Tarafsız",
     "diplomacy list text"
 )
 equal(

@@ -191,8 +191,10 @@ end
 local function relation_lines(relations)
     local lines = {}
     for _, relation in ipairs(relations) do
+        local prefix = relation.selected and "> " or "  "
         table.insert(lines, string.format(
-            "%s | %s",
+            "%s%s | %s",
+            prefix,
             relation.guild.name,
             relation.status.label
         ))
