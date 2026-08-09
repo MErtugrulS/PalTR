@@ -513,7 +513,17 @@ local function clan_view(snapshot)
         members = members,
         member_count = #members,
         online_count = online_count,
+        offline_count = #members - online_count,
         leader_name = leader_name,
+        members_heading_text = string.format(
+            "KLAN ÜYELERİ (%d)",
+            #members
+        ),
+        members_status_text = string.format(
+            "%d çevrimiçi | %d çevrimdışı",
+            online_count,
+            #members - online_count
+        ),
         dashboard = {
             cards = { clan_card, diplomacy_card },
             war_count = war_count,

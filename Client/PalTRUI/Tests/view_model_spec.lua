@@ -95,6 +95,11 @@ equal(panel:apply_snapshot(snapshot(relations)), true, "valid snapshot")
 equal(panel.selected_guild, "guild-alliance", "default relation selection")
 equal(panel.view_model.views.CLAN.member_count, 2, "member count")
 equal(panel.view_model.views.CLAN.online_count, 1, "online count")
+equal(panel.view_model.views.CLAN.offline_count, 1, "offline count")
+equal(panel.view_model.views.CLAN.members_heading_text, "KLAN ÜYELERİ (2)",
+    "member section heading")
+equal(panel.view_model.views.CLAN.members_status_text,
+    "1 çevrimiçi | 1 çevrimdışı", "member section status")
 equal(panel.view_model.views.CLAN.members[1].name, "Ada",
     "leader sorted before snapshot order")
 equal(panel.view_model.views.CLAN.members[1].role_label, "Lider",
