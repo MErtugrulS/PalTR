@@ -297,6 +297,8 @@ function ViewModel.build(snapshot, panel)
     if active_tab == "" then active_tab = Contract.DEFAULT_TAB end
 
     local selected_guild = text(panel.selected_guild)
+    local schema_version = tonumber(snapshot.schema_version) or 0
+    local panel_error = text(panel.error)
     local clan = clan_view(snapshot)
     local relation_data = relation_views(snapshot, selected_guild)
     local chat = chat_view(panel.chat)
@@ -308,12 +310,19 @@ function ViewModel.build(snapshot, panel)
     }
 
     return {
-        schema_version = tonumber(snapshot.schema_version) or 0,
+        schema_version = schema_version,
         generated_at = tonumber(snapshot.generated_at) or 0,
         open = panel.open == true,
         active_tab = active_tab,
         selected_guild = selected_guild,
-        error = text(panel.error),
+        error = panel_error,
+        connection = {
+            ready = schema_version > 0 and panel_error == "",
+            status_text = panel_error ~= "" and panel_error
+                or (schema_version > 0
+                    and "Sunucu snapshoti hazir"
+                    or "Sunucu baglantisi bekleniyor")
+        },
         player = {
             name = text(player.name),
             guild_key = text(player.guild_key),

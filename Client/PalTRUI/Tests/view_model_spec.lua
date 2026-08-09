@@ -110,6 +110,12 @@ equal(
 
 panel:set_tab("DIPLOMACY")
 equal(panel.view_model.content, panel.view_model.views.DIPLOMACY, "active content")
+equal(panel.view_model.connection.ready, true, "snapshot connection ready")
+equal(
+    panel.view_model.connection.status_text,
+    "Sunucu snapshoti hazir",
+    "snapshot connection text"
+)
 equal(panel.view_model.tabs[1].control, "ClanTabButton", "clan tab control")
 equal(panel.view_model.tabs[1].enabled, true, "inactive tab enabled")
 equal(

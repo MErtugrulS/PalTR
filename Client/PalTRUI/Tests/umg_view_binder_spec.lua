@@ -107,6 +107,10 @@ local model = {
     schema_version = 1,
     active_tab = "DIPLOMACY",
     error = "",
+    connection = {
+        ready = true,
+        status_text = "Sunucu snapshoti hazir"
+    },
     tabs = {
         {
             id = "CLAN",

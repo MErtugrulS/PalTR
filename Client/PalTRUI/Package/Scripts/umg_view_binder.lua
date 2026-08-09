@@ -239,16 +239,11 @@ function UMGViewBinder:bind(panel, model)
     local selected_status = table_or_empty(selected.status)
     local clan_guild = table_or_empty(clan.guild)
 
-    local connection = text(model.error)
-    if connection == "" then
-        connection = (tonumber(model.schema_version) or 0) > 0
-            and "Sunucu snapshoti hazir"
-            or "Sunucu baglantisi bekleniyor"
-    end
+    local connection = table_or_empty(model.connection)
 
     local bindings = {
         { "TitleText", "PalTR" },
-        { "ConnectionStatusText", connection },
+        { "ConnectionStatusText", connection.status_text },
         { "ClanNameText", text(clan_guild.name) ~= ""
             and clan_guild.name or "Klan bilgisi bekleniyor" },
         { "ClanSummaryText", string.format(
