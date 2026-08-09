@@ -15,6 +15,12 @@ local calls = {}
 local current_model = {
     open = true,
     active_tab = "DIPLOMACY",
+    tabs = {
+        { id = "CLAN", control = "ClanTabButton" },
+        { id = "DIPLOMACY", control = "DiplomacyTabButton" },
+        { id = "ALLIANCE", control = "AllianceTabButton" },
+        { id = "CHAT", control = "ChatTabButton" }
+    },
     views = {
         DIPLOMACY = {
             action_controls = {
@@ -104,6 +110,7 @@ equal(
 
 local failed = UIInteractionRouter.new({
     toggle = controller.toggle,
+    model = controller.model,
     set_tab = function(_, tab_id)
         return true, { open = true, active_tab = tab_id },
             false, "renderer failed"

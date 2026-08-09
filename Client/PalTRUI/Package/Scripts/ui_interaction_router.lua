@@ -1,23 +1,32 @@
 local UIInteractionRouter = {}
 UIInteractionRouter.__index = UIInteractionRouter
 
-local tab_controls = {
-    ClanTabButton = "CLAN",
-    DiplomacyTabButton = "DIPLOMACY",
-    AllianceTabButton = "ALLIANCE",
-    ChatTabButton = "CHAT"
-}
-
 local function valid_controller(controller)
     return type(controller) == "table"
         and type(controller.toggle) == "function"
         and type(controller.set_tab) == "function"
 end
 
-local function action_control(controller, control_name)
-    if type(controller.model) ~= "function" then return nil, nil end
+local function current_model(controller)
+    if type(controller.model) ~= "function" then return nil end
+    return controller:model()
+end
 
-    local model = controller:model()
+local function tab_id_for_control(model, control_name)
+    local tabs = type(model) == "table" and model.tabs or nil
+    if type(tabs) ~= "table" then return nil end
+
+    for _, tab in ipairs(tabs) do
+        if type(tab) == "table"
+            and tostring(tab.control or "") == control_name then
+            return tostring(tab.id or "")
+        end
+    end
+    return nil
+end
+
+local function action_control(controller, control_name)
+    local model = current_model(controller)
     local views = type(model) == "table" and model.views or nil
     local diplomacy = type(views) == "table" and views.DIPLOMACY or nil
     local controls = type(diplomacy) == "table"
@@ -46,28 +55,29 @@ function UIInteractionRouter:handle(control_name)
         return true, model, true
     end
 
-    local tab_id = tab_controls[name]
+    local model = current_model(self.controller)
+    local tab_id = tab_id_for_control(model, name)
     if tab_id == nil then
-        local model, action = action_control(self.controller, name)
+        local action_model, action = action_control(self.controller, name)
         if type(action) ~= "table" then
             return false, nil, false,
                 "UI kontrol etkilesimi tanimli degil."
         end
         if action.enabled ~= true then
-            return false, model, false,
+            return false, action_model, false,
                 tostring(action.reason or "Diplomasi aksiyonu kullanilamaz.")
         end
         if type(self.controller.request_action) ~= "function" then
-            return false, model, false,
+            return false, action_model, false,
                 "UI aksiyon controller'i hazir degil."
         end
 
         local dispatched, dispatch_result =
             self.controller:request_action(action.action_id)
         if dispatched ~= true then
-            return false, model, false, dispatch_result
+            return false, action_model, false, dispatch_result
         end
-        return true, model, true
+        return true, action_model, true
     end
 
     local accepted, model, rendered, render_error =
