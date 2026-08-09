@@ -151,11 +151,11 @@ equal(
     "diplomacy tab text control"
 )
 equal(panel.view_model.tabs[2].active, true, "diplomacy tab active")
-equal(panel.view_model.tabs[2].enabled, false, "active tab disabled")
+equal(panel.view_model.tabs[2].enabled, true, "active tab remains interactive")
 equal(panel.view_model.tabs[2].page_index, 1, "diplomacy page index")
 equal(
     panel.view_model.tabs[2].display_label,
-    "Diplomasi (3)",
+    "> Diplomasi (3)",
     "diplomacy tab display label"
 )
 
