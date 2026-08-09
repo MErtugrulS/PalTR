@@ -84,4 +84,8 @@ Palworld-inspired presentation pass. It gives the top navigation equal-width
 tabs, harmonizes dashboard/detail frames and status badges, and preserves every
 renderer-facing control name and interaction.
 
+Run the commandlet with `-UpdateAllPageScrollInput` to wrap every panel page in
+a wheel-consuming scroll box. This prevents wheel events over Diplomacy,
+Alliance, and Guilds from reaching gameplay weapon selection.
+
 Run the commandlet with `-Verify` to load both generated classes and check the renderer-facing widget names without modifying the assets.

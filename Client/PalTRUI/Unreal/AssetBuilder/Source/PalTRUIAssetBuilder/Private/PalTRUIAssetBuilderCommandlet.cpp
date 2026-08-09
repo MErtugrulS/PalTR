@@ -1352,6 +1352,122 @@ namespace PalTRUIAssetBuilder
         return true;
     }
 
+    bool UpdateAllPageScrollInput()
+    {
+        UWidgetBlueprint* Panel = LoadObject<UWidgetBlueprint>(
+            nullptr,
+            TEXT("/Game/Mods/PalTRUI/WBP_PalTRPanel.WBP_PalTRPanel")
+        );
+        if (!Panel || !Panel->WidgetTree)
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI page scroll input update failed: panel asset missing."));
+            return false;
+        }
+
+        UWidgetTree* Tree = Panel->WidgetTree;
+        UWidgetSwitcher* Switcher = Cast<UWidgetSwitcher>(Tree->FindWidget(TEXT("ContentSwitcher")));
+        if (!Switcher)
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI page scroll input update failed: content switcher missing."));
+            return false;
+        }
+
+        struct FPageScrollSpec
+        {
+            const TCHAR* PageName;
+            const TCHAR* ScrollName;
+        };
+        static const FPageScrollSpec PageSpecs[] = {
+            { TEXT("ClanPage"), TEXT("ClanPageScroll") },
+            { TEXT("DiplomacyPage"), TEXT("DiplomacyPageScroll") },
+            { TEXT("AlliancePage"), TEXT("AlliancePageScroll") },
+            { TEXT("ChatPage"), TEXT("GuildPageScroll") }
+        };
+
+        Panel->Modify();
+        Tree->Modify();
+        Switcher->Modify();
+        const int32 ActiveIndex = Switcher->GetActiveWidgetIndex();
+
+        for (const FPageScrollSpec& Spec : PageSpecs)
+        {
+            UVerticalBox* Page = Cast<UVerticalBox>(Tree->FindWidget(FName(Spec.PageName)));
+            UScrollBox* Scroll = Cast<UScrollBox>(Tree->FindWidget(FName(Spec.ScrollName)));
+            if (!Page)
+            {
+                UE_LOG(LogTemp, Error, TEXT("PalTRUI page scroll input update failed: page missing: %s"), Spec.PageName);
+                return false;
+            }
+
+            if (Scroll)
+            {
+                if (Scroll->GetChildrenCount() != 1
+                    || Scroll->GetChildAt(0) != Page
+                    || Scroll->GetParent() != Switcher)
+                {
+                    UE_LOG(LogTemp, Error, TEXT("PalTRUI page scroll input update refused: unexpected hierarchy: %s"), Spec.ScrollName);
+                    return false;
+                }
+            }
+            else
+            {
+                if (Page->GetParent() != Switcher)
+                {
+                    UE_LOG(LogTemp, Error, TEXT("PalTRUI page scroll input update refused: page is outside switcher: %s"), Spec.PageName);
+                    return false;
+                }
+                const int32 PageIndex = Switcher->GetChildIndex(Page);
+                if (PageIndex < 0)
+                {
+                    UE_LOG(LogTemp, Error, TEXT("PalTRUI page scroll input update failed: page index missing: %s"), Spec.PageName);
+                    return false;
+                }
+
+                Page->Modify();
+                Switcher->RemoveChild(Page);
+                Scroll = Tree->ConstructWidget<UScrollBox>(UScrollBox::StaticClass(), FName(Spec.ScrollName));
+                Scroll->AddChild(Page);
+                if (!Switcher->InsertChildAt(PageIndex, Scroll))
+                {
+                    UE_LOG(LogTemp, Error, TEXT("PalTRUI page scroll input update failed: scroll slot could not be inserted: %s"), Spec.ScrollName);
+                    return false;
+                }
+            }
+
+            Scroll->Modify();
+            Scroll->SetScrollBarVisibility(ESlateVisibility::Visible);
+            Scroll->SetScrollbarThickness(FVector2D(7.0f, 7.0f));
+            Scroll->SetAlwaysShowScrollbar(false);
+            Scroll->SetConsumeMouseWheel(EConsumeMouseWheel::Always);
+            Scroll->SetAllowOverscroll(false);
+        }
+
+        static const FName NestedScrollNames[] = {
+            TEXT("RelationList"),
+            TEXT("ChatMessageList")
+        };
+        for (const FName ScrollName : NestedScrollNames)
+        {
+            if (UScrollBox* NestedScroll = Cast<UScrollBox>(Tree->FindWidget(ScrollName)))
+            {
+                NestedScroll->Modify();
+                NestedScroll->SetConsumeMouseWheel(EConsumeMouseWheel::Always);
+                NestedScroll->SetAllowOverscroll(false);
+            }
+        }
+
+        Switcher->SetActiveWidgetIndex(ActiveIndex);
+        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Panel);
+        FKismetEditorUtilities::CompileBlueprint(Panel);
+        if (!SaveAsset(Panel))
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI page scroll input update failed while saving panel."));
+            return false;
+        }
+        UE_LOG(LogTemp, Display, TEXT("PALTR_UI_PAGE_SCROLL_INPUT_UPDATE_OK | pages=4 | consume_wheel=always"));
+        return true;
+    }
+
     bool UpdatePanelInputShield()
     {
         UWidgetBlueprint* Panel = LoadObject<UWidgetBlueprint>(
@@ -1754,6 +1870,9 @@ namespace PalTRUIAssetBuilder
             TEXT("ContentFrame"),
             TEXT("ContentSwitcher"),
             TEXT("ClanPageScroll"),
+            TEXT("DiplomacyPageScroll"),
+            TEXT("AlliancePageScroll"),
+            TEXT("GuildPageScroll"),
             TEXT("ClanNameText"),
             TEXT("ClanSummaryText"),
             TEXT("ClanMembersFrame"),
@@ -1948,6 +2067,11 @@ int32 UPalTRUIAssetBuilderCommandlet::Main(const FString& Params)
     if (FParse::Param(*Params, TEXT("UpdatePremiumTheme")))
     {
         return UpdatePremiumTheme() ? 0 : 20;
+    }
+
+    if (FParse::Param(*Params, TEXT("UpdateAllPageScrollInput")))
+    {
+        return UpdateAllPageScrollInput() ? 0 : 21;
     }
 
     const FString ModActorPackage = FString(AssetRoot) / TEXT("ModActor");
