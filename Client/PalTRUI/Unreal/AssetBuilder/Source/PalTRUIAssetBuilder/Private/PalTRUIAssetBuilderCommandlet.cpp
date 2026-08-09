@@ -12,6 +12,9 @@
 #include "Components/EditableTextBox.h"
 #include "Components/HorizontalBox.h"
 #include "Components/HorizontalBoxSlot.h"
+#include "Components/Image.h"
+#include "Components/Overlay.h"
+#include "Components/OverlaySlot.h"
 #include "Components/PanelWidget.h"
 #include "Components/ScrollBox.h"
 #include "Components/SizeBox.h"
@@ -20,11 +23,15 @@
 #include "Components/VerticalBoxSlot.h"
 #include "Components/WidgetSwitcher.h"
 #include "Engine/Blueprint.h"
+#include "Engine/Texture2D.h"
+#include "Factories/Factory.h"
+#include "Factories/TextureFactory.h"
 #include "GameFramework/Actor.h"
 #include "Kismet2/KismetEditorUtilities.h"
 #include "Kismet2/BlueprintEditorUtils.h"
 #include "Misc/Parse.h"
 #include "Misc/PackageName.h"
+#include "Misc/Paths.h"
 #include "UObject/Package.h"
 #include "UObject/SavePackage.h"
 #include "WidgetBlueprint.h"
@@ -211,6 +218,59 @@ namespace PalTRUIAssetBuilder
         SaveArgs.SaveFlags = SAVE_NoError;
         SaveArgs.bWarnOfLongFilename = true;
         return UPackage::SavePackage(Package, Asset, *Filename, SaveArgs);
+    }
+
+    UTexture2D* ImportUITexture(
+        const FString& PackageName,
+        const FName AssetName,
+        const FString& SourceFilename
+    )
+    {
+        const FString ObjectPath = FString::Printf(
+            TEXT("%s.%s"),
+            *PackageName,
+            *AssetName.ToString()
+        );
+        if (UTexture2D* Existing = LoadObject<UTexture2D>(nullptr, *ObjectPath))
+        {
+            return Existing;
+        }
+        if (!FPaths::FileExists(SourceFilename))
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI texture import failed: source missing: %s"), *SourceFilename);
+            return nullptr;
+        }
+
+        UPackage* Package = CreatePackage(*PackageName);
+        UTextureFactory* Factory = NewObject<UTextureFactory>();
+        bool bCanceled = false;
+        UTexture2D* Texture = Cast<UTexture2D>(UFactory::StaticImportObject(
+            UTexture2D::StaticClass(),
+            Package,
+            AssetName,
+            RF_Public | RF_Standalone,
+            bCanceled,
+            *SourceFilename,
+            nullptr,
+            Factory
+        ));
+        if (!Texture || bCanceled)
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI texture import failed: %s"), *SourceFilename);
+            return nullptr;
+        }
+        Texture->Modify();
+        Texture->LODGroup = TEXTUREGROUP_UI;
+        Texture->NeverStream = true;
+        Texture->SRGB = true;
+        Texture->UpdateResource();
+        FAssetRegistryModule::AssetCreated(Texture);
+        if (!SaveAsset(Texture))
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI texture import failed while saving: %s"), *ObjectPath);
+            return nullptr;
+        }
+        return Texture;
     }
 
     UBlueprint* CreateModActor()
@@ -1769,6 +1829,366 @@ namespace PalTRUIAssetBuilder
         return true;
     }
 
+    bool UpdateArtDashboard()
+    {
+        const FString ArtDirectory = FPaths::ConvertRelativePathToFull(
+            FPaths::ProjectPluginsDir() / TEXT("PalTRUIAssetBuilder/Resources")
+        );
+        UTexture2D* PanelTexture = ImportUITexture(
+            TEXT("/Game/Mods/PalTRUI/Art/T_PalTRPanelFrame"),
+            TEXT("T_PalTRPanelFrame"),
+            ArtDirectory / TEXT("paltr_panel_frame.png")
+        );
+        UTexture2D* ClanIcon = ImportUITexture(
+            TEXT("/Game/Mods/PalTRUI/Art/T_PalTRClanIcon"),
+            TEXT("T_PalTRClanIcon"),
+            ArtDirectory / TEXT("paltr_icon_clan.png")
+        );
+        UTexture2D* DiplomacyIcon = ImportUITexture(
+            TEXT("/Game/Mods/PalTRUI/Art/T_PalTRDiplomacyIcon"),
+            TEXT("T_PalTRDiplomacyIcon"),
+            ArtDirectory / TEXT("paltr_icon_diplomacy.png")
+        );
+        UTexture2D* ProtectionIcon = ImportUITexture(
+            TEXT("/Game/Mods/PalTRUI/Art/T_PalTRProtectionIcon"),
+            TEXT("T_PalTRProtectionIcon"),
+            ArtDirectory / TEXT("paltr_icon_protection.png")
+        );
+        UTexture2D* BuildingsIcon = ImportUITexture(
+            TEXT("/Game/Mods/PalTRUI/Art/T_PalTRBuildingsIcon"),
+            TEXT("T_PalTRBuildingsIcon"),
+            ArtDirectory / TEXT("paltr_icon_buildings.png")
+        );
+        if (!PanelTexture || !ClanIcon || !DiplomacyIcon || !ProtectionIcon || !BuildingsIcon)
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI art dashboard update failed: texture import incomplete."));
+            return false;
+        }
+
+        UWidgetBlueprint* Panel = LoadObject<UWidgetBlueprint>(
+            nullptr,
+            TEXT("/Game/Mods/PalTRUI/WBP_PalTRPanel.WBP_PalTRPanel")
+        );
+        if (!Panel || !Panel->WidgetTree)
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI art dashboard update failed: panel asset missing."));
+            return false;
+        }
+        UWidgetTree* Tree = Panel->WidgetTree;
+        UBorder* Background = Cast<UBorder>(Tree->FindWidget(TEXT("PanelBackground")));
+        UVerticalBox* Layout = Cast<UVerticalBox>(Tree->FindWidget(TEXT("PanelLayout")));
+        UBorder* HeaderFrame = Cast<UBorder>(Tree->FindWidget(TEXT("HeaderFrame")));
+        UBorder* TabFrame = Cast<UBorder>(Tree->FindWidget(TEXT("TabFrame")));
+        UHorizontalBox* TabBar = Cast<UHorizontalBox>(Tree->FindWidget(TEXT("TabBar")));
+        UBorder* ContentFrame = Cast<UBorder>(Tree->FindWidget(TEXT("ContentFrame")));
+        UBorder* FooterFrame = Cast<UBorder>(Tree->FindWidget(TEXT("FooterFrame")));
+        UHorizontalBox* StatusCards = Cast<UHorizontalBox>(Tree->FindWidget(TEXT("DashboardStatusCardsFrame")));
+        UVerticalBox* MainColumn = Cast<UVerticalBox>(Tree->FindWidget(TEXT("DashboardMainColumn")));
+        UVerticalBox* Sidebar = Cast<UVerticalBox>(Tree->FindWidget(TEXT("DashboardSidebarColumn")));
+        UVerticalBox* ClanCard = Cast<UVerticalBox>(Tree->FindWidget(TEXT("DashboardClanCardContent")));
+        UVerticalBox* DiplomacyCard = Cast<UVerticalBox>(Tree->FindWidget(TEXT("DashboardDiplomacyCardContent")));
+        UBorder* QuickActions = Cast<UBorder>(Tree->FindWidget(TEXT("DashboardQuickActionsFrame")));
+        const bool bHasExistingNavigation = Tree->FindWidget(TEXT("LeftNavigation")) != nullptr;
+        if (!Background || !Layout || !HeaderFrame || !ContentFrame || !FooterFrame
+            || !StatusCards || !MainColumn || !Sidebar || !ClanCard || !DiplomacyCard || !QuickActions
+            || (!bHasExistingNavigation && (!TabFrame || !TabBar)))
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI art dashboard update failed: required widget hierarchy missing."));
+            return false;
+        }
+
+        Panel->Modify();
+        Tree->Modify();
+        Background->Modify();
+        Layout->Modify();
+
+        UOverlay* ArtOverlay = Cast<UOverlay>(Tree->FindWidget(TEXT("PanelArtOverlay")));
+        UImage* ArtImage = Cast<UImage>(Tree->FindWidget(TEXT("PanelArtImage")));
+        UBorder* ContentPadding = Cast<UBorder>(Tree->FindWidget(TEXT("PanelArtContentPadding")));
+        if (!ArtOverlay && !ArtImage && !ContentPadding)
+        {
+            if (Background->GetContent() != Layout)
+            {
+                UE_LOG(LogTemp, Error, TEXT("PalTRUI art dashboard update refused: background content changed."));
+                return false;
+            }
+            Background->RemoveChild(Layout);
+            ArtOverlay = Tree->ConstructWidget<UOverlay>(UOverlay::StaticClass(), TEXT("PanelArtOverlay"));
+            ArtImage = Tree->ConstructWidget<UImage>(UImage::StaticClass(), TEXT("PanelArtImage"));
+            ContentPadding = Tree->ConstructWidget<UBorder>(UBorder::StaticClass(), TEXT("PanelArtContentPadding"));
+            ContentPadding->SetBrushColor(FLinearColor(0, 0, 0, 0));
+            ContentPadding->SetPadding(FMargin(28.0f, 24.0f));
+            ContentPadding->SetContent(Layout);
+            ArtOverlay->AddChildToOverlay(ArtImage);
+            ArtOverlay->AddChildToOverlay(ContentPadding);
+            Background->SetContent(ArtOverlay);
+        }
+        else if (!ArtOverlay || !ArtImage || !ContentPadding
+            || Background->GetContent() != ArtOverlay
+            || ArtImage->GetParent() != ArtOverlay
+            || ContentPadding->GetContent() != Layout
+            || ContentPadding->GetParent() != ArtOverlay)
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI art dashboard update refused: partial art overlay."));
+            return false;
+        }
+        ArtImage->Modify();
+        ArtImage->SetBrushFromTexture(PanelTexture, true);
+        ArtImage->SetColorAndOpacity(FLinearColor(1.0f, 1.0f, 1.0f, 0.84f));
+        Background->SetBrushColor(FLinearColor(0, 0, 0, 0));
+        Background->SetPadding(FMargin(0));
+        if (UCanvasPanelSlot* BackgroundSlot = Cast<UCanvasPanelSlot>(Background->Slot))
+        {
+            BackgroundSlot->Modify();
+            BackgroundSlot->SetSize(FVector2D(1500.0f, 840.0f));
+        }
+
+        UHorizontalBox* BodyRow = Cast<UHorizontalBox>(Tree->FindWidget(TEXT("PanelBodyRow")));
+        USizeBox* NavigationSize = Cast<USizeBox>(Tree->FindWidget(TEXT("LeftNavigationSize")));
+        UBorder* NavigationFrame = Cast<UBorder>(Tree->FindWidget(TEXT("LeftNavigationFrame")));
+        UVerticalBox* Navigation = Cast<UVerticalBox>(Tree->FindWidget(TEXT("LeftNavigation")));
+        UTextBlock* NavigationHeading = Cast<UTextBlock>(Tree->FindWidget(TEXT("LeftNavigationHeadingText")));
+        if (!BodyRow && !NavigationSize && !NavigationFrame && !Navigation && !NavigationHeading)
+        {
+            if (TabFrame->GetParent() != Layout || ContentFrame->GetParent() != Layout)
+            {
+                UE_LOG(LogTemp, Error, TEXT("PalTRUI art dashboard update refused: tab/content frames moved."));
+                return false;
+            }
+            BodyRow = Tree->ConstructWidget<UHorizontalBox>(UHorizontalBox::StaticClass(), TEXT("PanelBodyRow"));
+            NavigationSize = Tree->ConstructWidget<USizeBox>(USizeBox::StaticClass(), TEXT("LeftNavigationSize"));
+            NavigationSize->SetWidthOverride(238.0f);
+            NavigationFrame = Tree->ConstructWidget<UBorder>(UBorder::StaticClass(), TEXT("LeftNavigationFrame"));
+            NavigationFrame->SetBrushColor(FLinearColor(0.01f, 0.035f, 0.05f, 0.18f));
+            NavigationFrame->SetPadding(FMargin(12.0f));
+            Navigation = Tree->ConstructWidget<UVerticalBox>(UVerticalBox::StaticClass(), TEXT("LeftNavigation"));
+            NavigationHeading = MakeText(Tree, TEXT("LeftNavigationHeadingText"), TEXT("MENU"), 14);
+            NavigationHeading->SetColorAndOpacity(FSlateColor(FLinearColor(0.72f, 0.62f, 0.40f, 1.0f)));
+            AddVertical(Navigation, NavigationHeading, FMargin(8, 4, 0, 14));
+            for (const FName ButtonName : {
+                FName(TEXT("ClanTabButton")),
+                FName(TEXT("DiplomacyTabButton")),
+                FName(TEXT("AllianceTabButton")),
+                FName(TEXT("ChatTabButton"))
+            })
+            {
+                UButton* Button = Cast<UButton>(Tree->FindWidget(ButtonName));
+                if (!Button || Button->GetParent() != TabBar)
+                {
+                    UE_LOG(LogTemp, Error, TEXT("PalTRUI art dashboard update failed: navigation button missing: %s"), *ButtonName.ToString());
+                    return false;
+                }
+                TabBar->RemoveChild(Button);
+                UVerticalBoxSlot* ButtonSlot = AddVertical(Navigation, Button, FMargin(0, 0, 0, 10));
+                ButtonSlot->SetHorizontalAlignment(HAlign_Fill);
+            }
+            Layout->RemoveChild(TabFrame);
+            Layout->RemoveChild(ContentFrame);
+            NavigationFrame->SetContent(Navigation);
+            NavigationSize->SetContent(NavigationFrame);
+            AddHorizontal(BodyRow, NavigationSize, FMargin(0, 0, 18, 0));
+            UHorizontalBoxSlot* ContentSlot = AddHorizontal(BodyRow, ContentFrame);
+            ContentSlot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
+            ContentSlot->SetVerticalAlignment(VAlign_Fill);
+            UVerticalBoxSlot* BodySlot = Cast<UVerticalBoxSlot>(Layout->InsertChildAt(1, BodyRow));
+            if (!BodySlot)
+            {
+                UE_LOG(LogTemp, Error, TEXT("PalTRUI art dashboard update failed: body slot missing."));
+                return false;
+            }
+            BodySlot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
+            BodySlot->SetHorizontalAlignment(HAlign_Fill);
+            TabFrame->SetVisibility(ESlateVisibility::Collapsed);
+        }
+        else if (!BodyRow || !NavigationSize || !NavigationFrame || !Navigation || !NavigationHeading
+            || BodyRow->GetParent() != Layout
+            || NavigationSize->GetParent() != BodyRow
+            || ContentFrame->GetParent() != BodyRow)
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI art dashboard update refused: partial navigation shell."));
+            return false;
+        }
+
+        auto EnsureCardIcon = [Tree](
+            UVerticalBox* Card,
+            const FName SizeName,
+            const FName ImageName,
+            UTexture2D* Texture
+        ) -> bool
+        {
+            USizeBox* IconSize = Cast<USizeBox>(Tree->FindWidget(SizeName));
+            UImage* Icon = Cast<UImage>(Tree->FindWidget(ImageName));
+            if (!IconSize && !Icon)
+            {
+                IconSize = Tree->ConstructWidget<USizeBox>(USizeBox::StaticClass(), SizeName);
+                IconSize->SetWidthOverride(76.0f);
+                IconSize->SetHeightOverride(76.0f);
+                Icon = Tree->ConstructWidget<UImage>(UImage::StaticClass(), ImageName);
+                IconSize->SetContent(Icon);
+                UVerticalBoxSlot* IconSlot = Cast<UVerticalBoxSlot>(Card->InsertChildAt(1, IconSize));
+                if (!IconSlot)
+                {
+                    return false;
+                }
+                IconSlot->SetHorizontalAlignment(HAlign_Center);
+                IconSlot->SetPadding(FMargin(0, 2, 0, 8));
+            }
+            else if (!IconSize || !Icon || IconSize->GetContent() != Icon || IconSize->GetParent() != Card)
+            {
+                return false;
+            }
+            Icon->SetBrushFromTexture(Texture, true);
+            return true;
+        };
+        if (!EnsureCardIcon(ClanCard, TEXT("DashboardClanIconSize"), TEXT("DashboardClanIcon"), ClanIcon)
+            || !EnsureCardIcon(DiplomacyCard, TEXT("DashboardDiplomacyIconSize"), TEXT("DashboardDiplomacyIcon"), DiplomacyIcon))
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI art dashboard update failed: live card icon hierarchy."));
+            return false;
+        }
+
+        auto AddMockCard = [Tree, StatusCards, &EnsureCardIcon](
+            const FName FrameName,
+            const FName ContentName,
+            const FName TitleName,
+            const TCHAR* Title,
+            const FName IconSizeName,
+            const FName IconName,
+            UTexture2D* IconTexture,
+            const FName ValueName,
+            const TCHAR* Value,
+            const FName DetailName,
+            const TCHAR* Detail,
+            const FLinearColor Tint
+        ) -> bool
+        {
+            UBorder* Frame = Cast<UBorder>(Tree->FindWidget(FrameName));
+            UVerticalBox* Content = Cast<UVerticalBox>(Tree->FindWidget(ContentName));
+            if (!Frame && !Content)
+            {
+                Frame = Tree->ConstructWidget<UBorder>(UBorder::StaticClass(), FrameName);
+                Frame->SetBrushColor(Tint);
+                Frame->SetPadding(FMargin(14.0f));
+                Content = Tree->ConstructWidget<UVerticalBox>(UVerticalBox::StaticClass(), ContentName);
+                Frame->SetContent(Content);
+                UTextBlock* TitleText = MakeText(Tree, TitleName, Title, 17);
+                TitleText->SetJustification(ETextJustify::Center);
+                TitleText->SetColorAndOpacity(FSlateColor(FLinearColor(0.95f, 0.80f, 0.48f, 1.0f)));
+                AddVertical(Content, TitleText, FMargin(0, 0, 0, 4));
+                if (!EnsureCardIcon(Content, IconSizeName, IconName, IconTexture))
+                {
+                    return false;
+                }
+                UTextBlock* ValueText = MakeText(Tree, ValueName, Value, 18);
+                ValueText->SetJustification(ETextJustify::Center);
+                AddVertical(Content, ValueText, FMargin(0, 0, 0, 6));
+                UTextBlock* DetailText = MakeText(Tree, DetailName, Detail, 13);
+                DetailText->SetJustification(ETextJustify::Center);
+                DetailText->SetAutoWrapText(true);
+                AddVertical(Content, DetailText);
+                UHorizontalBoxSlot* FrameSlot = AddHorizontal(StatusCards, Frame, FMargin(6, 0));
+                FrameSlot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
+                FrameSlot->SetVerticalAlignment(VAlign_Fill);
+            }
+            else if (!Frame || !Content || Frame->GetContent() != Content || Frame->GetParent() != StatusCards)
+            {
+                return false;
+            }
+            return true;
+        };
+        if (!AddMockCard(
+                TEXT("DashboardProtectionCardFrame"), TEXT("DashboardProtectionCardContent"),
+                TEXT("DashboardProtectionCardTitleText"), TEXT("KORUMA"),
+                TEXT("DashboardProtectionIconSize"), TEXT("DashboardProtectionIcon"), ProtectionIcon,
+                TEXT("DashboardProtectionCardValueText"), TEXT("YAKINDA"),
+                TEXT("DashboardProtectionCardDetailText"), TEXT("Offline koruma ve baskin penceresi hazirlaniyor."),
+                FLinearColor(0.18f, 0.12f, 0.035f, 0.22f)
+            )
+            || !AddMockCard(
+                TEXT("DashboardBuildingsCardFrame"), TEXT("DashboardBuildingsCardContent"),
+                TEXT("DashboardBuildingsCardTitleText"), TEXT("YAPILAR"),
+                TEXT("DashboardBuildingsIconSize"), TEXT("DashboardBuildingsIcon"), BuildingsIcon,
+                TEXT("DashboardBuildingsCardValueText"), TEXT("YAKINDA"),
+                TEXT("DashboardBuildingsCardDetailText"), TEXT("Us ve yapi takibi sonraki fazda baglanacak."),
+                FLinearColor(0.16f, 0.085f, 0.025f, 0.22f)
+            ))
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI art dashboard update failed: mock card hierarchy."));
+            return false;
+        }
+
+        UHorizontalBox* LowerRow = Cast<UHorizontalBox>(Tree->FindWidget(TEXT("DashboardLowerRow")));
+        UBorder* RecentFrame = Cast<UBorder>(Tree->FindWidget(TEXT("DashboardRecentEventsFrame")));
+        UVerticalBox* RecentContent = Cast<UVerticalBox>(Tree->FindWidget(TEXT("DashboardRecentEventsContent")));
+        if (!LowerRow && !RecentFrame && !RecentContent)
+        {
+            if (QuickActions->GetParent() != Sidebar)
+            {
+                UE_LOG(LogTemp, Error, TEXT("PalTRUI art dashboard update refused: quick actions moved."));
+                return false;
+            }
+            Sidebar->RemoveChild(QuickActions);
+            LowerRow = Tree->ConstructWidget<UHorizontalBox>(UHorizontalBox::StaticClass(), TEXT("DashboardLowerRow"));
+            RecentFrame = Tree->ConstructWidget<UBorder>(UBorder::StaticClass(), TEXT("DashboardRecentEventsFrame"));
+            RecentFrame->SetBrushColor(FLinearColor(0.015f, 0.045f, 0.065f, 0.18f));
+            RecentFrame->SetPadding(FMargin(16.0f));
+            RecentContent = Tree->ConstructWidget<UVerticalBox>(UVerticalBox::StaticClass(), TEXT("DashboardRecentEventsContent"));
+            RecentFrame->SetContent(RecentContent);
+            UTextBlock* RecentHeading = MakeText(Tree, TEXT("DashboardRecentEventsHeadingText"), TEXT("SON OLAYLAR"), 18);
+            RecentHeading->SetColorAndOpacity(FSlateColor(FLinearColor(0.95f, 0.80f, 0.48f, 1.0f)));
+            AddVertical(RecentContent, RecentHeading, FMargin(0, 0, 0, 10));
+            AddVertical(RecentContent, MakeText(
+                Tree,
+                TEXT("DashboardRecentEventsText"),
+                TEXT("Exceed ile savas devam ediyor.\nSaru tarafsiz durumda.\nKoruma sistemi sonraki fazda.\nYapi takibi sonraki fazda."),
+                14
+            ));
+            UHorizontalBoxSlot* RecentSlot = AddHorizontal(LowerRow, RecentFrame, FMargin(0, 0, 8, 0));
+            RecentSlot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
+            UHorizontalBoxSlot* QuickSlot = AddHorizontal(LowerRow, QuickActions, FMargin(8, 0, 0, 0));
+            QuickSlot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
+            UVerticalBoxSlot* LowerSlot = Cast<UVerticalBoxSlot>(MainColumn->InsertChildAt(1, LowerRow));
+            if (!LowerSlot)
+            {
+                UE_LOG(LogTemp, Error, TEXT("PalTRUI art dashboard update failed: lower row slot missing."));
+                return false;
+            }
+            LowerSlot->SetPadding(FMargin(0, 14, 0, 14));
+            LowerSlot->SetHorizontalAlignment(HAlign_Fill);
+        }
+        else if (!LowerRow || !RecentFrame || !RecentContent
+            || LowerRow->GetParent() != MainColumn
+            || RecentFrame->GetParent() != LowerRow
+            || QuickActions->GetParent() != LowerRow)
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI art dashboard update refused: partial lower row."));
+            return false;
+        }
+
+        HeaderFrame->SetBrushColor(FLinearColor(0.01f, 0.025f, 0.04f, 0.18f));
+        ContentFrame->SetBrushColor(FLinearColor(0.01f, 0.025f, 0.04f, 0.08f));
+        FooterFrame->SetBrushColor(FLinearColor(0.01f, 0.025f, 0.04f, 0.12f));
+        StyleFrame(Tree, TEXT("DashboardClanCardFrame"), FLinearColor(0.02f, 0.16f, 0.16f, 0.18f), FMargin(14.0f));
+        StyleFrame(Tree, TEXT("DashboardDiplomacyCardFrame"), FLinearColor(0.02f, 0.10f, 0.17f, 0.18f), FMargin(14.0f));
+        StyleFrame(Tree, TEXT("DashboardRelationsFrame"), FLinearColor(0.10f, 0.075f, 0.025f, 0.16f), FMargin(14.0f));
+        StyleFrame(Tree, TEXT("PendingOffersFrame"), FLinearColor(0.10f, 0.075f, 0.025f, 0.16f), FMargin(14.0f));
+        StyleFrame(Tree, TEXT("DashboardQuickActionsFrame"), FLinearColor(0.02f, 0.07f, 0.09f, 0.18f), FMargin(14.0f));
+        if (UTextBlock* Title = Cast<UTextBlock>(Tree->FindWidget(TEXT("TitleText"))))
+        {
+            Title->SetText(FText::FromString(TEXT("PALTR PANEL")));
+        }
+
+        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Panel);
+        FKismetEditorUtilities::CompileBlueprint(Panel);
+        if (!SaveAsset(Panel))
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI art dashboard update failed while saving panel."));
+            return false;
+        }
+        UE_LOG(LogTemp, Display, TEXT("PALTR_UI_ART_DASHBOARD_OK | art=5 | navigation=left | mock_cards=2"));
+        return true;
+    }
+
     bool UpdatePanelInputShield()
     {
         UWidgetBlueprint* Panel = LoadObject<UWidgetBlueprint>(
@@ -2156,6 +2576,22 @@ namespace PalTRUIAssetBuilder
             return false;
         }
 
+        static const TCHAR* RequiredTextures[] = {
+            TEXT("/Game/Mods/PalTRUI/Art/T_PalTRPanelFrame.T_PalTRPanelFrame"),
+            TEXT("/Game/Mods/PalTRUI/Art/T_PalTRClanIcon.T_PalTRClanIcon"),
+            TEXT("/Game/Mods/PalTRUI/Art/T_PalTRDiplomacyIcon.T_PalTRDiplomacyIcon"),
+            TEXT("/Game/Mods/PalTRUI/Art/T_PalTRProtectionIcon.T_PalTRProtectionIcon"),
+            TEXT("/Game/Mods/PalTRUI/Art/T_PalTRBuildingsIcon.T_PalTRBuildingsIcon")
+        };
+        for (const TCHAR* TexturePath : RequiredTextures)
+        {
+            if (!LoadObject<UTexture2D>(nullptr, TexturePath))
+            {
+                UE_LOG(LogTemp, Error, TEXT("PalTRUI asset verification failed: missing texture '%s'."), TexturePath);
+                return false;
+            }
+        }
+
         static const FName RequiredWidgets[] = {
             TEXT("RootCanvas"),
             TEXT("PanelInputShield"),
@@ -2167,7 +2603,6 @@ namespace PalTRUIAssetBuilder
             TEXT("DiplomacyTabButton"),
             TEXT("AllianceTabButton"),
             TEXT("ChatTabButton"),
-            TEXT("TabFrame"),
             TEXT("ContentFrame"),
             TEXT("ContentSwitcher"),
             TEXT("ClanPageScroll"),
@@ -2186,6 +2621,24 @@ namespace PalTRUIAssetBuilder
             TEXT("DashboardSidebarTitleText"),
             TEXT("DiplomacyListFrame"),
             TEXT("DiplomacyDetailFrame"),
+            TEXT("PanelArtOverlay"),
+            TEXT("PanelArtImage"),
+            TEXT("PanelArtContentPadding"),
+            TEXT("PanelBodyRow"),
+            TEXT("LeftNavigationSize"),
+            TEXT("LeftNavigationFrame"),
+            TEXT("LeftNavigation"),
+            TEXT("LeftNavigationHeadingText"),
+            TEXT("DashboardClanIcon"),
+            TEXT("DashboardDiplomacyIcon"),
+            TEXT("DashboardProtectionCardFrame"),
+            TEXT("DashboardProtectionIcon"),
+            TEXT("DashboardBuildingsCardFrame"),
+            TEXT("DashboardBuildingsIcon"),
+            TEXT("DashboardLowerRow"),
+            TEXT("DashboardRecentEventsFrame"),
+            TEXT("DashboardRecentEventsHeadingText"),
+            TEXT("DashboardRecentEventsText"),
             TEXT("ClanNameText"),
             TEXT("ClanSummaryText"),
             TEXT("ClanMembersFrame"),
@@ -2280,10 +2733,11 @@ namespace PalTRUIAssetBuilder
         UE_LOG(
             LogTemp,
             Display,
-            TEXT("PALTR_UI_ASSET_VERIFY_OK | mod_actor=%s | panel=%s | widgets=%d"),
+            TEXT("PALTR_UI_ASSET_VERIFY_OK | mod_actor=%s | panel=%s | widgets=%d | textures=%d"),
             *ModActor->GeneratedClass->GetPathName(),
             *Panel->GeneratedClass->GetPathName(),
-            UE_ARRAY_COUNT(RequiredWidgets)
+            UE_ARRAY_COUNT(RequiredWidgets),
+            UE_ARRAY_COUNT(RequiredTextures)
         );
         return true;
     }
@@ -2395,6 +2849,11 @@ int32 UPalTRUIAssetBuilderCommandlet::Main(const FString& Params)
     if (FParse::Param(*Params, TEXT("UpdatePresentationHierarchy")))
     {
         return UpdatePresentationHierarchy() ? 0 : 23;
+    }
+
+    if (FParse::Param(*Params, TEXT("UpdateArtDashboard")))
+    {
+        return UpdateArtDashboard() ? 0 : 24;
     }
 
     const FString ModActorPackage = FString(AssetRoot) / TEXT("ModActor");

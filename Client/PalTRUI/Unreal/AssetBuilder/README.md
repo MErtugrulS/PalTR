@@ -98,4 +98,10 @@ header, descriptive page introductions, a titled dashboard sidebar, and separate
 Diplomacy list/detail cards. It changes presentation hierarchy only and keeps
 the existing renderer and action widget names intact.
 
+Run the commandlet with `-UpdateArtDashboard` to import the project-owned panel
+art and four dashboard emblems, replace the top tab strip with left navigation,
+and compose the Clan home page as four status cards, recent events, quick
+actions, relations, and pending offers. Protection and Buildings are explicitly
+mocked as future-phase cards; Clan and Diplomacy keep their live bindings.
+
 Run the commandlet with `-Verify` to load both generated classes and check the renderer-facing widget names without modifying the assets.
