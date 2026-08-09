@@ -20,4 +20,9 @@ visible heading and tab defaults to `Klanlar` and collapses the unused chat
 composer without renaming renderer controls. It is idempotent and refuses an
 unexpected legacy page hierarchy.
 
+Run the commandlet with `-UpdateDiplomacyTheme` to wrap the existing tab bar
+and content switcher in dark renderer frames and apply the gold, teal, green,
+amber, and red diplomacy theme. The update preserves every renderer-facing
+control name and refuses a partial theme hierarchy.
+
 Run the commandlet with `-Verify` to load both generated classes and check the renderer-facing widget names without modifying the assets.

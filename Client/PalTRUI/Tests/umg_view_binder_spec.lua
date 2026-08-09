@@ -231,6 +231,7 @@ local bound, bind_error = binder:bind(panel, model)
 equal(bound, true, "view model bound")
 equal(bind_error, nil, "successful bind has no error")
 equal(switch_index, 1, "diplomacy tab selected")
+equal(text_values.TitleText, "PALTR DİPLOMASİ MODU", "panel title")
 equal(text_values.ConnectionStatusText, "Sunucu snapshoti hazir", "status")
 equal(text_values.ClanNameText, "Anka", "clan name")
 equal(text_values.ClanSummaryText,

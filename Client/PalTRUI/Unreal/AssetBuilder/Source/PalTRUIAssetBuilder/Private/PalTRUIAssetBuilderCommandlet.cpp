@@ -51,6 +51,32 @@ namespace PalTRUIAssetBuilder
         return Button;
     }
 
+    void SetTextColor(UWidgetTree* Tree, const FName Name, const FLinearColor Color)
+    {
+        if (UTextBlock* Text = Cast<UTextBlock>(Tree->FindWidget(Name)))
+        {
+            Text->Modify();
+            Text->SetColorAndOpacity(FSlateColor(Color));
+        }
+    }
+
+    void StyleButton(UWidgetTree* Tree, const FName Name, const FLinearColor Color)
+    {
+        UButton* Button = Cast<UButton>(Tree->FindWidget(Name));
+        if (!Button)
+        {
+            return;
+        }
+
+        Button->Modify();
+        Button->SetBackgroundColor(Color);
+        if (UTextBlock* Label = Cast<UTextBlock>(Button->GetContent()))
+        {
+            Label->Modify();
+            Label->SetColorAndOpacity(FSlateColor(FLinearColor(0.95f, 0.88f, 0.70f, 1.0f)));
+        }
+    }
+
     UVerticalBoxSlot* AddVertical(UVerticalBox* Parent, UWidget* Child, const FMargin Padding = FMargin(0.0f))
     {
         UVerticalBoxSlot* Slot = Parent->AddChildToVerticalBox(Child);
@@ -381,6 +407,133 @@ namespace PalTRUIAssetBuilder
         return true;
     }
 
+    bool UpdateDiplomacyTheme()
+    {
+        UWidgetBlueprint* Panel = LoadObject<UWidgetBlueprint>(
+            nullptr,
+            TEXT("/Game/Mods/PalTRUI/WBP_PalTRPanel.WBP_PalTRPanel")
+        );
+        if (!Panel || !Panel->WidgetTree)
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI diplomacy theme update failed: panel asset missing."));
+            return false;
+        }
+
+        UWidgetTree* Tree = Panel->WidgetTree;
+        UVerticalBox* Layout = Cast<UVerticalBox>(Tree->FindWidget(TEXT("PanelLayout")));
+        UBorder* Background = Cast<UBorder>(Tree->FindWidget(TEXT("PanelBackground")));
+        UHorizontalBox* TabBar = Cast<UHorizontalBox>(Tree->FindWidget(TEXT("TabBar")));
+        UWidgetSwitcher* Switcher = Cast<UWidgetSwitcher>(Tree->FindWidget(TEXT("ContentSwitcher")));
+        if (!Layout || !Background || !TabBar || !Switcher)
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI diplomacy theme update failed: panel hierarchy changed."));
+            return false;
+        }
+
+        UBorder* TabFrame = Cast<UBorder>(Tree->FindWidget(TEXT("TabFrame")));
+        UBorder* ContentFrame = Cast<UBorder>(Tree->FindWidget(TEXT("ContentFrame")));
+        const bool HasTabFrame = TabFrame && TabFrame->GetContent() == TabBar;
+        const bool HasContentFrame = ContentFrame && ContentFrame->GetContent() == Switcher;
+        if ((TabFrame || ContentFrame) && (!HasTabFrame || !HasContentFrame))
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI diplomacy theme update refused: partial theme hierarchy exists."));
+            return false;
+        }
+
+        Panel->Modify();
+        Tree->Modify();
+        Layout->Modify();
+        Background->Modify();
+        Background->SetBrushColor(FLinearColor(0.012f, 0.018f, 0.022f, 0.985f));
+        Background->SetPadding(FMargin(20.0f));
+
+        bool Changed = false;
+        if (!HasTabFrame)
+        {
+            if (TabBar->GetParent() != Layout || Switcher->GetParent() != Layout)
+            {
+                UE_LOG(LogTemp, Error, TEXT("PalTRUI diplomacy theme update failed: expected direct layout children."));
+                return false;
+            }
+
+            Layout->RemoveChild(TabBar);
+            Layout->RemoveChild(Switcher);
+
+            TabFrame = Tree->ConstructWidget<UBorder>(UBorder::StaticClass(), TEXT("TabFrame"));
+            TabFrame->SetPadding(FMargin(8.0f, 6.0f));
+            TabFrame->SetContent(TabBar);
+            AddVertical(Layout, TabFrame, FMargin(0, 0, 0, 12));
+
+            ContentFrame = Tree->ConstructWidget<UBorder>(UBorder::StaticClass(), TEXT("ContentFrame"));
+            ContentFrame->SetPadding(FMargin(18.0f));
+            ContentFrame->SetContent(Switcher);
+            UVerticalBoxSlot* ContentSlot = AddVertical(Layout, ContentFrame);
+            ContentSlot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
+            Changed = true;
+        }
+
+        TabFrame->Modify();
+        ContentFrame->Modify();
+        TabFrame->SetBrushColor(FLinearColor(0.025f, 0.075f, 0.085f, 0.98f));
+        ContentFrame->SetBrushColor(FLinearColor(0.018f, 0.055f, 0.065f, 0.94f));
+
+        if (UTextBlock* Title = Cast<UTextBlock>(Tree->FindWidget(TEXT("TitleText"))))
+        {
+            Title->Modify();
+            Title->SetText(FText::FromString(TEXT("PALTR DİPLOMASİ MODU")));
+            FSlateFontInfo Font = Title->GetFont();
+            Font.Size = 28;
+            Title->SetFont(Font);
+        }
+
+        const FLinearColor Gold(0.92f, 0.68f, 0.25f, 1.0f);
+        const FLinearColor Ivory(0.94f, 0.90f, 0.78f, 1.0f);
+        for (const FName Heading : {
+            FName(TEXT("TitleText")),
+            FName(TEXT("ClanHeadingText")),
+            FName(TEXT("DiplomacyHeadingText")),
+            FName(TEXT("AllianceHeadingText")),
+            FName(TEXT("ChatHeadingText"))
+        })
+        {
+            SetTextColor(Tree, Heading, Gold);
+        }
+        SetTextColor(Tree, TEXT("ConnectionStatusText"), Ivory);
+
+        const FLinearColor Teal(0.055f, 0.24f, 0.27f, 1.0f);
+        const FLinearColor Amber(0.30f, 0.20f, 0.07f, 1.0f);
+        const FLinearColor Green(0.06f, 0.28f, 0.16f, 1.0f);
+        const FLinearColor Red(0.34f, 0.07f, 0.055f, 1.0f);
+        for (const FName Tab : {
+            FName(TEXT("ClanTabButton")),
+            FName(TEXT("DiplomacyTabButton")),
+            FName(TEXT("AllianceTabButton")),
+            FName(TEXT("ChatTabButton"))
+        })
+        {
+            StyleButton(Tree, Tab, Teal);
+        }
+        StyleButton(Tree, TEXT("PreviousRelationButton"), Amber);
+        StyleButton(Tree, TEXT("NextRelationButton"), Amber);
+        StyleButton(Tree, TEXT("AllianceRequestButton"), Teal);
+        StyleButton(Tree, TEXT("WarRequestButton"), Red);
+        StyleButton(Tree, TEXT("AcceptButton"), Green);
+        StyleButton(Tree, TEXT("RejectButton"), Red);
+        StyleButton(Tree, TEXT("CancelButton"), Amber);
+        StyleButton(Tree, TEXT("CloseButton"), Red);
+
+        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Panel);
+        FKismetEditorUtilities::CompileBlueprint(Panel);
+        if (!SaveAsset(Panel))
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI diplomacy theme update failed while saving panel."));
+            return false;
+        }
+
+        UE_LOG(LogTemp, Display, TEXT("PALTR_UI_DIPLOMACY_THEME_UPDATE_OK | changed=%s"), Changed ? TEXT("true") : TEXT("false"));
+        return true;
+    }
+
     bool VerifyAssets()
     {
         UBlueprint* ModActor = LoadObject<UBlueprint>(
@@ -407,6 +560,8 @@ namespace PalTRUIAssetBuilder
             TEXT("DiplomacyTabButton"),
             TEXT("AllianceTabButton"),
             TEXT("ChatTabButton"),
+            TEXT("TabFrame"),
+            TEXT("ContentFrame"),
             TEXT("ContentSwitcher"),
             TEXT("ClanNameText"),
             TEXT("ClanSummaryText"),
@@ -478,6 +633,11 @@ int32 UPalTRUIAssetBuilderCommandlet::Main(const FString& Params)
     if (FParse::Param(*Params, TEXT("UpdateGuildCatalogPage")))
     {
         return UpdateGuildCatalogPage() ? 0 : 7;
+    }
+
+    if (FParse::Param(*Params, TEXT("UpdateDiplomacyTheme")))
+    {
+        return UpdateDiplomacyTheme() ? 0 : 8;
     }
 
     const FString ModActorPackage = FString(AssetRoot) / TEXT("ModActor");

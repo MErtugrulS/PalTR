@@ -181,7 +181,7 @@ function UMGViewBinder:bind(panel, model)
     local connection = table_or_empty(model.connection)
 
     local bindings = {
-        { "TitleText", "PalTR" },
+        { "TitleText", "PALTR DİPLOMASİ MODU" },
         { "ConnectionStatusText", connection.status_text },
         { "ClanNameText", clan.name_text },
         { "ClanSummaryText", clan.summary_text },
