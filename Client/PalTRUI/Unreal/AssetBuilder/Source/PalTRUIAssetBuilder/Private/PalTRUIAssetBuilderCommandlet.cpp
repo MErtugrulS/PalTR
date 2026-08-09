@@ -1006,6 +1006,128 @@ namespace PalTRUIAssetBuilder
         return true;
     }
 
+    bool UpdateGuildCatalogCards()
+    {
+        UWidgetBlueprint* Panel = LoadObject<UWidgetBlueprint>(
+            nullptr,
+            TEXT("/Game/Mods/PalTRUI/WBP_PalTRPanel.WBP_PalTRPanel")
+        );
+        if (!Panel || !Panel->WidgetTree)
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI guild cards update failed: panel asset missing."));
+            return false;
+        }
+        UWidgetTree* Tree = Panel->WidgetTree;
+        UVerticalBox* GuildPage = Cast<UVerticalBox>(Tree->FindWidget(TEXT("ChatPage")));
+        UScrollBox* LegacyList = Cast<UScrollBox>(Tree->FindWidget(TEXT("ChatMessageList")));
+        static const FName GuildCardWidgets[] = {
+            TEXT("GuildCatalogSummaryText"),
+            TEXT("GuildCatalogColumns"),
+            TEXT("GuildCatalogActiveFrame"),
+            TEXT("GuildCatalogActiveContent"),
+            TEXT("GuildCatalogActiveHeadingText"),
+            TEXT("GuildCatalogActiveText"),
+            TEXT("GuildCatalogRegisteredFrame"),
+            TEXT("GuildCatalogRegisteredContent"),
+            TEXT("GuildCatalogRegisteredHeadingText"),
+            TEXT("GuildCatalogRegisteredText")
+        };
+        if (!GuildPage || !LegacyList)
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI guild cards update failed: guild page hierarchy missing."));
+            return false;
+        }
+        int32 ExistingWidgetCount = 0;
+        for (const FName WidgetName : GuildCardWidgets)
+        {
+            ExistingWidgetCount += Tree->FindWidget(WidgetName) ? 1 : 0;
+        }
+        if (ExistingWidgetCount == UE_ARRAY_COUNT(GuildCardWidgets))
+        {
+            UE_LOG(LogTemp, Display, TEXT("PALTR_UI_GUILD_CARDS_UPDATE_OK | changed=false"));
+            return true;
+        }
+        if (ExistingWidgetCount != 0)
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI guild cards update refused: partial controls exist."));
+            return false;
+        }
+
+        Panel->Modify();
+        Tree->Modify();
+        GuildPage->Modify();
+        LegacyList->Modify();
+        UTextBlock* Summary = MakeText(Tree, TEXT("GuildCatalogSummaryText"), TEXT("0 klan | 0 aktif"), 18);
+        Summary->SetColorAndOpacity(FSlateColor(FLinearColor(0.92f, 0.68f, 0.25f, 1.0f)));
+        UVerticalBoxSlot* SummarySlot = Cast<UVerticalBoxSlot>(GuildPage->InsertChildAt(1, Summary));
+        if (!SummarySlot)
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI guild cards update failed: summary slot missing."));
+            return false;
+        }
+        SummarySlot->SetPadding(FMargin(0, 0, 0, 14));
+
+        UHorizontalBox* Columns = Tree->ConstructWidget<UHorizontalBox>(
+            UHorizontalBox::StaticClass(),
+            TEXT("GuildCatalogColumns")
+        );
+        UBorder* ActiveFrame = Tree->ConstructWidget<UBorder>(
+            UBorder::StaticClass(),
+            TEXT("GuildCatalogActiveFrame")
+        );
+        ActiveFrame->SetBrushColor(FLinearColor(0.025f, 0.20f, 0.18f, 0.96f));
+        ActiveFrame->SetPadding(FMargin(16.0f));
+        UVerticalBox* ActiveContent = Tree->ConstructWidget<UVerticalBox>(
+            UVerticalBox::StaticClass(),
+            TEXT("GuildCatalogActiveContent")
+        );
+        ActiveFrame->SetContent(ActiveContent);
+        UTextBlock* ActiveHeading = MakeText(Tree, TEXT("GuildCatalogActiveHeadingText"), TEXT("AKTIF KLANLAR"), 20);
+        ActiveHeading->SetColorAndOpacity(FSlateColor(FLinearColor(0.35f, 0.90f, 0.82f, 1.0f)));
+        AddVertical(ActiveContent, ActiveHeading, FMargin(0, 0, 0, 10));
+        AddVertical(ActiveContent, MakeText(Tree, TEXT("GuildCatalogActiveText"), TEXT("Aktif klan yok."), 16));
+        UHorizontalBoxSlot* ActiveSlot = AddHorizontal(Columns, ActiveFrame, FMargin(0, 0, 8, 0));
+        ActiveSlot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
+
+        UBorder* RegisteredFrame = Tree->ConstructWidget<UBorder>(
+            UBorder::StaticClass(),
+            TEXT("GuildCatalogRegisteredFrame")
+        );
+        RegisteredFrame->SetBrushColor(FLinearColor(0.06f, 0.05f, 0.025f, 0.94f));
+        RegisteredFrame->SetPadding(FMargin(16.0f));
+        UVerticalBox* RegisteredContent = Tree->ConstructWidget<UVerticalBox>(
+            UVerticalBox::StaticClass(),
+            TEXT("GuildCatalogRegisteredContent")
+        );
+        RegisteredFrame->SetContent(RegisteredContent);
+        UTextBlock* RegisteredHeading = MakeText(Tree, TEXT("GuildCatalogRegisteredHeadingText"), TEXT("KAYITLI KLANLAR"), 20);
+        RegisteredHeading->SetColorAndOpacity(FSlateColor(FLinearColor(0.92f, 0.68f, 0.25f, 1.0f)));
+        AddVertical(RegisteredContent, RegisteredHeading, FMargin(0, 0, 0, 10));
+        AddVertical(RegisteredContent, MakeText(Tree, TEXT("GuildCatalogRegisteredText"), TEXT("Kayitli klan yok."), 16));
+        UHorizontalBoxSlot* RegisteredSlot = AddHorizontal(Columns, RegisteredFrame, FMargin(8, 0, 0, 0));
+        RegisteredSlot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
+
+        UVerticalBoxSlot* ColumnsSlot = Cast<UVerticalBoxSlot>(GuildPage->InsertChildAt(2, Columns));
+        if (!ColumnsSlot)
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI guild cards update failed: columns slot missing."));
+            return false;
+        }
+        ColumnsSlot->SetHorizontalAlignment(HAlign_Fill);
+        ColumnsSlot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
+        LegacyList->SetVisibility(ESlateVisibility::Collapsed);
+
+        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Panel);
+        FKismetEditorUtilities::CompileBlueprint(Panel);
+        if (!SaveAsset(Panel))
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI guild cards update failed while saving panel."));
+            return false;
+        }
+        UE_LOG(LogTemp, Display, TEXT("PALTR_UI_GUILD_CARDS_UPDATE_OK | changed=true"));
+        return true;
+    }
+
     bool VerifyAssets()
     {
         UBlueprint* ModActor = LoadObject<UBlueprint>(
@@ -1075,6 +1197,16 @@ namespace PalTRUIAssetBuilder
             TEXT("PreviousAllianceButtonText"),
             TEXT("NextAllianceButton"),
             TEXT("NextAllianceButtonText"),
+            TEXT("GuildCatalogSummaryText"),
+            TEXT("GuildCatalogColumns"),
+            TEXT("GuildCatalogActiveFrame"),
+            TEXT("GuildCatalogActiveContent"),
+            TEXT("GuildCatalogActiveHeadingText"),
+            TEXT("GuildCatalogActiveText"),
+            TEXT("GuildCatalogRegisteredFrame"),
+            TEXT("GuildCatalogRegisteredContent"),
+            TEXT("GuildCatalogRegisteredHeadingText"),
+            TEXT("GuildCatalogRegisteredText"),
             TEXT("RelationList"),
             TEXT("RelationTitleText"),
             TEXT("RelationStateText"),
@@ -1172,6 +1304,11 @@ int32 UPalTRUIAssetBuilderCommandlet::Main(const FString& Params)
     if (FParse::Param(*Params, TEXT("UpdateAllianceDetailPanel")))
     {
         return UpdateAllianceDetailPanel() ? 0 : 13;
+    }
+
+    if (FParse::Param(*Params, TEXT("UpdateGuildCatalogCards")))
+    {
+        return UpdateGuildCatalogCards() ? 0 : 14;
     }
 
     const FString ModActorPackage = FString(AssetRoot) / TEXT("ModActor");

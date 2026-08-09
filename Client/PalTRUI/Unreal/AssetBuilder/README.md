@@ -50,4 +50,9 @@ Alliance detail card and Previous/Next controls. The controls reuse the existing
 client relation navigator and do not add alliance rules or transport behavior.
 The update is idempotent and refuses partial controls.
 
+Run the commandlet with `-UpdateGuildCatalogCards` to replace the visible legacy
+chat list with side-by-side Active and Registered guild presentation cards. The
+legacy chat controls remain named but collapsed, and no chat behavior is enabled.
+The update is idempotent and refuses partial controls.
+
 Run the commandlet with `-Verify` to load both generated classes and check the renderer-facing widget names without modifying the assets.
