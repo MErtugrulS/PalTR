@@ -6,9 +6,11 @@ local ChatReceiveProbe = require("chat_receive_probe")
 local UIInteractionRouter = require("ui_interaction_router")
 local PresentationSnapshotProbe = require("presentation_snapshot_probe")
 local SnapshotInbox = require("snapshot_inbox")
+local UMGButtonStateProbe = require("umg_button_state_probe")
 
+local widget_port = UMGWidgetPort.new()
 local presentation = PresentationController.new(
-    RendererHost.new(UMGWidgetPort.new())
+    RendererHost.new(widget_port)
 )
 local interactions = UIInteractionRouter.new(presentation)
 local snapshots = SnapshotInbox.new(presentation)
@@ -52,6 +54,33 @@ end)
 RegisterKeyBind(Key.F7, function()
     local function run_probe()
         UMGProbe.scan()
+        local sampled, states, sample_error =
+            UMGButtonStateProbe.sample(widget_port.widget, {
+                "CloseButton",
+                "ClanTabButton",
+                "DiplomacyTabButton",
+                "AllianceTabButton",
+                "AllianceRequestButton",
+                "WarRequestButton",
+                "AcceptButton",
+                "RejectButton",
+                "CancelButton"
+            })
+        if sampled ~= true then
+            print(string.format(
+                "[PalTRUI][UMG] BUTTON_STATE_ERROR | %s\n",
+                tostring(sample_error)
+            ))
+            return
+        end
+        for _, state in ipairs(states) do
+            print(string.format(
+                "[PalTRUI][UMG] BUTTON_STATE | control=%s | available=%s | pressed=%s\n",
+                state.control,
+                tostring(state.available),
+                tostring(state.pressed)
+            ))
+        end
     end
     if type(ExecuteInGameThread) == "function" then
         ExecuteInGameThread(run_probe)
