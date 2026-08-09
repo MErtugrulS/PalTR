@@ -7,6 +7,7 @@ local UIInteractionRouter = require("ui_interaction_router")
 local PresentationSnapshotProbe = require("presentation_snapshot_probe")
 local SnapshotInbox = require("snapshot_inbox")
 local UMGButtonStateProbe = require("umg_button_state_probe")
+local UMGButtonPoller = require("umg_button_poller")
 
 local widget_port = UMGWidgetPort.new()
 local presentation = PresentationController.new(
@@ -14,6 +15,31 @@ local presentation = PresentationController.new(
 )
 local interactions = UIInteractionRouter.new(presentation)
 local snapshots = SnapshotInbox.new(presentation)
+local interactive_controls = {
+    "CloseButton",
+    "ClanTabButton",
+    "DiplomacyTabButton",
+    "AllianceTabButton",
+    "AllianceRequestButton",
+    "WarRequestButton",
+    "AcceptButton",
+    "RejectButton",
+    "CancelButton"
+}
+local button_poller = UMGButtonPoller.new({
+    widget_provider = function() return widget_port.widget end,
+    router = interactions,
+    control_names = interactive_controls,
+    on_result = function(control, handled, model, interaction_error)
+        print(string.format(
+            "[PalTRUI] PALTR_UI_CLICK_%s | control=%s | tab=%s | error=%s\n",
+            handled == true and "OK" or "ERROR",
+            tostring(control),
+            tostring(model and model.active_tab or ""),
+            tostring(interaction_error or "")
+        ))
+    end
+})
 
 local tab_cycle = {
     { id = "CLAN", control = "ClanTabButton" },
@@ -40,6 +66,17 @@ local function toggle_panel()
         tostring(model.open),
         tostring(model.active_tab)
     ))
+    if model.open == true then
+        local started, start_error = button_poller:start()
+        if started ~= true then
+            print(string.format(
+                "[PalTRUI] PALTR_UI_BUTTON_POLLER_ERROR | %s\n",
+                tostring(start_error)
+            ))
+        end
+    else
+        button_poller:stop()
+    end
 end
 
 RegisterKeyBind(Key.F6, function()
@@ -56,15 +93,7 @@ RegisterKeyBind(Key.F7, function()
         UMGProbe.scan()
         local sampled, states, sample_error =
             UMGButtonStateProbe.sample(widget_port.widget, {
-                "CloseButton",
-                "ClanTabButton",
-                "DiplomacyTabButton",
-                "AllianceTabButton",
-                "AllianceRequestButton",
-                "WarRequestButton",
-                "AcceptButton",
-                "RejectButton",
-                "CancelButton"
+                table.unpack(interactive_controls)
             })
         if sampled ~= true then
             print(string.format(
@@ -75,10 +104,12 @@ RegisterKeyBind(Key.F7, function()
         end
         for _, state in ipairs(states) do
             print(string.format(
-                "[PalTRUI][UMG] BUTTON_STATE | control=%s | available=%s | pressed=%s\n",
+                "[PalTRUI][UMG] BUTTON_STATE | control=%s | available=%s | pressed=%s | hovered_available=%s | hovered=%s\n",
                 state.control,
                 tostring(state.available),
-                tostring(state.pressed)
+                tostring(state.pressed),
+                tostring(state.hovered_available),
+                tostring(state.hovered)
             ))
         end
     end

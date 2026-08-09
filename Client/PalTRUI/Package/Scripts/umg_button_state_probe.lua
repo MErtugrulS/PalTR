@@ -53,16 +53,23 @@ function UMGButtonStateProbe.sample(panel, control_names)
             table.insert(result, {
                 control = name,
                 available = false,
-                pressed = false
+                pressed = false,
+                hovered_available = false,
+                hovered = false
             })
         else
             local sampled, pressed = pcall(function()
                 return control:IsPressed()
             end)
+            local hover_sampled, hovered = pcall(function()
+                return control:IsHovered()
+            end)
             table.insert(result, {
                 control = name,
                 available = sampled,
-                pressed = sampled and pressed == true
+                pressed = sampled and pressed == true,
+                hovered_available = hover_sampled,
+                hovered = hover_sampled and hovered == true
             })
         end
     end
