@@ -53,6 +53,7 @@ local poller = UMGButtonPoller.new({
 equal(poller:start(), true, "poller started")
 equal(poller.active, true, "poller active")
 equal(type(scheduled), "function", "poll loop scheduled")
+equal(poller.loop_callback, scheduled, "poll loop callback retained")
 equal(scheduled(), false, "press frame keeps loop active")
 equal(#routed, 0, "press does not route before release")
 equal(scheduled(), false, "release frame keeps loop active")
@@ -62,6 +63,9 @@ equal(results[1].handled, true, "route result reported")
 poller:stop()
 equal(scheduled(), true, "stopped poller ends loop")
 equal(poller.active, false, "poller inactive")
+equal(poller.loop_callback, nil, "stopped loop callback released")
+equal(poller.game_thread_callback, nil,
+    "stopped game-thread callback released")
 
 local deferred = nil
 local execute_count = 0
@@ -84,11 +88,15 @@ local guarded = UMGButtonPoller.new({
 equal(guarded:start(), true, "guarded poller started")
 equal(deferred_loop(), false, "first game-thread callback queued")
 equal(execute_count, 1, "one game-thread callback queued")
+equal(guarded.game_thread_callback, deferred,
+    "pending game-thread callback retained")
 for _ = 1, 5 do equal(deferred_loop(), false, "backlog tick skipped") end
 equal(execute_count, 1, "game-thread backlog is bounded")
 deferred()
 equal(resume_ticks, 5, "delayed game thread reports resume")
 equal(guarded.game_thread_pending, false, "pending state cleared")
+equal(guarded.game_thread_callback, nil,
+    "completed game-thread callback released")
 equal(deferred_loop(), false, "polling continues after resume")
 equal(execute_count, 2, "next callback queued after resume")
 guarded:stop()

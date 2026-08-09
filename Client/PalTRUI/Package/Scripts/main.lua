@@ -56,6 +56,13 @@ local button_poller = UMGButtonPoller.new({
     end
 })
 
+PalTRUIKeybindCallbacks = PalTRUIKeybindCallbacks or {}
+local keybind_callbacks = PalTRUIKeybindCallbacks
+local function register_retained_keybind(name, key, callback)
+    keybind_callbacks[name] = callback
+    RegisterKeyBind(key, keybind_callbacks[name])
+end
+
 local tab_cycle = {
     { id = "CLAN", control = "ClanTabButton" },
     { id = "DIPLOMACY", control = "DiplomacyTabButton" },
@@ -102,7 +109,7 @@ local function toggle_panel()
     end
 end
 
-RegisterKeyBind(Key.F6, function()
+register_retained_keybind("F6", Key.F6, function()
     if type(ExecuteInGameThread) == "function" then
         ExecuteInGameThread(toggle_panel)
     else
@@ -124,14 +131,14 @@ local function close_panel_keybind()
     end
 end
 
-RegisterKeyBind(Key.TAB, close_panel_keybind)
+register_retained_keybind("TAB", Key.TAB, close_panel_keybind)
 
 
-RegisterKeyBind(Key.F7, function()
+register_retained_keybind("F7", Key.F7, function()
     print("[PalTRUI][UMG] F7_PROBE_DISABLED | runtime guvenligi\n")
 end)
 
-RegisterKeyBind(Key.F8, function()
+register_retained_keybind("F8", Key.F8, function()
     ChatReceiveProbe.register()
 end)
 
@@ -161,7 +168,7 @@ local function cycle_tab()
     ))
 end
 
-RegisterKeyBind(Key.F9, function()
+register_retained_keybind("F9", Key.F9, function()
     if type(ExecuteInGameThread) == "function" then
         ExecuteInGameThread(cycle_tab)
     else
@@ -202,7 +209,7 @@ local function apply_presentation_snapshot_probe()
 end
 
 if Key.F10 ~= nil then
-    RegisterKeyBind(Key.F10, function()
+    register_retained_keybind("F10", Key.F10, function()
         if type(ExecuteInGameThread) == "function" then
             ExecuteInGameThread(apply_presentation_snapshot_probe)
         else
