@@ -19,6 +19,39 @@ local direction_labels = {
     none = ""
 }
 
+local action_control_definitions = {
+    {
+        control = "AllianceRequestButton",
+        text_control = "AllianceRequestButtonText",
+        action_id = "ALLIANCE",
+        default_label = "İttifak İste"
+    },
+    {
+        control = "WarRequestButton",
+        text_control = "WarRequestButtonText",
+        action_id = "DECLARE_WAR",
+        default_label = "Savaş İlan Et"
+    },
+    {
+        control = "AcceptButton",
+        text_control = "AcceptButtonText",
+        action_id = "ACCEPT",
+        default_label = "Kabul Et"
+    },
+    {
+        control = "RejectButton",
+        text_control = "RejectButtonText",
+        action_id = "REJECT",
+        default_label = "Reddet"
+    },
+    {
+        control = "CancelButton",
+        text_control = "CancelButtonText",
+        action_id = "CANCEL",
+        default_label = "İptal Et"
+    }
+}
+
 local function text(value)
     if value == nil then return "" end
     return tostring(value)
@@ -45,6 +78,41 @@ local function copy_actions(source)
         })
     end
 
+    return result
+end
+
+local function action_control_models(relation)
+    relation = table_or_empty(relation)
+    local permissions = table_or_empty(relation.permissions)
+    local offered = {}
+    for _, action in ipairs(table_or_empty(relation.actions)) do
+        action = table_or_empty(action)
+        offered[text(action.id)] = action
+    end
+
+    local result = {}
+    for _, definition in ipairs(action_control_definitions) do
+        local action = offered[definition.action_id]
+        local label = action and text(action.label) or ""
+        local enabled = permissions.can_manage == true and action ~= nil
+        local reason = ""
+        if not enabled then
+            reason = text(permissions.reason)
+            if reason == "" then
+                reason = action == nil
+                    and "Aksiyon güncel snapshotta sunulmuyor."
+                    or "Diplomasi aksiyonu kullanılamaz."
+            end
+        end
+        result[definition.control] = {
+            control = definition.control,
+            text_control = definition.text_control,
+            action_id = definition.action_id,
+            label = label ~= "" and label or definition.default_label,
+            enabled = enabled,
+            reason = reason
+        }
+    end
     return result
 end
 
@@ -135,6 +203,7 @@ local function relation_views(snapshot, selected_guild)
         diplomacy = {
             relations = diplomacy,
             selected_relation = selected_relation,
+            action_controls = action_control_models(selected_relation),
             empty = #diplomacy == 0,
             empty_message = #diplomacy == 0 and "Diplomasi kaydı bulunamadı." or ""
         },

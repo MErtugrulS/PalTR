@@ -70,6 +70,19 @@ local relations = {
             { id = "CEASEFIRE", label = "Ateşkes Teklif Et" },
             { id = "PEACE", label = "Barış Teklif Et" }
         }
+    },
+    {
+        guild_key = "guild-neutral",
+        guild_name = "Tarafsızlar",
+        state = "NEUTRAL",
+        previous_state = "NEUTRAL",
+        proposal_direction = "none",
+        can_manage = true,
+        action_reason = "",
+        actions = {
+            { id = "DECLARE_WAR", label = "Savaş İlan Et" },
+            { id = "ALLIANCE", label = "İttifak Teklif Et" }
+        }
     }
 }
 
@@ -82,7 +95,7 @@ equal(panel:apply_snapshot(snapshot(relations)), true, "valid snapshot")
 equal(panel.selected_guild, "guild-alliance", "default relation selection")
 equal(panel.view_model.views.CLAN.member_count, 2, "member count")
 equal(panel.view_model.views.CLAN.online_count, 1, "online count")
-equal(#panel.view_model.views.DIPLOMACY.relations, 2, "diplomacy count")
+equal(#panel.view_model.views.DIPLOMACY.relations, 3, "diplomacy count")
 equal(#panel.view_model.views.ALLIANCE.relations, 1, "alliance filter")
 equal(
     panel.view_model.views.DIPLOMACY.relations[2].actions[1].id,
@@ -97,6 +110,26 @@ equal(
 
 panel:set_tab("DIPLOMACY")
 equal(panel.view_model.content, panel.view_model.views.DIPLOMACY, "active content")
+
+panel:select_guild("guild-neutral")
+local action_controls = panel.view_model.views.DIPLOMACY.action_controls
+equal(action_controls.WarRequestButton.enabled, true, "war action enabled")
+equal(
+    action_controls.WarRequestButton.action_id,
+    "DECLARE_WAR",
+    "war action identity"
+)
+equal(
+    action_controls.AllianceRequestButton.enabled,
+    true,
+    "alliance action enabled"
+)
+equal(action_controls.AcceptButton.enabled, false, "missing action disabled")
+equal(
+    action_controls.AcceptButton.reason,
+    "Aksiyon güncel snapshotta sunulmuyor.",
+    "disabled action reason"
+)
 
 panel:select_guild("guild-war")
 equal(
