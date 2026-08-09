@@ -1128,6 +1128,111 @@ namespace PalTRUIAssetBuilder
         return true;
     }
 
+    bool UpdateHeaderStatusBadges()
+    {
+        UWidgetBlueprint* Panel = LoadObject<UWidgetBlueprint>(
+            nullptr,
+            TEXT("/Game/Mods/PalTRUI/WBP_PalTRPanel.WBP_PalTRPanel")
+        );
+        if (!Panel || !Panel->WidgetTree)
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI header badges update failed: panel asset missing."));
+            return false;
+        }
+        UWidgetTree* Tree = Panel->WidgetTree;
+        UHorizontalBox* Header = Cast<UHorizontalBox>(Tree->FindWidget(TEXT("HeaderRow")));
+        UBorder* GuildFrame = Cast<UBorder>(Tree->FindWidget(TEXT("HeaderGuildFrame")));
+        UTextBlock* GuildText = Cast<UTextBlock>(Tree->FindWidget(TEXT("HeaderGuildText")));
+        UBorder* RoleFrame = Cast<UBorder>(Tree->FindWidget(TEXT("HeaderRoleFrame")));
+        UTextBlock* RoleText = Cast<UTextBlock>(Tree->FindWidget(TEXT("HeaderRoleText")));
+        UBorder* NotificationFrame = Cast<UBorder>(Tree->FindWidget(TEXT("HeaderNotificationFrame")));
+        UTextBlock* NotificationText = Cast<UTextBlock>(Tree->FindWidget(TEXT("HeaderNotificationText")));
+        if (!Header)
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI header badges update failed: header row missing."));
+            return false;
+        }
+        if (GuildFrame && GuildText && RoleFrame && RoleText
+            && NotificationFrame && NotificationText)
+        {
+            UE_LOG(LogTemp, Display, TEXT("PALTR_UI_HEADER_BADGES_UPDATE_OK | changed=false"));
+            return true;
+        }
+        if (GuildFrame || GuildText || RoleFrame || RoleText
+            || NotificationFrame || NotificationText)
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI header badges update refused: partial controls exist."));
+            return false;
+        }
+
+        Panel->Modify();
+        Tree->Modify();
+        Header->Modify();
+        GuildFrame = Tree->ConstructWidget<UBorder>(
+            UBorder::StaticClass(),
+            TEXT("HeaderGuildFrame")
+        );
+        GuildFrame->SetBrushColor(FLinearColor(0.025f, 0.18f, 0.20f, 0.96f));
+        GuildFrame->SetPadding(FMargin(10.0f, 6.0f));
+        GuildText = MakeText(Tree, TEXT("HeaderGuildText"), TEXT("Klan: -"), 15);
+        GuildText->SetColorAndOpacity(FSlateColor(FLinearColor(0.35f, 0.90f, 0.82f, 1.0f)));
+        GuildFrame->SetContent(GuildText);
+        UHorizontalBoxSlot* GuildSlot = Cast<UHorizontalBoxSlot>(Header->InsertChildAt(1, GuildFrame));
+        if (!GuildSlot)
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI header badges update failed: guild slot missing."));
+            return false;
+        }
+        GuildSlot->SetPadding(FMargin(0, 0, 8, 0));
+        GuildSlot->SetVerticalAlignment(VAlign_Center);
+
+        RoleFrame = Tree->ConstructWidget<UBorder>(
+            UBorder::StaticClass(),
+            TEXT("HeaderRoleFrame")
+        );
+        RoleFrame->SetBrushColor(FLinearColor(0.20f, 0.12f, 0.025f, 0.96f));
+        RoleFrame->SetPadding(FMargin(10.0f, 6.0f));
+        RoleText = MakeText(Tree, TEXT("HeaderRoleText"), TEXT("Yetki: -"), 15);
+        RoleText->SetColorAndOpacity(FSlateColor(FLinearColor(0.92f, 0.68f, 0.25f, 1.0f)));
+        RoleFrame->SetContent(RoleText);
+        UHorizontalBoxSlot* RoleSlot = Cast<UHorizontalBoxSlot>(Header->InsertChildAt(2, RoleFrame));
+        if (!RoleSlot)
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI header badges update failed: role slot missing."));
+            return false;
+        }
+        RoleSlot->SetPadding(FMargin(0, 0, 12, 0));
+        RoleSlot->SetVerticalAlignment(VAlign_Center);
+
+        NotificationFrame = Tree->ConstructWidget<UBorder>(
+            UBorder::StaticClass(),
+            TEXT("HeaderNotificationFrame")
+        );
+        NotificationFrame->SetBrushColor(FLinearColor(0.32f, 0.055f, 0.035f, 0.96f));
+        NotificationFrame->SetPadding(FMargin(10.0f, 6.0f));
+        NotificationText = MakeText(Tree, TEXT("HeaderNotificationText"), TEXT("Bildirim: 0"), 15);
+        NotificationText->SetColorAndOpacity(FSlateColor(FLinearColor(1.0f, 0.82f, 0.68f, 1.0f)));
+        NotificationFrame->SetContent(NotificationText);
+        UHorizontalBoxSlot* NotificationSlot = Cast<UHorizontalBoxSlot>(Header->InsertChildAt(3, NotificationFrame));
+        if (!NotificationSlot)
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI header badges update failed: notification slot missing."));
+            return false;
+        }
+        NotificationSlot->SetPadding(FMargin(0, 0, 12, 0));
+        NotificationSlot->SetVerticalAlignment(VAlign_Center);
+
+        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Panel);
+        FKismetEditorUtilities::CompileBlueprint(Panel);
+        if (!SaveAsset(Panel))
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI header badges update failed while saving panel."));
+            return false;
+        }
+        UE_LOG(LogTemp, Display, TEXT("PALTR_UI_HEADER_BADGES_UPDATE_OK | changed=true"));
+        return true;
+    }
+
     bool VerifyAssets()
     {
         UBlueprint* ModActor = LoadObject<UBlueprint>(
@@ -1207,6 +1312,12 @@ namespace PalTRUIAssetBuilder
             TEXT("GuildCatalogRegisteredContent"),
             TEXT("GuildCatalogRegisteredHeadingText"),
             TEXT("GuildCatalogRegisteredText"),
+            TEXT("HeaderGuildFrame"),
+            TEXT("HeaderGuildText"),
+            TEXT("HeaderRoleFrame"),
+            TEXT("HeaderRoleText"),
+            TEXT("HeaderNotificationFrame"),
+            TEXT("HeaderNotificationText"),
             TEXT("RelationList"),
             TEXT("RelationTitleText"),
             TEXT("RelationStateText"),
@@ -1309,6 +1420,11 @@ int32 UPalTRUIAssetBuilderCommandlet::Main(const FString& Params)
     if (FParse::Param(*Params, TEXT("UpdateGuildCatalogCards")))
     {
         return UpdateGuildCatalogCards() ? 0 : 14;
+    }
+
+    if (FParse::Param(*Params, TEXT("UpdateHeaderStatusBadges")))
+    {
+        return UpdateHeaderStatusBadges() ? 0 : 15;
     }
 
     const FString ModActorPackage = FString(AssetRoot) / TEXT("ModActor");

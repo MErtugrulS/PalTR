@@ -55,4 +55,9 @@ chat list with side-by-side Active and Registered guild presentation cards. The
 legacy chat controls remain named but collapsed, and no chat behavior is enabled.
 The update is idempotent and refuses partial controls.
 
+Run the commandlet with `-UpdateHeaderStatusBadges` to add renderer-facing Guild,
+Role, and pending-offer Notification badges to the existing header row. The values
+come only from the current snapshot presentation model. The update is idempotent
+and refuses partial controls.
+
 Run the commandlet with `-Verify` to load both generated classes and check the renderer-facing widget names without modifying the assets.
