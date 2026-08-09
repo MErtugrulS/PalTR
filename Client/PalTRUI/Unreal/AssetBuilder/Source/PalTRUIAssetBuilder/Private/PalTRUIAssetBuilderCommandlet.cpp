@@ -11,6 +11,7 @@
 #include "Components/EditableTextBox.h"
 #include "Components/HorizontalBox.h"
 #include "Components/HorizontalBoxSlot.h"
+#include "Components/PanelWidget.h"
 #include "Components/ScrollBox.h"
 #include "Components/SizeBox.h"
 #include "Components/TextBlock.h"
@@ -20,6 +21,7 @@
 #include "Engine/Blueprint.h"
 #include "GameFramework/Actor.h"
 #include "Kismet2/KismetEditorUtilities.h"
+#include "Kismet2/BlueprintEditorUtils.h"
 #include "Misc/Parse.h"
 #include "Misc/PackageName.h"
 #include "UObject/Package.h"
@@ -242,6 +244,90 @@ namespace PalTRUIAssetBuilder
         return Blueprint;
     }
 
+    bool UpdateRelationNavigation()
+    {
+        UWidgetBlueprint* Panel = LoadObject<UWidgetBlueprint>(
+            nullptr,
+            TEXT("/Game/Mods/PalTRUI/WBP_PalTRPanel.WBP_PalTRPanel")
+        );
+        if (!Panel || !Panel->WidgetTree)
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI relation navigation update failed: panel asset missing."));
+            return false;
+        }
+
+        UWidgetTree* Tree = Panel->WidgetTree;
+        UButton* PreviousButton = Cast<UButton>(Tree->FindWidget(TEXT("PreviousRelationButton")));
+        UButton* NextButton = Cast<UButton>(Tree->FindWidget(TEXT("NextRelationButton")));
+        if (PreviousButton && NextButton)
+        {
+            UE_LOG(LogTemp, Display, TEXT("PALTR_UI_RELATION_NAV_UPDATE_OK | changed=false"));
+            return true;
+        }
+        if (PreviousButton || NextButton)
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI relation navigation update refused: partial controls exist."));
+            return false;
+        }
+
+        USizeBox* ListSize = Cast<USizeBox>(Tree->FindWidget(TEXT("RelationListSize")));
+        UScrollBox* RelationList = Cast<UScrollBox>(Tree->FindWidget(TEXT("RelationList")));
+        if (!ListSize || !RelationList || RelationList->GetParent() != ListSize)
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI relation navigation update failed: relation list hierarchy changed."));
+            return false;
+        }
+
+        Panel->Modify();
+        Tree->Modify();
+        ListSize->Modify();
+        ListSize->RemoveChild(RelationList);
+
+        UVerticalBox* ListColumn = Tree->ConstructWidget<UVerticalBox>(
+            UVerticalBox::StaticClass(),
+            TEXT("RelationListColumn")
+        );
+        ListSize->SetContent(ListColumn);
+        UVerticalBoxSlot* RelationListSlot = AddVertical(ListColumn, RelationList);
+        RelationListSlot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
+
+        UHorizontalBox* Navigation = Tree->ConstructWidget<UHorizontalBox>(
+            UHorizontalBox::StaticClass(),
+            TEXT("RelationNavigationRow")
+        );
+        AddHorizontal(
+            Navigation,
+            MakeTabButton(
+                Tree,
+                TEXT("PreviousRelationButton"),
+                TEXT("PreviousRelationButtonText"),
+                TEXT("Onceki")
+            ),
+            FMargin(0, 0, 8, 0)
+        );
+        AddHorizontal(
+            Navigation,
+            MakeTabButton(
+                Tree,
+                TEXT("NextRelationButton"),
+                TEXT("NextRelationButtonText"),
+                TEXT("Sonraki")
+            )
+        );
+        AddVertical(ListColumn, Navigation, FMargin(0, 12, 0, 0));
+
+        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Panel);
+        FKismetEditorUtilities::CompileBlueprint(Panel);
+        if (!SaveAsset(Panel))
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI relation navigation update failed while saving panel."));
+            return false;
+        }
+
+        UE_LOG(LogTemp, Display, TEXT("PALTR_UI_RELATION_NAV_UPDATE_OK | changed=true"));
+        return true;
+    }
+
     bool VerifyAssets()
     {
         UBlueprint* ModActor = LoadObject<UBlueprint>(
@@ -276,6 +362,10 @@ namespace PalTRUIAssetBuilder
             TEXT("RelationTitleText"),
             TEXT("RelationStateText"),
             TEXT("RelationDescriptionText"),
+            TEXT("PreviousRelationButton"),
+            TEXT("PreviousRelationButtonText"),
+            TEXT("NextRelationButton"),
+            TEXT("NextRelationButtonText"),
             TEXT("AllianceRequestButton"),
             TEXT("WarRequestButton"),
             TEXT("AcceptButton"),
@@ -325,6 +415,11 @@ int32 UPalTRUIAssetBuilderCommandlet::Main(const FString& Params)
     if (FParse::Param(*Params, TEXT("Verify")))
     {
         return VerifyAssets() ? 0 : 5;
+    }
+
+    if (FParse::Param(*Params, TEXT("UpdateRelationNavigation")))
+    {
+        return UpdateRelationNavigation() ? 0 : 6;
     }
 
     const FString ModActorPackage = FString(AssetRoot) / TEXT("ModActor");

@@ -9,4 +9,9 @@ The generated widget is a renderer shell. It contains stable, named controls for
 
 The generator refuses to overwrite either target asset.
 
+Run the commandlet with `-UpdateRelationNavigation` to update an existing
+panel in place with the renderer-facing `PreviousRelationButton` and
+`NextRelationButton` controls. The update is idempotent and refuses partial
+or unexpected widget hierarchies.
+
 Run the commandlet with `-Verify` to load both generated classes and check the renderer-facing widget names without modifying the assets.
