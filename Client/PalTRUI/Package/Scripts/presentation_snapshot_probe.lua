@@ -66,16 +66,17 @@ function PresentationSnapshotProbe.build()
     }
 end
 
-function PresentationSnapshotProbe.apply(controller)
+function PresentationSnapshotProbe.apply(controller, snapshot_inbox)
     if type(controller) ~= "table"
-        or type(controller.apply_snapshot) ~= "function"
         or type(controller.select_guild) ~= "function"
-        or type(controller.set_tab) ~= "function" then
+        or type(controller.set_tab) ~= "function"
+        or type(snapshot_inbox) ~= "table"
+        or type(snapshot_inbox.receive) ~= "function" then
         return false, nil, "UI sunum controller'i hazir degil."
     end
 
     local accepted, snapshot_model, snapshot_rendered, snapshot_error =
-        controller:apply_snapshot(PresentationSnapshotProbe.build())
+        snapshot_inbox:receive(PresentationSnapshotProbe.build())
     if accepted ~= true or snapshot_rendered ~= true then
         return false, snapshot_model,
             snapshot_error or "Sunum probe snapshoti reddedildi."

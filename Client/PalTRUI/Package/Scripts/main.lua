@@ -5,11 +5,13 @@ local UMGProbe = require("umg_probe")
 local ChatReceiveProbe = require("chat_receive_probe")
 local UIInteractionRouter = require("ui_interaction_router")
 local PresentationSnapshotProbe = require("presentation_snapshot_probe")
+local SnapshotInbox = require("snapshot_inbox")
 
 local presentation = PresentationController.new(
     RendererHost.new(UMGWidgetPort.new())
 )
 local interactions = UIInteractionRouter.new(presentation)
+local snapshots = SnapshotInbox.new(presentation)
 
 local tab_cycle = {
     { id = "CLAN", control = "ClanTabButton" },
@@ -106,7 +108,7 @@ local function apply_presentation_snapshot_probe()
             PresentationSnapshotProbe.select_next(presentation)
     else
         applied, model, probe_error =
-            PresentationSnapshotProbe.apply(presentation)
+            PresentationSnapshotProbe.apply(presentation, snapshots)
     end
     if applied ~= true then
         print(string.format(

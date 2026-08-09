@@ -1,5 +1,6 @@
 local PresentationController = require("presentation_controller")
 local PresentationSnapshotProbe = require("presentation_snapshot_probe")
+local SnapshotInbox = require("snapshot_inbox")
 
 local function equal(actual, expected, label)
     if actual ~= expected then
@@ -12,8 +13,10 @@ local function equal(actual, expected, label)
     end
 end
 
+local controller = PresentationController.new()
 local applied, model, apply_error = PresentationSnapshotProbe.apply(
-    PresentationController.new()
+    controller,
+    SnapshotInbox.new(controller)
 )
 equal(applied, true, "presentation snapshot applied")
 equal(apply_error, nil, "presentation snapshot has no error")
@@ -35,7 +38,10 @@ equal(cycle_error, "Secilebilir diplomasi kaydi bulunamadi.",
     "empty relation cycle error")
 
 local cycle_controller = PresentationController.new()
-PresentationSnapshotProbe.apply(cycle_controller)
+PresentationSnapshotProbe.apply(
+    cycle_controller,
+    SnapshotInbox.new(cycle_controller)
+)
 local selected_next, next_model, next_error =
     PresentationSnapshotProbe.select_next(cycle_controller)
 equal(selected_next, true, "next relation selected")
