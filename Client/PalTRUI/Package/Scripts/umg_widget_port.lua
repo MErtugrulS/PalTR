@@ -8,6 +8,7 @@ UMGWidgetPort.__index = UMGWidgetPort
 UMGWidgetPort.WIDGET_LIBRARY_PATH =
     "/Script/UMG.Default__WidgetBlueprintLibrary"
 UMGWidgetPort.Z_ORDER = 50
+UMGWidgetPort.MOUSE_LOCK_DO_NOT_LOCK = 0
 
 local function valid_object(object)
     if object == nil then return false end
@@ -53,6 +54,40 @@ local function report_cursor_warning(message)
     end
 end
 
+local function set_ui_input_mode(widget_library, player_controller, widget)
+    local changed, change_error = pcall(function()
+        widget_library:SetInputMode_UIOnlyEx(
+            player_controller,
+            widget,
+            UMGWidgetPort.MOUSE_LOCK_DO_NOT_LOCK,
+            true
+        )
+    end)
+    if not changed then
+        return false,
+            "PalTR UI input modu ayarlanamadi: " .. tostring(change_error)
+    end
+    return true
+end
+
+local function restore_game_input_mode(widget_library, player_controller)
+    local changed, change_error = pcall(function()
+        widget_library:SetInputMode_GameOnly(player_controller, true)
+    end)
+    if not changed then
+        return false,
+            "PalTR oyun input modu geri yuklenemedi: "
+                .. tostring(change_error)
+    end
+    return true
+end
+
+local function report_input_warning(message)
+    if type(print) == "function" then
+        print("PALTR_UI_INPUT_WARN | " .. tostring(message))
+    end
+end
+
 function UMGWidgetPort.new(dependencies)
     dependencies = type(dependencies) == "table" and dependencies or {}
     return setmetatable({
@@ -62,6 +97,7 @@ function UMGWidgetPort.new(dependencies)
         find_object = dependencies.find_object or default_find_object,
         widget = nil,
         last_model = nil,
+        widget_library = nil,
         player_controller = nil,
         previous_mouse_cursor = nil
     }, UMGWidgetPort)
@@ -126,8 +162,16 @@ function UMGWidgetPort:open(model)
         return false, "PalTR paneli viewport'a eklenemedi."
     end
 
+    local input_ready, input_error = set_ui_input_mode(
+        widget_library,
+        context.player_controller,
+        widget
+    )
+    if input_ready ~= true then report_input_warning(input_error) end
+
     self.widget = widget
     self.last_model = model
+    self.widget_library = widget_library
     self.player_controller = context.player_controller
     self.previous_mouse_cursor = previous_mouse_cursor
     return true
@@ -147,6 +191,7 @@ function UMGWidgetPort:close()
     if not valid_object(self.widget) then
         self.widget = nil
         self.last_model = nil
+        self.widget_library = nil
         self.player_controller = nil
         self.previous_mouse_cursor = nil
         return true
@@ -159,6 +204,12 @@ function UMGWidgetPort:close()
         return false, "PalTR paneli viewport'tan kaldirilamadi."
     end
 
+    local input_restored, input_error = restore_game_input_mode(
+        self.widget_library,
+        self.player_controller
+    )
+    if input_restored ~= true then report_input_warning(input_error) end
+
     local cursor_restored = true
     local cursor_error = nil
     if self.previous_mouse_cursor ~= nil then
@@ -170,6 +221,7 @@ function UMGWidgetPort:close()
 
     self.widget = nil
     self.last_model = nil
+    self.widget_library = nil
     self.player_controller = nil
     self.previous_mouse_cursor = nil
     if cursor_restored ~= true then report_cursor_warning(cursor_error) end

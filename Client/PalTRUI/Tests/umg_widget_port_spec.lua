@@ -30,6 +30,7 @@ setmetatable(controller, {
 })
 local panel_class = { name = "WBP_PalTRPanel_C" }
 local create_calls = {}
+local input_mode_calls = {}
 local viewport_calls = {}
 local remove_calls = 0
 local widget = {
@@ -48,6 +49,24 @@ local library = {
             owning_player = owning_player
         })
         return widget
+    end,
+    SetInputMode_UIOnlyEx = function(
+        _, player_controller, focused_widget, mouse_lock_mode, flush_input
+    )
+        table.insert(input_mode_calls, {
+            mode = "ui_only",
+            player_controller = player_controller,
+            focused_widget = focused_widget,
+            mouse_lock_mode = mouse_lock_mode,
+            flush_input = flush_input
+        })
+    end,
+    SetInputMode_GameOnly = function(_, player_controller, flush_input)
+        table.insert(input_mode_calls, {
+            mode = "game_only",
+            player_controller = player_controller,
+            flush_input = flush_input
+        })
     end
 }
 local context_provider = {
@@ -97,6 +116,14 @@ equal(bound_models[1], first_model, "initial model bound before viewport")
 equal(port.last_model, first_model, "open model retained")
 equal(cursor_calls[1], true, "mouse cursor shown on open")
 equal(controller.bShowMouseCursor, true, "mouse cursor is visible")
+equal(input_mode_calls[1].mode, "ui_only", "UI-only input enabled")
+equal(input_mode_calls[1].player_controller, controller,
+    "UI-only input receives controller")
+equal(input_mode_calls[1].focused_widget, widget,
+    "UI-only input focuses panel")
+equal(input_mode_calls[1].mouse_lock_mode,
+    UMGWidgetPort.MOUSE_LOCK_DO_NOT_LOCK, "mouse remains unlocked")
+equal(input_mode_calls[1].flush_input, true, "opening input is flushed")
 
 equal(port:open(first_model), true, "open widget reused")
 equal(#create_calls, 1, "open does not duplicate widget")
@@ -109,6 +136,10 @@ equal(port:close(), true, "widget closed")
 equal(remove_calls, 1, "widget removed once")
 equal(cursor_calls[2], false, "previous mouse cursor restored on close")
 equal(controller.bShowMouseCursor, false, "mouse cursor is restored")
+equal(input_mode_calls[2].mode, "game_only", "game input restored")
+equal(input_mode_calls[2].player_controller, controller,
+    "game input receives controller")
+equal(input_mode_calls[2].flush_input, true, "closing input is flushed")
 equal(port.widget, nil, "widget reference cleared")
 equal(port.last_model, nil, "model reference cleared")
 equal(port:close(), true, "closed widget is idempotent")
