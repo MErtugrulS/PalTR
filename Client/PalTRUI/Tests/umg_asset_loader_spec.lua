@@ -12,6 +12,9 @@ local function equal(actual, expected, label)
 end
 
 local loaded_class = { name = "WBP_PalTRPanel_C" }
+local invalid_class = {
+    IsValid = function() return false end
+}
 local load_calls = {}
 local find_calls = 0
 local loader = UMGAssetLoader.new({
@@ -25,7 +28,7 @@ local loader = UMGAssetLoader.new({
             "stable panel class path"
         )
         find_calls = find_calls + 1
-        if find_calls == 1 then return nil end
+        if find_calls == 1 then return invalid_class end
         return loaded_class
     end
 })
@@ -41,6 +44,19 @@ equal(
     "stable panel asset path"
 )
 equal(find_calls, 2, "class checked before and after load")
+
+local unresolved_invalid = UMGAssetLoader.new({
+    load_asset = function() end,
+    find_object = function() return invalid_class end
+})
+local invalid_resolved, _, invalid_resolve_error =
+    unresolved_invalid:load_panel_class()
+equal(invalid_resolved, false, "invalid class rejected after load")
+equal(
+    invalid_resolve_error,
+    "Yuklenen panel sinifi bulunamadi.",
+    "invalid class resolve error"
+)
 
 local already_loaded_calls = 0
 local already_loaded = UMGAssetLoader.new({

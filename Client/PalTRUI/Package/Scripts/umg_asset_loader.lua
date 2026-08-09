@@ -6,6 +6,15 @@ UMGAssetLoader.PANEL_ASSET_PATH =
 UMGAssetLoader.PANEL_CLASS_PATH =
     "/Game/Mods/PalTRUI/WBP_PalTRPanel.WBP_PalTRPanel_C"
 
+local function valid_object(object)
+    if object == nil then return false end
+    local checked, valid = pcall(function()
+        return object:IsValid()
+    end)
+    if checked then return valid == true end
+    return true
+end
+
 local function default_api()
     return {
         load_asset = type(LoadAsset) == "function" and LoadAsset or nil,
@@ -32,6 +41,7 @@ function UMGAssetLoader:_find_panel_class()
     if not found then
         return nil, "Panel sinifi aranirken UE4SS hatasi olustu."
     end
+    if not valid_object(panel_class) then return nil end
     return panel_class
 end
 
