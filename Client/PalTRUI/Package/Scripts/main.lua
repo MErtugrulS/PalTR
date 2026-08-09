@@ -85,18 +85,22 @@ RegisterKeyBind(Key.F6, function()
     end
 end)
 
-RegisterKeyBind(Key.TAB, function()
-    local function close_open_panel()
-        local model = presentation:model()
-        if type(model) ~= "table" or model.open ~= true then return end
-        toggle_panel()
-    end
+local function close_open_panel()
+    local model = presentation:model()
+    if type(model) ~= "table" or model.open ~= true then return end
+    toggle_panel()
+end
+
+local function close_panel_keybind()
     if type(ExecuteInGameThread) == "function" then
         ExecuteInGameThread(close_open_panel)
     else
         close_open_panel()
     end
-end)
+end
+
+RegisterKeyBind(Key.TAB, close_panel_keybind)
+RegisterKeyBind(Key.ESCAPE, close_panel_keybind)
 
 
 RegisterKeyBind(Key.F7, function()
