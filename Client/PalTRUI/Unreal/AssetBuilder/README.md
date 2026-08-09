@@ -74,4 +74,9 @@ in a transparent renderer-facing button. The wrapper consumes otherwise-unhandle
 pointer clicks inside the panel bounds without adding gameplay behavior. The
 update is idempotent and refuses partial or unexpected widget hierarchies.
 
+Run the commandlet with `-UpdateClanPageScroll` to wrap the existing Clan page in
+a vertical scroll container. This keeps the footer and lower dashboard cards
+inside the fixed panel bounds without changing presentation data or interactions.
+The update is idempotent and refuses partial or unexpected widget hierarchies.
+
 Run the commandlet with `-Verify` to load both generated classes and check the renderer-facing widget names without modifying the assets.

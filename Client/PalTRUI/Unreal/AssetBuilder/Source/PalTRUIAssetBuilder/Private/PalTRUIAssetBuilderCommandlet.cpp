@@ -1234,6 +1234,85 @@ namespace PalTRUIAssetBuilder
         return true;
     }
 
+    bool UpdateClanPageScroll()
+    {
+        UWidgetBlueprint* Panel = LoadObject<UWidgetBlueprint>(
+            nullptr,
+            TEXT("/Game/Mods/PalTRUI/WBP_PalTRPanel.WBP_PalTRPanel")
+        );
+        if (!Panel || !Panel->WidgetTree)
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI clan scroll update failed: panel asset missing."));
+            return false;
+        }
+
+        UWidgetTree* Tree = Panel->WidgetTree;
+        UWidgetSwitcher* Switcher = Cast<UWidgetSwitcher>(
+            Tree->FindWidget(TEXT("ContentSwitcher"))
+        );
+        UVerticalBox* ClanPage = Cast<UVerticalBox>(
+            Tree->FindWidget(TEXT("ClanPage"))
+        );
+        UScrollBox* Scroll = Cast<UScrollBox>(
+            Tree->FindWidget(TEXT("ClanPageScroll"))
+        );
+        if (!Switcher || !ClanPage)
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI clan scroll update failed: switcher or clan page missing."));
+            return false;
+        }
+        if (Scroll && Scroll->GetChildAt(0) == ClanPage
+            && Scroll->GetParent() == Switcher)
+        {
+            UE_LOG(LogTemp, Display, TEXT("PALTR_UI_CLAN_SCROLL_UPDATE_OK | changed=false"));
+            return true;
+        }
+        if (Scroll || ClanPage->GetParent() != Switcher)
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI clan scroll update refused: partial or unexpected hierarchy."));
+            return false;
+        }
+
+        const int32 PageIndex = Switcher->GetChildIndex(ClanPage);
+        if (PageIndex < 0)
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI clan scroll update failed: page index missing."));
+            return false;
+        }
+        const int32 ActiveIndex = Switcher->GetActiveWidgetIndex();
+
+        Panel->Modify();
+        Tree->Modify();
+        Switcher->Modify();
+        ClanPage->Modify();
+        Switcher->RemoveChild(ClanPage);
+
+        Scroll = Tree->ConstructWidget<UScrollBox>(
+            UScrollBox::StaticClass(),
+            TEXT("ClanPageScroll")
+        );
+        Scroll->SetScrollBarVisibility(ESlateVisibility::Visible);
+        Scroll->SetScrollbarThickness(FVector2D(7.0f, 7.0f));
+        Scroll->SetAlwaysShowScrollbar(false);
+        Scroll->AddChild(ClanPage);
+        if (!Switcher->InsertChildAt(PageIndex, Scroll))
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI clan scroll update failed: scroll slot could not be inserted."));
+            return false;
+        }
+        Switcher->SetActiveWidgetIndex(ActiveIndex);
+
+        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Panel);
+        FKismetEditorUtilities::CompileBlueprint(Panel);
+        if (!SaveAsset(Panel))
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI clan scroll update failed while saving panel."));
+            return false;
+        }
+        UE_LOG(LogTemp, Display, TEXT("PALTR_UI_CLAN_SCROLL_UPDATE_OK | changed=true"));
+        return true;
+    }
+
     bool UpdatePanelInputShield()
     {
         UWidgetBlueprint* Panel = LoadObject<UWidgetBlueprint>(
@@ -1505,6 +1584,7 @@ namespace PalTRUIAssetBuilder
             TEXT("TabFrame"),
             TEXT("ContentFrame"),
             TEXT("ContentSwitcher"),
+            TEXT("ClanPageScroll"),
             TEXT("ClanNameText"),
             TEXT("ClanSummaryText"),
             TEXT("ClanMembersFrame"),
@@ -1689,6 +1769,11 @@ int32 UPalTRUIAssetBuilderCommandlet::Main(const FString& Params)
     if (FParse::Param(*Params, TEXT("UpdatePanelInputShield")))
     {
         return UpdatePanelInputShield() ? 0 : 18;
+    }
+
+    if (FParse::Param(*Params, TEXT("UpdateClanPageScroll")))
+    {
+        return UpdateClanPageScroll() ? 0 : 19;
     }
 
     const FString ModActorPackage = FString(AssetRoot) / TEXT("ModActor");
