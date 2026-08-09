@@ -34,6 +34,15 @@ local button_poller = UMGButtonPoller.new({
     widget_provider = function() return widget_port.widget end,
     router = interactions,
     control_names = interactive_controls,
+    on_resume = function(delayed_ticks)
+        local refreshed, refresh_error = widget_port:refresh_input()
+        print(string.format(
+            "[PalTRUI] PALTR_UI_INPUT_RESUME_%s | delayed_ticks=%s | error=%s\n",
+            refreshed == true and "OK" or "ERROR",
+            tostring(delayed_ticks),
+            tostring(refresh_error or "")
+        ))
+    end,
     on_result = function(control, handled, model, interaction_error)
         print(string.format(
             "[PalTRUI] PALTR_UI_CLICK_%s | control=%s | tab=%s | error=%s\n",

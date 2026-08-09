@@ -14,8 +14,14 @@ function UMGButtonPoller.new(options)
         execute_in_game_thread = options.execute_in_game_thread
             or ExecuteInGameThread,
         on_result = options.on_result,
+        on_resume = options.on_resume,
         interval_ms = tonumber(options.interval_ms) or 16,
+        resume_after_delayed_ticks = tonumber(
+            options.resume_after_delayed_ticks
+        ) or 8,
         active = false,
+        game_thread_pending = false,
+        delayed_ticks = 0,
         previous = {}
     }, UMGButtonPoller)
 end
@@ -65,12 +71,32 @@ function UMGButtonPoller:start()
     end
 
     self.active = true
+    self.game_thread_pending = false
+    self.delayed_ticks = 0
     self.previous = {}
     self.schedule_loop(self.interval_ms, function()
         if not self.active then return true end
-        self.execute_in_game_thread(function()
-            if self.active then self:poll_once() end
+        if self.game_thread_pending then
+            self.delayed_ticks = self.delayed_ticks + 1
+            return false
+        end
+
+        self.game_thread_pending = true
+        local queued = pcall(self.execute_in_game_thread, function()
+            local delayed_ticks = self.delayed_ticks
+            self.game_thread_pending = false
+            self.delayed_ticks = 0
+            if not self.active then return end
+            if delayed_ticks >= self.resume_after_delayed_ticks
+                and type(self.on_resume) == "function" then
+                self.on_resume(delayed_ticks)
+            end
+            self:poll_once()
         end)
+        if not queued then
+            self.game_thread_pending = false
+            self.delayed_ticks = 0
+        end
         return false
     end)
     return true
@@ -78,6 +104,8 @@ end
 
 function UMGButtonPoller:stop()
     self.active = false
+    self.game_thread_pending = false
+    self.delayed_ticks = 0
     self.previous = {}
 end
 

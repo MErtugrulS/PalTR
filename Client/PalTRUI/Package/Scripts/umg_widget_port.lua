@@ -194,6 +194,24 @@ function UMGWidgetPort:update(model)
     return true
 end
 
+function UMGWidgetPort:refresh_input()
+    if not valid_object(self.widget)
+        or not valid_object(self.widget_library)
+        or not valid_object(self.player_controller) then
+        return false, "PalTR panel input baglami acik degil."
+    end
+
+    local cursor_ready, cursor_error =
+        set_mouse_cursor(self.player_controller, true)
+    if cursor_ready ~= true then return false, cursor_error end
+
+    return set_ui_input_mode(
+        self.widget_library,
+        self.player_controller,
+        self.widget
+    )
+end
+
 function UMGWidgetPort:close()
     if not valid_object(self.widget) then
         self.widget = nil
