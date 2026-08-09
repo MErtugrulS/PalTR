@@ -286,6 +286,23 @@ function UMGViewBinder:bind(panel, model)
         if not updated then return false, update_error end
     end
 
+    for _, tab in ipairs(table_or_empty(model.tabs)) do
+        tab = table_or_empty(tab)
+        local label_updated, label_error = self:_set_text(
+            controls,
+            text(tab.text_control),
+            tab.label
+        )
+        if not label_updated then return false, label_error end
+
+        local state_updated, state_error = self:_set_enabled(
+            controls,
+            text(tab.control),
+            tab.enabled
+        )
+        if not state_updated then return false, state_error end
+    end
+
     for _, action_control in pairs(
         table_or_empty(diplomacy.action_controls)
     ) do

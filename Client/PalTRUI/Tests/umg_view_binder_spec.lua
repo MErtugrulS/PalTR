@@ -83,6 +83,16 @@ for _, action in ipairs({
     table.insert(controls, button_widget(action.control))
     table.insert(controls, text_widget(action.text_control))
 end
+for _, tab in ipairs({
+    { control = "ClanTabButton", text_control = "ClanTabText" },
+    {
+        control = "DiplomacyTabButton",
+        text_control = "DiplomacyTabText"
+    }
+}) do
+    table.insert(controls, button_widget(tab.control))
+    table.insert(controls, text_widget(tab.text_control))
+end
 local root = widget("RootCanvas", {
     widget("PanelBackground", controls)
 })
@@ -97,6 +107,22 @@ local model = {
     schema_version = 1,
     active_tab = "DIPLOMACY",
     error = "",
+    tabs = {
+        {
+            id = "CLAN",
+            label = "Klanim",
+            control = "ClanTabButton",
+            text_control = "ClanTabText",
+            enabled = true
+        },
+        {
+            id = "DIPLOMACY",
+            label = "Diplomasi",
+            control = "DiplomacyTabButton",
+            text_control = "DiplomacyTabText",
+            enabled = false
+        }
+    },
     views = {
         CLAN = {
             guild = { name = "Anka" },
@@ -168,6 +194,10 @@ equal(text_values.RelationStateText, "Savas", "relation state")
 equal(text_values.RelationDescriptionText, "Sinir catismasi", "relation detail")
 equal(text_values.AllianceMembersText, "Ittifak yok.", "empty alliance")
 equal(text_values.ChatEmptyText, "Ada: Merhaba", "chat messages")
+equal(text_values.ClanTabText, "Klanim", "clan tab label")
+equal(enabled_values.ClanTabButton, true, "inactive tab enabled")
+equal(text_values.DiplomacyTabText, "Diplomasi", "diplomacy tab label")
+equal(enabled_values.DiplomacyTabButton, false, "active tab disabled")
 equal(text_values.WarRequestButtonText, "Savas Ilan Et", "war label")
 equal(enabled_values.WarRequestButton, true, "war button enabled")
 equal(
