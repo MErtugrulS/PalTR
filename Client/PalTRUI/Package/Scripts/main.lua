@@ -7,10 +7,13 @@ local PresentationSnapshotProbe = require("presentation_snapshot_probe")
 local SnapshotInbox = require("snapshot_inbox")
 local SnapshotTransport = require("snapshot_transport")
 local UMGButtonPoller = require("umg_button_poller")
+local ActionOutbox = require("action_outbox")
+local ChatCommandSender = require("chat_command_sender")
 
 local widget_port = UMGWidgetPort.new()
 local presentation = PresentationController.new(
-    RendererHost.new(widget_port)
+    RendererHost.new(widget_port),
+    ActionOutbox.new(ChatCommandSender.new())
 )
 local interactions = UIInteractionRouter.new(presentation)
 local snapshots = SnapshotInbox.new(presentation)
