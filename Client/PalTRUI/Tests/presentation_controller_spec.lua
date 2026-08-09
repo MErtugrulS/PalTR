@@ -129,12 +129,27 @@ equal(
 )
 equal(rendered[#rendered], controller:model(),
     "queued action model rendered")
+equal(
+    controller:model().views.DIPLOMACY.action_controls.WarRequestButton.enabled,
+    false,
+    "queued action disables diplomacy actions"
+)
+equal(
+    controller:model().views.DIPLOMACY.action_controls.WarRequestButton.reason,
+    "Sunucu sonucu bekleniyor.",
+    "queued action disable reason"
+)
 
 local refreshed_snapshot = snapshot()
 refreshed_snapshot.generated_at = 101
 controller:apply_snapshot(refreshed_snapshot)
 equal(controller:model().connection.status_text, "Sunucu snapshoti hazir",
     "new snapshot clears queued action status")
+equal(
+    controller:model().views.DIPLOMACY.action_controls.WarRequestButton.enabled,
+    true,
+    "new snapshot enables offered action"
+)
 
 local rejected, rejection = controller:request_action("PEACE")
 equal(rejected, false, "unoffered action not dispatched")

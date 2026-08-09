@@ -157,7 +157,11 @@ local function copy_actions(source)
     return result
 end
 
-local function action_control_models(relation, action_transport_ready)
+local function action_control_models(
+    relation,
+    action_transport_ready,
+    action_pending
+)
     relation = table_or_empty(relation)
     local permissions = table_or_empty(relation.permissions)
     local offered = {}
@@ -177,10 +181,13 @@ local function action_control_models(relation, action_transport_ready)
         end
         local label = action and text(action.label) or ""
         local enabled = action_transport_ready == true
+            and action_pending ~= true
             and permissions.can_manage == true and action ~= nil
         local reason = ""
         if not enabled then
-            if action_transport_ready ~= true then
+            if action_pending == true then
+                reason = "Sunucu sonucu bekleniyor."
+            elseif action_transport_ready ~= true then
                 reason = "Client-server UI transportu hazir degil."
             else
                 reason = text(permissions.reason)
@@ -557,7 +564,12 @@ local function clan_view(snapshot)
     }
 end
 
-local function relation_views(snapshot, selected_guild, action_transport_ready)
+local function relation_views(
+    snapshot,
+    selected_guild,
+    action_transport_ready,
+    action_pending
+)
     local diplomacy = {}
     local alliance = {}
     local selected_relation = nil
@@ -603,7 +615,8 @@ local function relation_views(snapshot, selected_guild, action_transport_ready)
             selected_relation = selected_relation,
             action_controls = action_control_models(
                 selected_relation,
-                action_transport_ready
+                action_transport_ready,
+                action_pending
             ),
             navigation_controls = relation_navigation_controls(#diplomacy),
             empty = diplomacy_empty,
@@ -798,7 +811,8 @@ function ViewModel.build(snapshot, panel)
     local relation_data = relation_views(
         snapshot,
         selected_guild,
-        action_transport_ready
+        action_transport_ready,
+        action_status ~= ""
     )
     local guilds = guild_catalog_view(snapshot)
     local chat = chat_view(panel.chat)
