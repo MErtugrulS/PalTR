@@ -78,6 +78,32 @@ namespace PalTRUIAssetBuilder
         }
     }
 
+    void StyleFrame(
+        UWidgetTree* Tree,
+        const FName Name,
+        const FLinearColor Color,
+        const FMargin Padding
+    )
+    {
+        if (UBorder* Frame = Cast<UBorder>(Tree->FindWidget(Name)))
+        {
+            Frame->Modify();
+            Frame->SetBrushColor(Color);
+            Frame->SetPadding(Padding);
+        }
+    }
+
+    void SetTextFontSize(UWidgetTree* Tree, const FName Name, const int32 Size)
+    {
+        if (UTextBlock* Text = Cast<UTextBlock>(Tree->FindWidget(Name)))
+        {
+            Text->Modify();
+            FSlateFontInfo Font = Text->GetFont();
+            Font.Size = Size;
+            Text->SetFont(Font);
+        }
+    }
+
     UVerticalBoxSlot* AddVertical(UVerticalBox* Parent, UWidget* Child, const FMargin Padding = FMargin(0.0f))
     {
         UVerticalBoxSlot* Slot = Parent->AddChildToVerticalBox(Child);
@@ -1567,6 +1593,136 @@ namespace PalTRUIAssetBuilder
         return true;
     }
 
+    bool UpdatePremiumTheme()
+    {
+        UWidgetBlueprint* Panel = LoadObject<UWidgetBlueprint>(
+            nullptr,
+            TEXT("/Game/Mods/PalTRUI/WBP_PalTRPanel.WBP_PalTRPanel")
+        );
+        if (!Panel || !Panel->WidgetTree)
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI premium theme update failed: panel asset missing."));
+            return false;
+        }
+
+        UWidgetTree* Tree = Panel->WidgetTree;
+        UBorder* Background = Cast<UBorder>(Tree->FindWidget(TEXT("PanelBackground")));
+        UHorizontalBox* TabBar = Cast<UHorizontalBox>(Tree->FindWidget(TEXT("TabBar")));
+        UBorder* TabFrame = Cast<UBorder>(Tree->FindWidget(TEXT("TabFrame")));
+        UBorder* ContentFrame = Cast<UBorder>(Tree->FindWidget(TEXT("ContentFrame")));
+        if (!Background || !TabBar || !TabFrame || !ContentFrame)
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI premium theme update failed: core themed hierarchy missing."));
+            return false;
+        }
+
+        Panel->Modify();
+        Tree->Modify();
+        Background->Modify();
+        TabBar->Modify();
+
+        const FLinearColor DeepNavy(0.006f, 0.014f, 0.024f, 0.985f);
+        const FLinearColor Navy(0.012f, 0.035f, 0.052f, 0.985f);
+        const FLinearColor RaisedNavy(0.022f, 0.070f, 0.092f, 0.98f);
+        const FLinearColor Gold(0.88f, 0.64f, 0.23f, 1.0f);
+        const FLinearColor PaleGold(0.98f, 0.84f, 0.52f, 1.0f);
+        const FLinearColor Ivory(0.94f, 0.91f, 0.82f, 1.0f);
+        const FLinearColor Teal(0.025f, 0.19f, 0.22f, 1.0f);
+        const FLinearColor Green(0.035f, 0.24f, 0.14f, 1.0f);
+        const FLinearColor Amber(0.25f, 0.16f, 0.045f, 1.0f);
+        const FLinearColor Red(0.30f, 0.055f, 0.045f, 1.0f);
+
+        Background->SetBrushColor(DeepNavy);
+        Background->SetPadding(FMargin(20.0f));
+        StyleFrame(Tree, TEXT("TabFrame"), FLinearColor(0.12f, 0.085f, 0.025f, 0.99f), FMargin(2.0f));
+        StyleFrame(Tree, TEXT("ContentFrame"), Navy, FMargin(20.0f));
+        StyleFrame(Tree, TEXT("HeaderGuildFrame"), FLinearColor(0.02f, 0.16f, 0.18f, 1.0f), FMargin(10.0f, 6.0f));
+        StyleFrame(Tree, TEXT("HeaderRoleFrame"), FLinearColor(0.22f, 0.14f, 0.035f, 1.0f), FMargin(10.0f, 6.0f));
+        StyleFrame(Tree, TEXT("HeaderNotificationFrame"), FLinearColor(0.30f, 0.055f, 0.04f, 1.0f), FMargin(10.0f, 6.0f));
+        StyleFrame(Tree, TEXT("DashboardClanCardFrame"), FLinearColor(0.018f, 0.16f, 0.16f, 0.98f), FMargin(17.0f));
+        StyleFrame(Tree, TEXT("DashboardDiplomacyCardFrame"), FLinearColor(0.022f, 0.10f, 0.17f, 0.98f), FMargin(17.0f));
+        StyleFrame(Tree, TEXT("DashboardRelationsFrame"), FLinearColor(0.10f, 0.075f, 0.025f, 0.98f), FMargin(15.0f));
+        StyleFrame(Tree, TEXT("ClanMembersFrame"), FLinearColor(0.018f, 0.105f, 0.13f, 0.98f), FMargin(16.0f));
+        StyleFrame(Tree, TEXT("PendingOffersFrame"), FLinearColor(0.085f, 0.060f, 0.020f, 0.98f), FMargin(15.0f));
+        StyleFrame(Tree, TEXT("DashboardQuickActionsFrame"), RaisedNavy, FMargin(15.0f));
+        StyleFrame(Tree, TEXT("AllianceDetailFrame"), FLinearColor(0.025f, 0.095f, 0.13f, 0.98f), FMargin(16.0f));
+        StyleFrame(Tree, TEXT("GuildCatalogActiveFrame"), FLinearColor(0.018f, 0.14f, 0.13f, 0.98f), FMargin(16.0f));
+        StyleFrame(Tree, TEXT("GuildCatalogRegisteredFrame"), FLinearColor(0.05f, 0.07f, 0.10f, 0.98f), FMargin(16.0f));
+        StyleFrame(Tree, TEXT("FooterFrame"), FLinearColor(0.10f, 0.07f, 0.02f, 0.99f), FMargin(12.0f, 8.0f));
+
+        for (const FName Tab : {
+            FName(TEXT("ClanTabButton")),
+            FName(TEXT("DiplomacyTabButton")),
+            FName(TEXT("AllianceTabButton")),
+            FName(TEXT("ChatTabButton"))
+        })
+        {
+            StyleButton(Tree, Tab, RaisedNavy);
+            if (UButton* Button = Cast<UButton>(Tree->FindWidget(Tab)))
+            {
+                if (UHorizontalBoxSlot* Slot = Cast<UHorizontalBoxSlot>(Button->Slot))
+                {
+                    Slot->Modify();
+                    Slot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
+                    Slot->SetHorizontalAlignment(HAlign_Fill);
+                    Slot->SetPadding(FMargin(3.0f, 2.0f));
+                }
+                if (UTextBlock* Label = Cast<UTextBlock>(Button->GetContent()))
+                {
+                    Label->SetJustification(ETextJustify::Center);
+                }
+            }
+        }
+
+        StyleButton(Tree, TEXT("PreviousRelationButton"), Amber);
+        StyleButton(Tree, TEXT("NextRelationButton"), Amber);
+        StyleButton(Tree, TEXT("PreviousAllianceButton"), Amber);
+        StyleButton(Tree, TEXT("NextAllianceButton"), Amber);
+        StyleButton(Tree, TEXT("DashboardDiplomacyButton"), Teal);
+        StyleButton(Tree, TEXT("DashboardOffersButton"), Teal);
+        StyleButton(Tree, TEXT("DashboardGuildsButton"), Teal);
+        StyleButton(Tree, TEXT("AllianceRequestButton"), Teal);
+        StyleButton(Tree, TEXT("WarRequestButton"), Red);
+        StyleButton(Tree, TEXT("AcceptButton"), Green);
+        StyleButton(Tree, TEXT("RejectButton"), Red);
+        StyleButton(Tree, TEXT("CancelButton"), Amber);
+        StyleButton(Tree, TEXT("CloseButton"), Red);
+
+        SetTextColor(Tree, TEXT("TitleText"), PaleGold);
+        SetTextColor(Tree, TEXT("ConnectionStatusText"), Ivory);
+        SetTextColor(Tree, TEXT("FooterHintText"), PaleGold);
+        for (const FName Heading : {
+            FName(TEXT("ClanHeadingText")),
+            FName(TEXT("DiplomacyHeadingText")),
+            FName(TEXT("AllianceHeadingText")),
+            FName(TEXT("ChatHeadingText")),
+            FName(TEXT("DashboardDiplomacyCardTitleText")),
+            FName(TEXT("DashboardRelationsHeadingText")),
+            FName(TEXT("PendingOffersHeadingText")),
+            FName(TEXT("DashboardQuickActionsHeadingText"))
+        })
+        {
+            SetTextColor(Tree, Heading, PaleGold);
+        }
+        SetTextColor(Tree, TEXT("DashboardClanCardTitleText"), FLinearColor(0.40f, 0.90f, 0.84f, 1.0f));
+        SetTextColor(Tree, TEXT("ClanMembersHeadingText"), FLinearColor(0.40f, 0.90f, 0.84f, 1.0f));
+        SetTextFontSize(Tree, TEXT("TitleText"), 30);
+        SetTextFontSize(Tree, TEXT("ClanHeadingText"), 24);
+        SetTextFontSize(Tree, TEXT("DiplomacyHeadingText"), 24);
+        SetTextFontSize(Tree, TEXT("AllianceHeadingText"), 24);
+        SetTextFontSize(Tree, TEXT("ChatHeadingText"), 24);
+
+        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Panel);
+        FKismetEditorUtilities::CompileBlueprint(Panel);
+        if (!SaveAsset(Panel))
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI premium theme update failed while saving panel."));
+            return false;
+        }
+        UE_LOG(LogTemp, Display, TEXT("PALTR_UI_PREMIUM_THEME_UPDATE_OK | palette=navy_gold | tabs=equal"));
+        return true;
+    }
+
     bool VerifyAssets()
     {
         UBlueprint* ModActor = LoadObject<UBlueprint>(
@@ -1787,6 +1943,11 @@ int32 UPalTRUIAssetBuilderCommandlet::Main(const FString& Params)
     if (FParse::Param(*Params, TEXT("UpdateClanPageScroll")))
     {
         return UpdateClanPageScroll() ? 0 : 19;
+    }
+
+    if (FParse::Param(*Params, TEXT("UpdatePremiumTheme")))
+    {
+        return UpdatePremiumTheme() ? 0 : 20;
     }
 
     const FString ModActorPackage = FString(AssetRoot) / TEXT("ModActor");

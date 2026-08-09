@@ -79,4 +79,9 @@ a vertical scroll container. This keeps the footer and lower dashboard cards
 inside the fixed panel bounds without changing presentation data or interactions.
 The update is idempotent and refuses partial or unexpected widget hierarchies.
 
+Run the commandlet with `-UpdatePremiumTheme` to apply the dark navy and gold
+Palworld-inspired presentation pass. It gives the top navigation equal-width
+tabs, harmonizes dashboard/detail frames and status badges, and preserves every
+renderer-facing control name and interaction.
+
 Run the commandlet with `-Verify` to load both generated classes and check the renderer-facing widget names without modifying the assets.
