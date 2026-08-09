@@ -31,6 +31,8 @@ local function snapshot()
                 guild_key = "guild-other",
                 guild_name = "Diger Klan",
                 state = "NEUTRAL",
+                can_manage = true,
+                action_reason = "",
                 actions = {
                     { id = "DECLARE_WAR", label = "Savas Ilan Et" }
                 }
