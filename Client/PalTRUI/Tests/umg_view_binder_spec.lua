@@ -83,6 +83,19 @@ for _, action in ipairs({
     table.insert(controls, button_widget(action.control))
     table.insert(controls, text_widget(action.text_control))
 end
+for _, navigation in ipairs({
+    {
+        control = "PreviousRelationButton",
+        text_control = "PreviousRelationButtonText"
+    },
+    {
+        control = "NextRelationButton",
+        text_control = "NextRelationButtonText"
+    }
+}) do
+    table.insert(controls, button_widget(navigation.control))
+    table.insert(controls, text_widget(navigation.text_control))
+end
 for _, tab in ipairs({
     { control = "ClanTabButton", text_control = "ClanTabText" },
     {
@@ -153,6 +166,20 @@ local model = {
             title_text = "Rakipler",
             state_text = "Savas",
             description_text = "Sinir catismasi",
+            navigation_controls = {
+                PreviousRelationButton = {
+                    control = "PreviousRelationButton",
+                    text_control = "PreviousRelationButtonText",
+                    label = "Onceki",
+                    enabled = true
+                },
+                NextRelationButton = {
+                    control = "NextRelationButton",
+                    text_control = "NextRelationButtonText",
+                    label = "Sonraki",
+                    enabled = false
+                }
+            },
             action_controls = {
                 WarRequestButton = {
                     control = "WarRequestButton",
@@ -220,6 +247,14 @@ equal(text_values.DiplomacyTabText, "Diplomasi (1)", "diplomacy tab label")
 equal(enabled_values.DiplomacyTabButton, false, "active tab disabled")
 equal(text_values.WarRequestButtonText, "Savas Ilan Et", "war label")
 equal(enabled_values.WarRequestButton, true, "war button enabled")
+equal(text_values.PreviousRelationButtonText, "Onceki",
+    "previous relation label")
+equal(enabled_values.PreviousRelationButton, true,
+    "previous relation enabled")
+equal(text_values.NextRelationButtonText, "Sonraki",
+    "next relation label")
+equal(enabled_values.NextRelationButton, false,
+    "next relation disabled")
 equal(
     enabled_values.AllianceRequestButton,
     false,
