@@ -329,6 +329,7 @@ local function clan_view(snapshot)
     local war_count = 0
     local alliance_count = 0
     local pending_count = 0
+    local pending_offers = {}
     for _, relation in ipairs(table_or_empty(snapshot.relations)) do
         relation = table_or_empty(relation)
         local state = text(relation.state)
@@ -336,7 +337,30 @@ local function clan_view(snapshot)
         if state == "ALLIANCE" then alliance_count = alliance_count + 1 end
         if string.sub(state, -8) == "_PENDING" then
             pending_count = pending_count + 1
+            table.insert(pending_offers, {
+                guild_key = text(relation.guild_key),
+                guild_name = text(relation.guild_name),
+                state = state,
+                state_label = label_for(state_labels, state),
+                direction = text(relation.proposal_direction),
+                direction_label = label_for(
+                    direction_labels,
+                    relation.proposal_direction
+                )
+            })
         end
+    end
+
+    local pending_lines = {}
+    for _, offer in ipairs(pending_offers) do
+        local detail = offer.direction_label ~= ""
+            and " | " .. offer.direction_label or ""
+        table.insert(pending_lines, string.format(
+            "%s | %s%s",
+            offer.guild_name,
+            offer.state_label,
+            detail
+        ))
     end
 
     local guild_name = text(guild.name)
@@ -381,6 +405,12 @@ local function clan_view(snapshot)
             alliance_count = alliance_count,
             pending_count = pending_count
         },
+        pending_offers = pending_offers,
+        pending_count = pending_count,
+        pending_empty = pending_count == 0,
+        pending_text = pending_count == 0
+            and "Bekleyen teklif yok."
+            or table.concat(pending_lines, "\n"),
         empty = empty,
         empty_message = empty_message,
         name_text = guild_name ~= ""

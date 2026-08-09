@@ -129,10 +129,41 @@ equal(panel.view_model.views.CLAN.dashboard.alliance_count, 1,
     "dashboard alliance count")
 equal(panel.view_model.views.CLAN.dashboard.pending_count, 0,
     "dashboard pending count")
+equal(panel.view_model.views.CLAN.pending_empty, true,
+    "dashboard pending offers empty")
+equal(panel.view_model.views.CLAN.pending_text, "Bekleyen teklif yok.",
+    "dashboard pending empty text")
 equal(panel.view_model.views.CLAN.dashboard.cards[1].id, "CLAN_STATUS",
     "clan dashboard card")
 equal(panel.view_model.views.CLAN.dashboard.cards[2].id,
     "DIPLOMACY_STATUS", "diplomacy dashboard card")
+
+local pending_relations = {
+    relations[1],
+    {
+        guild_key = "guild-offer",
+        guild_name = "Teklifçiler",
+        state = "ALLIANCE_PENDING",
+        previous_state = "NEUTRAL",
+        proposal_direction = "incoming",
+        can_manage = true,
+        action_reason = "",
+        actions = {
+            { id = "ACCEPT", label = "Kabul Et" },
+            { id = "REJECT", label = "Reddet" }
+        }
+    }
+}
+local pending_panel = PanelState.new()
+equal(pending_panel:apply_snapshot(snapshot(pending_relations)), true,
+    "pending snapshot accepted")
+equal(pending_panel.view_model.views.CLAN.pending_count, 1,
+    "pending offer count")
+equal(pending_panel.view_model.views.CLAN.pending_offers[1].guild_key,
+    "guild-offer", "pending offer identity")
+equal(pending_panel.view_model.views.CLAN.pending_text,
+    "Teklifçiler | İttifak teklifi bekliyor | Gelen teklif",
+    "pending offer presentation text")
 equal(
     panel.view_model.views.CLAN.members_text,
     "Ada (cevrimici)\nBora",

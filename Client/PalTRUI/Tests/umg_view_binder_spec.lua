@@ -58,6 +58,7 @@ local names = {
     "ClanNameText",
     "ClanSummaryText",
     "ClanMembersText",
+    "PendingOffersText",
     "RelationListEmptyText",
     "RelationTitleText",
     "RelationStateText",
@@ -155,6 +156,7 @@ local model = {
             name_text = "Anka",
             summary_text = "Lider: Ada | Üye: 2 | Çevrimiçi: 1\nSavaş: 1 | İttifak: 0 | Bekleyen: 0",
             members_text = "Ada (cevrimici)\nBora",
+            pending_text = "Teklifçiler | İttifak teklifi bekliyor | Gelen teklif",
             members = {
                 { name = "Ada", online = true },
                 { name = "Bora", online = false }
@@ -238,6 +240,9 @@ equal(text_values.ClanSummaryText,
     "Lider: Ada | Üye: 2 | Çevrimiçi: 1\nSavaş: 1 | İttifak: 0 | Bekleyen: 0",
     "clan summary")
 equal(text_values.ClanMembersText, "Ada (cevrimici)\nBora", "members")
+equal(text_values.PendingOffersText,
+    "Teklifçiler | İttifak teklifi bekliyor | Gelen teklif",
+    "pending offers")
 equal(text_values.RelationListEmptyText, "Rakipler | Savas", "relations")
 equal(text_values.RelationTitleText, "Rakipler", "selected guild")
 equal(text_values.RelationStateText, "Savas", "relation state")
