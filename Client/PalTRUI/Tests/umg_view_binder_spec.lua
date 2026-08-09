@@ -29,10 +29,19 @@ local function widget(name, children)
 end
 
 local text_values = {}
+local enabled_values = {}
 local function text_widget(name)
     local item = widget(name)
     item.SetText = function(_, value)
         text_values[name] = value
+    end
+    return item
+end
+
+local function button_widget(name)
+    local item = widget(name)
+    item.SetIsEnabled = function(_, value)
+        enabled_values[name] = value
     end
     return item
 end
@@ -61,6 +70,19 @@ local controls = { switcher }
 for _, name in ipairs(names) do
     table.insert(controls, text_widget(name))
 end
+for _, action in ipairs({
+    {
+        control = "WarRequestButton",
+        text_control = "WarRequestButtonText"
+    },
+    {
+        control = "AllianceRequestButton",
+        text_control = "AllianceRequestButtonText"
+    }
+}) do
+    table.insert(controls, button_widget(action.control))
+    table.insert(controls, text_widget(action.text_control))
+end
 local root = widget("RootCanvas", {
     widget("PanelBackground", controls)
 })
@@ -88,6 +110,20 @@ local model = {
         },
         DIPLOMACY = {
             empty = false,
+            action_controls = {
+                WarRequestButton = {
+                    control = "WarRequestButton",
+                    text_control = "WarRequestButtonText",
+                    label = "Savas Ilan Et",
+                    enabled = true
+                },
+                AllianceRequestButton = {
+                    control = "AllianceRequestButton",
+                    text_control = "AllianceRequestButtonText",
+                    label = "Ittifak Iste",
+                    enabled = false
+                }
+            },
             relations = {
                 {
                     guild = { name = "Rakipler" },
@@ -132,6 +168,13 @@ equal(text_values.RelationStateText, "Savas", "relation state")
 equal(text_values.RelationDescriptionText, "Sinir catismasi", "relation detail")
 equal(text_values.AllianceMembersText, "Ittifak yok.", "empty alliance")
 equal(text_values.ChatEmptyText, "Ada: Merhaba", "chat messages")
+equal(text_values.WarRequestButtonText, "Savas Ilan Et", "war label")
+equal(enabled_values.WarRequestButton, true, "war button enabled")
+equal(
+    enabled_values.AllianceRequestButton,
+    false,
+    "alliance button disabled"
+)
 
 local converted_values = {}
 local fallback_binder = UMGViewBinder.new({

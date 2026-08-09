@@ -188,6 +188,21 @@ function UMGViewBinder:_set_text(controls, name, value)
     return true
 end
 
+function UMGViewBinder:_set_enabled(controls, name, enabled)
+    local control = controls[name]
+    if control == nil then
+        return false, "UMG kontrolu bulunamadi: " .. name
+    end
+
+    local updated = pcall(function()
+        control:SetIsEnabled(enabled == true)
+    end)
+    if not updated then
+        return false, "UMG kontrol durumu guncellenemedi: " .. name
+    end
+    return true
+end
+
 function UMGViewBinder:bind(panel, model)
     if type(model) ~= "table" then
         return false, "Gorunum modeli bulunamadi."
@@ -269,6 +284,25 @@ function UMGViewBinder:bind(panel, model)
             binding[2]
         )
         if not updated then return false, update_error end
+    end
+
+    for _, action_control in pairs(
+        table_or_empty(diplomacy.action_controls)
+    ) do
+        action_control = table_or_empty(action_control)
+        local label_updated, label_error = self:_set_text(
+            controls,
+            text(action_control.text_control),
+            action_control.label
+        )
+        if not label_updated then return false, label_error end
+
+        local state_updated, state_error = self:_set_enabled(
+            controls,
+            text(action_control.control),
+            action_control.enabled
+        )
+        if not state_updated then return false, state_error end
     end
     return true
 end
