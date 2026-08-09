@@ -15,6 +15,19 @@ local hud = { name = "hud" }
 local cursor_calls = {}
 local controller_cursor = false
 local controller = { name = "controller" }
+local move_ignored = false
+local look_ignored = false
+local gameplay_lock_calls = {}
+controller.IsMoveInputIgnored = function() return move_ignored end
+controller.IsLookInputIgnored = function() return look_ignored end
+controller.SetIgnoreMoveInput = function(_, ignored)
+    move_ignored = ignored
+    table.insert(gameplay_lock_calls, { kind = "move", ignored = ignored })
+end
+controller.SetIgnoreLookInput = function(_, ignored)
+    look_ignored = ignored
+    table.insert(gameplay_lock_calls, { kind = "look", ignored = ignored })
+end
 setmetatable(controller, {
     __index = function(_, key)
         if key == "bShowMouseCursor" then return controller_cursor end
@@ -52,14 +65,16 @@ local library = {
         })
         return widget
     end,
-    SetInputMode_UIOnlyEx = function(
-        _, player_controller, focused_widget, mouse_lock_mode, flush_input
+    SetInputMode_GameAndUIEx = function(
+        _, player_controller, focused_widget, mouse_lock_mode,
+        hide_cursor_during_capture, flush_input
     )
         table.insert(input_mode_calls, {
-            mode = "ui_only",
+            mode = "game_and_ui",
             player_controller = player_controller,
             focused_widget = focused_widget,
             mouse_lock_mode = mouse_lock_mode,
+            hide_cursor_during_capture = hide_cursor_during_capture,
             flush_input = flush_input
         })
     end,
@@ -119,7 +134,7 @@ equal(bound_models[1], first_model, "initial model bound before viewport")
 equal(port.last_model, first_model, "open model retained")
 equal(cursor_calls[1], true, "mouse cursor shown on open")
 equal(controller.bShowMouseCursor, true, "mouse cursor is visible")
-equal(input_mode_calls[1].mode, "ui_only", "UI-only input enabled")
+equal(input_mode_calls[1].mode, "game_and_ui", "game-and-UI input enabled")
 equal(input_mode_calls[1].player_controller, controller,
     "UI-only input receives controller")
 equal(input_mode_calls[1].focused_widget, widget,
@@ -127,6 +142,10 @@ equal(input_mode_calls[1].focused_widget, widget,
 equal(input_mode_calls[1].mouse_lock_mode,
     UMGWidgetPort.MOUSE_LOCK_DO_NOT_LOCK, "mouse remains unlocked")
 equal(input_mode_calls[1].flush_input, true, "opening input is flushed")
+equal(input_mode_calls[1].hide_cursor_during_capture, false,
+    "cursor remains visible during capture")
+equal(move_ignored, true, "movement input locked while panel is open")
+equal(look_ignored, true, "look input locked while panel is open")
 
 equal(port:open(first_model), true, "open widget reused")
 equal(#create_calls, 1, "open does not duplicate widget")
@@ -135,7 +154,8 @@ local refreshed, refresh_error = port:refresh_input()
 equal(refreshed, true, "open widget input refreshed")
 equal(refresh_error, nil, "successful input refresh has no error")
 equal(cursor_calls[2], true, "input refresh keeps cursor visible")
-equal(input_mode_calls[2].mode, "ui_only", "input refresh restores UI-only mode")
+equal(input_mode_calls[2].mode, "game_and_ui",
+    "input refresh restores game-and-UI mode")
 equal(input_mode_calls[2].focused_widget, widget, "input refresh refocuses panel")
 
 local diplomacy = { open = true, active_tab = "DIPLOMACY" }
@@ -146,6 +166,9 @@ equal(port:close(), true, "widget closed")
 equal(remove_calls, 1, "widget removed once")
 equal(cursor_calls[3], false, "previous mouse cursor restored on close")
 equal(controller.bShowMouseCursor, false, "mouse cursor is restored")
+equal(move_ignored, false, "movement input unlocked on close")
+equal(look_ignored, false, "look input unlocked on close")
+equal(#gameplay_lock_calls, 4, "only owned gameplay locks are toggled")
 equal(input_mode_calls[3].mode, "game_only", "game input restored")
 equal(input_mode_calls[3].player_controller, controller,
     "game input receives controller")
