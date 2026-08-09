@@ -141,6 +141,7 @@ equal(
 )
 equal(panel.view_model.tabs[2].active, true, "diplomacy tab active")
 equal(panel.view_model.tabs[2].enabled, false, "active tab disabled")
+equal(panel.view_model.tabs[2].page_index, 1, "diplomacy page index")
 
 panel:select_guild("guild-neutral")
 equal(

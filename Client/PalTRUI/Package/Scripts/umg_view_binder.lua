@@ -1,13 +1,6 @@
 local UMGViewBinder = {}
 UMGViewBinder.__index = UMGViewBinder
 
-local tab_indexes = {
-    CLAN = 0,
-    DIPLOMACY = 1,
-    ALLIANCE = 2,
-    CHAT = 3
-}
-
 local function table_or_empty(value)
     return type(value) == "table" and value or {}
 end
@@ -163,7 +156,13 @@ function UMGViewBinder:bind(panel, model)
     collect_widgets(root, controls, 0)
 
     local switcher = controls.ContentSwitcher
-    local active_index = tab_indexes[text(model.active_tab)]
+    local active_index = nil
+    for _, tab in ipairs(table_or_empty(model.tabs)) do
+        if type(tab) == "table" and tab.active == true then
+            active_index = tonumber(tab.page_index)
+            break
+        end
+    end
     if switcher == nil or active_index == nil then
         return false, "PalTR aktif sekmesi guncellenemedi."
     end

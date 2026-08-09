@@ -22,19 +22,23 @@ local direction_labels = {
 local tab_control_definitions = {
     CLAN = {
         control = "ClanTabButton",
-        text_control = "ClanTabText"
+        text_control = "ClanTabText",
+        page_index = 0
     },
     DIPLOMACY = {
         control = "DiplomacyTabButton",
-        text_control = "DiplomacyTabText"
+        text_control = "DiplomacyTabText",
+        page_index = 1
     },
     ALLIANCE = {
         control = "AllianceTabButton",
-        text_control = "AllianceTabText"
+        text_control = "AllianceTabText",
+        page_index = 2
     },
     CHAT = {
         control = "ChatTabButton",
-        text_control = "ChatTabText"
+        text_control = "ChatTabText",
+        page_index = 3
     }
 }
 
@@ -363,6 +367,7 @@ local function tab_models(active_tab, counts)
             label = tab.label,
             control = definition.control or "",
             text_control = definition.text_control or "",
+            page_index = tonumber(definition.page_index) or -1,
             active = tab.id == active_tab,
             enabled = tab.id ~= active_tab,
             badge_count = counts[tab.id] or 0

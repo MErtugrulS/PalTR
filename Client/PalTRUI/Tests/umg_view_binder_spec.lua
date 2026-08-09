@@ -117,6 +117,8 @@ local model = {
             label = "Klanim",
             control = "ClanTabButton",
             text_control = "ClanTabText",
+            page_index = 0,
+            active = false,
             enabled = true
         },
         {
@@ -124,6 +126,8 @@ local model = {
             label = "Diplomasi",
             control = "DiplomacyTabButton",
             text_control = "DiplomacyTabText",
+            page_index = 1,
+            active = true,
             enabled = false
         }
     },
