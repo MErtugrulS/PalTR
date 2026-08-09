@@ -911,6 +911,101 @@ namespace PalTRUIAssetBuilder
         return true;
     }
 
+    bool UpdateAllianceDetailPanel()
+    {
+        UWidgetBlueprint* Panel = LoadObject<UWidgetBlueprint>(
+            nullptr,
+            TEXT("/Game/Mods/PalTRUI/WBP_PalTRPanel.WBP_PalTRPanel")
+        );
+        if (!Panel || !Panel->WidgetTree)
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI alliance detail update failed: panel asset missing."));
+            return false;
+        }
+
+        UWidgetTree* Tree = Panel->WidgetTree;
+        UVerticalBox* AlliancePage = Cast<UVerticalBox>(Tree->FindWidget(TEXT("AlliancePage")));
+        static const FName DetailWidgets[] = {
+            TEXT("AllianceDetailFrame"),
+            TEXT("AllianceDetailContent"),
+            TEXT("AllianceTitleText"),
+            TEXT("AllianceStateText"),
+            TEXT("AllianceDescriptionText"),
+            TEXT("AllianceNavigation"),
+            TEXT("PreviousAllianceButton"),
+            TEXT("PreviousAllianceButtonText"),
+            TEXT("NextAllianceButton"),
+            TEXT("NextAllianceButtonText")
+        };
+        if (!AlliancePage)
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI alliance detail update failed: alliance page missing."));
+            return false;
+        }
+        int32 ExistingWidgetCount = 0;
+        for (const FName WidgetName : DetailWidgets)
+        {
+            ExistingWidgetCount += Tree->FindWidget(WidgetName) ? 1 : 0;
+        }
+        if (ExistingWidgetCount == UE_ARRAY_COUNT(DetailWidgets))
+        {
+            UE_LOG(LogTemp, Display, TEXT("PALTR_UI_ALLIANCE_DETAIL_UPDATE_OK | changed=false"));
+            return true;
+        }
+        if (ExistingWidgetCount != 0)
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI alliance detail update refused: partial controls exist."));
+            return false;
+        }
+
+        Panel->Modify();
+        Tree->Modify();
+        AlliancePage->Modify();
+        UBorder* Frame = Tree->ConstructWidget<UBorder>(
+            UBorder::StaticClass(),
+            TEXT("AllianceDetailFrame")
+        );
+        Frame->SetBrushColor(FLinearColor(0.025f, 0.12f, 0.18f, 0.96f));
+        Frame->SetPadding(FMargin(16.0f));
+        UVerticalBox* Content = Tree->ConstructWidget<UVerticalBox>(
+            UVerticalBox::StaticClass(),
+            TEXT("AllianceDetailContent")
+        );
+        Frame->SetContent(Content);
+        UTextBlock* Title = MakeText(Tree, TEXT("AllianceTitleText"), TEXT("Ittifak secin"), 24);
+        Title->SetColorAndOpacity(FSlateColor(FLinearColor(0.92f, 0.68f, 0.25f, 1.0f)));
+        AddVertical(Content, Title, FMargin(0, 0, 0, 8));
+        AddVertical(Content, MakeText(Tree, TEXT("AllianceStateText"), TEXT("Ittifak durumu: -"), 18), FMargin(0, 0, 0, 8));
+        AddVertical(Content, MakeText(Tree, TEXT("AllianceDescriptionText"), TEXT("Ittifak ayrintisi yok."), 16), FMargin(0, 0, 0, 12));
+        UHorizontalBox* Navigation = Tree->ConstructWidget<UHorizontalBox>(
+            UHorizontalBox::StaticClass(),
+            TEXT("AllianceNavigation")
+        );
+        AddHorizontal(Navigation, MakeTabButton(Tree, TEXT("PreviousAllianceButton"), TEXT("PreviousAllianceButtonText"), TEXT("Onceki")), FMargin(0, 0, 8, 0));
+        AddHorizontal(Navigation, MakeTabButton(Tree, TEXT("NextAllianceButton"), TEXT("NextAllianceButtonText"), TEXT("Sonraki")));
+        AddVertical(Content, Navigation);
+        StyleButton(Tree, TEXT("PreviousAllianceButton"), FLinearColor(0.42f, 0.25f, 0.06f, 1.0f));
+        StyleButton(Tree, TEXT("NextAllianceButton"), FLinearColor(0.42f, 0.25f, 0.06f, 1.0f));
+
+        UVerticalBoxSlot* DetailSlot = Cast<UVerticalBoxSlot>(AlliancePage->InsertChildAt(2, Frame));
+        if (!DetailSlot)
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI alliance detail update failed: slot could not be inserted."));
+            return false;
+        }
+        DetailSlot->SetPadding(FMargin(0, 0, 0, 14));
+        DetailSlot->SetHorizontalAlignment(HAlign_Fill);
+        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Panel);
+        FKismetEditorUtilities::CompileBlueprint(Panel);
+        if (!SaveAsset(Panel))
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI alliance detail update failed while saving panel."));
+            return false;
+        }
+        UE_LOG(LogTemp, Display, TEXT("PALTR_UI_ALLIANCE_DETAIL_UPDATE_OK | changed=true"));
+        return true;
+    }
+
     bool VerifyAssets()
     {
         UBlueprint* ModActor = LoadObject<UBlueprint>(
@@ -970,6 +1065,16 @@ namespace PalTRUIAssetBuilder
             TEXT("DashboardRelationsContent"),
             TEXT("DashboardRelationsHeadingText"),
             TEXT("DashboardRelationsText"),
+            TEXT("AllianceDetailFrame"),
+            TEXT("AllianceDetailContent"),
+            TEXT("AllianceTitleText"),
+            TEXT("AllianceStateText"),
+            TEXT("AllianceDescriptionText"),
+            TEXT("AllianceNavigation"),
+            TEXT("PreviousAllianceButton"),
+            TEXT("PreviousAllianceButtonText"),
+            TEXT("NextAllianceButton"),
+            TEXT("NextAllianceButtonText"),
             TEXT("RelationList"),
             TEXT("RelationTitleText"),
             TEXT("RelationStateText"),
@@ -1062,6 +1167,11 @@ int32 UPalTRUIAssetBuilderCommandlet::Main(const FString& Params)
     if (FParse::Param(*Params, TEXT("UpdateDashboardRelationsPreview")))
     {
         return UpdateDashboardRelationsPreview() ? 0 : 12;
+    }
+
+    if (FParse::Param(*Params, TEXT("UpdateAllianceDetailPanel")))
+    {
+        return UpdateAllianceDetailPanel() ? 0 : 13;
     }
 
     const FString ModActorPackage = FString(AssetRoot) / TEXT("ModActor");

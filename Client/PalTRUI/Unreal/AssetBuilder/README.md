@@ -45,4 +45,9 @@ renderer-facing Relations card below the dashboard status cards. It lists only
 guild names and relation labels already present in the snapshot presentation
 model. The update is idempotent and refuses partial controls.
 
+Run the commandlet with `-UpdateAllianceDetailPanel` to add the renderer-facing
+Alliance detail card and Previous/Next controls. The controls reuse the existing
+client relation navigator and do not add alliance rules or transport behavior.
+The update is idempotent and refuses partial controls.
+
 Run the commandlet with `-Verify` to load both generated classes and check the renderer-facing widget names without modifying the assets.
