@@ -29,6 +29,10 @@ equal(apply_error, nil, "presentation snapshot has no error")
 equal(model.active_tab, "DIPLOMACY", "probe opens diplomacy")
 equal(model.selected_guild, "probe-neutral", "probe relation selected")
 equal(model.views.CLAN.member_count, 2, "probe clan members")
+equal(model.views.CLAN.pending_count, 1, "probe pending offer count")
+equal(model.views.CLAN.pending_text,
+    "Kuzey Birliği | İttifak teklifi bekliyor | Gelen teklif",
+    "probe pending offer presentation")
 equal(model.capabilities.action_transport_ready, false,
     "probe action transport unavailable")
 equal(model.views.DIPLOMACY.action_controls.WarRequestButton.enabled,
@@ -68,7 +72,7 @@ equal(next_model.selected_guild, "probe-active", "relation wraps")
 equal(next_model.views.DIPLOMACY.title_text, "Gezginler",
     "selected relation rendered")
 equal(next_model.views.DIPLOMACY.list_text,
-    "> Gezginler | Tarafsız\n  Müttefikler | İttifak\n  Tarafsızlar | Tarafsız",
+    "> Gezginler | Tarafsız\n  Kuzey Birliği | İttifak teklifi bekliyor\n  Müttefikler | İttifak\n  Tarafsızlar | Tarafsız",
     "selected relation marked")
 
 local rejected, _, rejection = PresentationSnapshotProbe.apply()

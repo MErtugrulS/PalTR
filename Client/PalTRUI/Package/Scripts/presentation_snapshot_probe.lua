@@ -74,6 +74,20 @@ function PresentationSnapshotProbe.build()
                     { id = "DECLARE_WAR", label = "Savaş İlan Et" },
                     { id = "ALLIANCE", label = "İttifak Teklif Et" }
                 }
+            },
+            {
+                guild_key = "probe-offer",
+                guild_name = "Kuzey Birliği",
+                state = "ALLIANCE_PENDING",
+                previous_state = "NEUTRAL",
+                proposal_direction = "incoming",
+                note = "Yerel gelen teklif probu",
+                can_manage = true,
+                action_reason = "",
+                actions = {
+                    { id = "ACCEPT", label = "Kabul Et" },
+                    { id = "REJECT", label = "Reddet" }
+                }
             }
         }
     }
