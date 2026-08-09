@@ -40,4 +40,9 @@ existing presentation model, preserve the detailed member and offer sections,
 and collapse the superseded single-block summary. The update is idempotent and
 refuses partial controls.
 
+Run the commandlet with `-UpdateDashboardRelationsPreview` to add a compact
+renderer-facing Relations card below the dashboard status cards. It lists only
+guild names and relation labels already present in the snapshot presentation
+model. The update is idempotent and refuses partial controls.
+
 Run the commandlet with `-Verify` to load both generated classes and check the renderer-facing widget names without modifying the assets.

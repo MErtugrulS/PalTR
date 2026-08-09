@@ -837,6 +837,80 @@ namespace PalTRUIAssetBuilder
         return true;
     }
 
+    bool UpdateDashboardRelationsPreview()
+    {
+        UWidgetBlueprint* Panel = LoadObject<UWidgetBlueprint>(
+            nullptr,
+            TEXT("/Game/Mods/PalTRUI/WBP_PalTRPanel.WBP_PalTRPanel")
+        );
+        if (!Panel || !Panel->WidgetTree)
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI relations preview update failed: panel asset missing."));
+            return false;
+        }
+
+        UWidgetTree* Tree = Panel->WidgetTree;
+        UVerticalBox* ClanPage = Cast<UVerticalBox>(Tree->FindWidget(TEXT("ClanPage")));
+        UBorder* Frame = Cast<UBorder>(Tree->FindWidget(TEXT("DashboardRelationsFrame")));
+        UVerticalBox* Content = Cast<UVerticalBox>(Tree->FindWidget(TEXT("DashboardRelationsContent")));
+        UTextBlock* Heading = Cast<UTextBlock>(Tree->FindWidget(TEXT("DashboardRelationsHeadingText")));
+        UTextBlock* Relations = Cast<UTextBlock>(Tree->FindWidget(TEXT("DashboardRelationsText")));
+        if (!ClanPage)
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI relations preview update failed: clan page missing."));
+            return false;
+        }
+        if (Frame && Content && Heading && Relations)
+        {
+            UE_LOG(LogTemp, Display, TEXT("PALTR_UI_RELATIONS_PREVIEW_UPDATE_OK | changed=false"));
+            return true;
+        }
+        if (Frame || Content || Heading || Relations)
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI relations preview update refused: partial controls exist."));
+            return false;
+        }
+
+        Panel->Modify();
+        Tree->Modify();
+        ClanPage->Modify();
+        Frame = Tree->ConstructWidget<UBorder>(
+            UBorder::StaticClass(),
+            TEXT("DashboardRelationsFrame")
+        );
+        Frame->SetBrushColor(FLinearColor(0.06f, 0.05f, 0.025f, 0.94f));
+        Frame->SetPadding(FMargin(14.0f));
+        Content = Tree->ConstructWidget<UVerticalBox>(
+            UVerticalBox::StaticClass(),
+            TEXT("DashboardRelationsContent")
+        );
+        Frame->SetContent(Content);
+        Heading = MakeText(Tree, TEXT("DashboardRelationsHeadingText"), TEXT("ILISKILER"), 20);
+        Heading->SetColorAndOpacity(FSlateColor(FLinearColor(0.92f, 0.68f, 0.25f, 1.0f)));
+        Relations = MakeText(Tree, TEXT("DashboardRelationsText"), TEXT("Iliski kaydi yok."), 16);
+        AddVertical(Content, Heading, FMargin(0, 0, 0, 8));
+        AddVertical(Content, Relations);
+
+        UVerticalBoxSlot* PreviewSlot = Cast<UVerticalBoxSlot>(ClanPage->InsertChildAt(2, Frame));
+        if (!PreviewSlot)
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI relations preview update failed: slot could not be inserted."));
+            return false;
+        }
+        PreviewSlot->SetPadding(FMargin(0, 0, 0, 14));
+        PreviewSlot->SetHorizontalAlignment(HAlign_Fill);
+
+        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Panel);
+        FKismetEditorUtilities::CompileBlueprint(Panel);
+        if (!SaveAsset(Panel))
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI relations preview update failed while saving panel."));
+            return false;
+        }
+        UE_LOG(LogTemp, Display, TEXT("PALTR_UI_RELATIONS_PREVIEW_UPDATE_OK | changed=true"));
+        return true;
+    }
+
     bool VerifyAssets()
     {
         UBlueprint* ModActor = LoadObject<UBlueprint>(
@@ -892,6 +966,10 @@ namespace PalTRUIAssetBuilder
             TEXT("DashboardDiplomacyCardTitleText"),
             TEXT("DashboardDiplomacyCardValueText"),
             TEXT("DashboardDiplomacyCardDetailText"),
+            TEXT("DashboardRelationsFrame"),
+            TEXT("DashboardRelationsContent"),
+            TEXT("DashboardRelationsHeadingText"),
+            TEXT("DashboardRelationsText"),
             TEXT("RelationList"),
             TEXT("RelationTitleText"),
             TEXT("RelationStateText"),
@@ -979,6 +1057,11 @@ int32 UPalTRUIAssetBuilderCommandlet::Main(const FString& Params)
     if (FParse::Param(*Params, TEXT("UpdateDashboardStatusCards")))
     {
         return UpdateDashboardStatusCards() ? 0 : 11;
+    }
+
+    if (FParse::Param(*Params, TEXT("UpdateDashboardRelationsPreview")))
+    {
+        return UpdateDashboardRelationsPreview() ? 0 : 12;
     }
 
     const FString ModActorPackage = FString(AssetRoot) / TEXT("ModActor");
