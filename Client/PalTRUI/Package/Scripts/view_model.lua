@@ -392,6 +392,9 @@ local function clan_view(snapshot)
 
     local clan_card = {
         id = "CLAN_STATUS",
+        title_control = "DashboardClanCardTitleText",
+        value_control = "DashboardClanCardValueText",
+        detail_control = "DashboardClanCardDetailText",
         title = "Klanım",
         value = guild_name ~= "" and guild_name or "-",
         detail = string.format(
@@ -403,6 +406,9 @@ local function clan_view(snapshot)
     }
     local diplomacy_card = {
         id = "DIPLOMACY_STATUS",
+        title_control = "DashboardDiplomacyCardTitleText",
+        value_control = "DashboardDiplomacyCardValueText",
+        detail_control = "DashboardDiplomacyCardDetailText",
         title = "Diplomasi",
         value = string.format(
             "Savaş: %d | İttifak: %d | Bekleyen: %d",

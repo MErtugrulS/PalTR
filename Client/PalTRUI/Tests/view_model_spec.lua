@@ -135,8 +135,13 @@ equal(panel.view_model.views.CLAN.pending_text, "Bekleyen teklif yok.",
     "dashboard pending empty text")
 equal(panel.view_model.views.CLAN.dashboard.cards[1].id, "CLAN_STATUS",
     "clan dashboard card")
+equal(panel.view_model.views.CLAN.dashboard.cards[1].value_control,
+    "DashboardClanCardValueText", "clan dashboard renderer control")
 equal(panel.view_model.views.CLAN.dashboard.cards[2].id,
     "DIPLOMACY_STATUS", "diplomacy dashboard card")
+equal(panel.view_model.views.CLAN.dashboard.cards[2].value_control,
+    "DashboardDiplomacyCardValueText",
+    "diplomacy dashboard renderer control")
 equal(panel.view_model.views.CLAN.quick_actions.DashboardOffersButton.enabled,
     false, "pending quick action disabled")
 equal(panel.view_model.views.CLAN.quick_actions.DashboardOffersButton.reason,

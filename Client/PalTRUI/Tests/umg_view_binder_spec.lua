@@ -62,6 +62,12 @@ local names = {
     "DashboardDiplomacyButtonText",
     "DashboardOffersButtonText",
     "DashboardGuildsButtonText",
+    "DashboardClanCardTitleText",
+    "DashboardClanCardValueText",
+    "DashboardClanCardDetailText",
+    "DashboardDiplomacyCardTitleText",
+    "DashboardDiplomacyCardValueText",
+    "DashboardDiplomacyCardDetailText",
     "RelationListEmptyText",
     "RelationTitleText",
     "RelationStateText",
@@ -172,6 +178,28 @@ local model = {
             summary_text = "Lider: Ada | Üye: 2 | Çevrimiçi: 1\nSavaş: 1 | İttifak: 0 | Bekleyen: 0",
             members_text = "Ada (cevrimici)\nBora",
             pending_text = "Teklifçiler | İttifak teklifi bekliyor | Gelen teklif",
+            dashboard = {
+                cards = {
+                    {
+                        id = "CLAN_STATUS",
+                        title_control = "DashboardClanCardTitleText",
+                        value_control = "DashboardClanCardValueText",
+                        detail_control = "DashboardClanCardDetailText",
+                        title = "Klanim",
+                        value = "Anka",
+                        detail = "Lider: Ada | Uye: 2 | Cevrimici: 1"
+                    },
+                    {
+                        id = "DIPLOMACY_STATUS",
+                        title_control = "DashboardDiplomacyCardTitleText",
+                        value_control = "DashboardDiplomacyCardValueText",
+                        detail_control = "DashboardDiplomacyCardDetailText",
+                        title = "Diplomasi",
+                        value = "Savas: 1 | Ittifak: 0 | Bekleyen: 1",
+                        detail = ""
+                    }
+                }
+            },
             quick_actions = {
                 DashboardDiplomacyButton = {
                     control = "DashboardDiplomacyButton",
@@ -286,6 +314,18 @@ equal(text_values.DashboardOffersButtonText, "Teklifleri Gor",
     "dashboard offers label")
 equal(enabled_values.DashboardGuildsButton, false,
     "dashboard guilds disabled")
+equal(text_values.DashboardClanCardTitleText, "Klanim",
+    "clan dashboard card title")
+equal(text_values.DashboardClanCardValueText, "Anka",
+    "clan dashboard card value")
+equal(text_values.DashboardClanCardDetailText,
+    "Lider: Ada | Uye: 2 | Cevrimici: 1",
+    "clan dashboard card detail")
+equal(text_values.DashboardDiplomacyCardTitleText, "Diplomasi",
+    "diplomacy dashboard card title")
+equal(text_values.DashboardDiplomacyCardValueText,
+    "Savas: 1 | Ittifak: 0 | Bekleyen: 1",
+    "diplomacy dashboard card value")
 equal(text_values.RelationListEmptyText, "Rakipler | Savas", "relations")
 equal(text_values.RelationTitleText, "Rakipler", "selected guild")
 equal(text_values.RelationStateText, "Savas", "relation state")

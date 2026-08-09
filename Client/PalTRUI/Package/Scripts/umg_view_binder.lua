@@ -239,6 +239,23 @@ function UMGViewBinder:bind(panel, model)
         if not state_updated then return false, state_error end
     end
 
+    local dashboard = table_or_empty(clan.dashboard)
+    for _, card in ipairs(table_or_empty(dashboard.cards)) do
+        card = table_or_empty(card)
+        for _, field in ipairs({
+            { control = card.title_control, value = card.title },
+            { control = card.value_control, value = card.value },
+            { control = card.detail_control, value = card.detail }
+        }) do
+            local updated, update_error = self:_set_text(
+                controls,
+                text(field.control),
+                field.value
+            )
+            if not updated then return false, update_error end
+        end
+    end
+
     for _, action_control in pairs(
         table_or_empty(diplomacy.action_controls)
     ) do
