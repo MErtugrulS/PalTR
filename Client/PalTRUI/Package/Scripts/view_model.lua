@@ -46,31 +46,31 @@ local action_control_definitions = {
     {
         control = "AllianceRequestButton",
         text_control = "AllianceRequestButtonText",
-        action_id = "ALLIANCE",
+        action_ids = { "ALLIANCE", "CEASEFIRE" },
         default_label = "İttifak İste"
     },
     {
         control = "WarRequestButton",
         text_control = "WarRequestButtonText",
-        action_id = "DECLARE_WAR",
+        action_ids = { "DECLARE_WAR", "BREAK_CEASEFIRE" },
         default_label = "Savaş İlan Et"
     },
     {
         control = "AcceptButton",
         text_control = "AcceptButtonText",
-        action_id = "ACCEPT",
+        action_ids = { "ACCEPT" },
         default_label = "Kabul Et"
     },
     {
         control = "RejectButton",
         text_control = "RejectButtonText",
-        action_id = "REJECT",
+        action_ids = { "REJECT" },
         default_label = "Reddet"
     },
     {
         control = "CancelButton",
         text_control = "CancelButtonText",
-        action_id = "CANCEL",
+        action_ids = { "CANCEL", "PEACE", "RETURN_NEUTRAL" },
         default_label = "İptal Et"
     }
 }
@@ -168,7 +168,13 @@ local function action_control_models(relation, action_transport_ready)
 
     local result = {}
     for _, definition in ipairs(action_control_definitions) do
-        local action = offered[definition.action_id]
+        local action = nil
+        for _, action_id in ipairs(definition.action_ids or {}) do
+            if offered[action_id] ~= nil then
+                action = offered[action_id]
+                break
+            end
+        end
         local label = action and text(action.label) or ""
         local enabled = action_transport_ready == true
             and permissions.can_manage == true and action ~= nil
@@ -188,7 +194,8 @@ local function action_control_models(relation, action_transport_ready)
         result[definition.control] = {
             control = definition.control,
             text_control = definition.text_control,
-            action_id = definition.action_id,
+            action_id = action and text(action.id)
+                or text(table_or_empty(definition.action_ids)[1]),
             label = label ~= "" and label or definition.default_label,
             enabled = enabled,
             reason = reason

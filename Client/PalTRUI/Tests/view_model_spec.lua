@@ -326,6 +326,24 @@ equal(
     "guild-war",
     "selected relation"
 )
+local war_actions = panel.view_model.views.DIPLOMACY.action_controls
+equal(war_actions.AllianceRequestButton.enabled, true,
+    "ceasefire action slot enabled")
+equal(war_actions.AllianceRequestButton.action_id, "CEASEFIRE",
+    "ceasefire action assigned from server offer")
+equal(war_actions.AllianceRequestButton.label, "Ateşkes Teklif Et",
+    "ceasefire server label preserved")
+equal(war_actions.CancelButton.enabled, true,
+    "peace action slot enabled")
+equal(war_actions.CancelButton.action_id, "PEACE",
+    "peace action assigned from server offer")
+
+panel:select_guild("guild-alliance")
+local alliance_actions = panel.view_model.views.DIPLOMACY.action_controls
+equal(alliance_actions.CancelButton.enabled, true,
+    "return neutral action slot enabled")
+equal(alliance_actions.CancelButton.action_id, "RETURN_NEUTRAL",
+    "return neutral action assigned from server offer")
 
 equal(panel:set_tab("ALLIANCE"), true, "alliance tab accepted")
 equal(panel.selected_guild, "guild-alliance", "alliance selection normalized")
