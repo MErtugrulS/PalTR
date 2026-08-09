@@ -24,6 +24,8 @@ local interactive_controls = {
     "DashboardGuildsButton",
     "PreviousRelationButton",
     "NextRelationButton",
+    "PreviousAllianceButton",
+    "NextAllianceButton",
     "AllianceRequestButton",
     "WarRequestButton",
     "AcceptButton",

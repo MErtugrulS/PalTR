@@ -90,6 +90,21 @@ local relation_navigation_definitions = {
     }
 }
 
+local alliance_navigation_definitions = {
+    {
+        control = "PreviousAllianceButton",
+        text_control = "PreviousAllianceButtonText",
+        label = "Onceki",
+        step = -1
+    },
+    {
+        control = "NextAllianceButton",
+        text_control = "NextAllianceButtonText",
+        label = "Sonraki",
+        step = 1
+    }
+}
+
 local dashboard_action_definitions = {
     {
         control = "DashboardDiplomacyButton",
@@ -182,10 +197,10 @@ local function action_control_models(relation, action_transport_ready)
     return result
 end
 
-local function relation_navigation_controls(relation_count)
+local function relation_navigation_controls(relation_count, definitions)
     local result = {}
     local enabled = tonumber(relation_count) ~= nil and relation_count > 1
-    for _, definition in ipairs(relation_navigation_definitions) do
+    for _, definition in ipairs(definitions or relation_navigation_definitions) do
         result[definition.control] = {
             control = definition.control,
             text_control = definition.text_control,
@@ -526,6 +541,12 @@ local function relation_views(snapshot, selected_guild, action_transport_ready)
         action_transport_ready
     )
     local alliance_empty = #alliance == 0
+    local selected_alliance_guild = table_or_empty(
+        table_or_empty(selected_alliance).guild
+    )
+    local selected_alliance_status = table_or_empty(
+        table_or_empty(selected_alliance).status
+    )
     local alliance_empty_message = alliance_empty
         and "Aktif veya bekleyen ittifak bulunamadı." or ""
 
@@ -554,11 +575,20 @@ local function relation_views(snapshot, selected_guild, action_transport_ready)
         alliance = {
             relations = alliance,
             selected_relation = selected_alliance,
+            navigation_controls = relation_navigation_controls(
+                #alliance,
+                alliance_navigation_definitions
+            ),
             empty = alliance_empty,
             empty_message = alliance_empty_message,
             summary_text = string.format("%d ittifak kaydi", #alliance),
             members_text = alliance_empty
-                and alliance_empty_message or relation_lines(alliance)
+                and alliance_empty_message or relation_lines(alliance),
+            title_text = text(selected_alliance_guild.name) ~= ""
+                and selected_alliance_guild.name or "Ittifak secin",
+            state_text = text(selected_alliance_status.label) ~= ""
+                and selected_alliance_status.label or "Ittifak durumu: -",
+            description_text = relation_description(selected_alliance)
         }
     }
 end

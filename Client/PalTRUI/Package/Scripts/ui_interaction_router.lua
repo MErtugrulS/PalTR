@@ -38,9 +38,11 @@ end
 local function navigation_control(controller, control_name)
     local model = current_model(controller)
     local views = type(model) == "table" and model.views or nil
-    local diplomacy = type(views) == "table" and views.DIPLOMACY or nil
-    local controls = type(diplomacy) == "table"
-        and diplomacy.navigation_controls or nil
+    local active_tab = type(model) == "table"
+        and tostring(model.active_tab or "") or ""
+    local active_view = type(views) == "table" and views[active_tab] or nil
+    local controls = type(active_view) == "table"
+        and active_view.navigation_controls or nil
     if type(controls) ~= "table" then return model, nil end
     return model, controls[control_name]
 end

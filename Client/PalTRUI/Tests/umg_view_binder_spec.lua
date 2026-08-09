@@ -75,6 +75,9 @@ local names = {
     "RelationDescriptionText",
     "AllianceSummaryText",
     "AllianceMembersText",
+    "AllianceTitleText",
+    "AllianceStateText",
+    "AllianceDescriptionText",
     "ChatEmptyText"
 }
 local controls = { switcher }
@@ -114,6 +117,14 @@ for _, navigation in ipairs({
     {
         control = "NextRelationButton",
         text_control = "NextRelationButtonText"
+    },
+    {
+        control = "PreviousAllianceButton",
+        text_control = "PreviousAllianceButtonText"
+    },
+    {
+        control = "NextAllianceButton",
+        text_control = "NextAllianceButtonText"
     }
 }) do
     table.insert(controls, button_widget(navigation.control))
@@ -282,7 +293,24 @@ local model = {
             empty_message = "Ittifak yok.",
             summary_text = "0 ittifak kaydi",
             members_text = "Ittifak yok.",
-            relations = {}
+            title_text = "Ittifak secin",
+            state_text = "Ittifak durumu: -",
+            description_text = "Ittifak ayrintisi yok.",
+            relations = {},
+            navigation_controls = {
+                PreviousAllianceButton = {
+                    control = "PreviousAllianceButton",
+                    text_control = "PreviousAllianceButtonText",
+                    label = "Onceki",
+                    enabled = false
+                },
+                NextAllianceButton = {
+                    control = "NextAllianceButton",
+                    text_control = "NextAllianceButtonText",
+                    label = "Sonraki",
+                    enabled = false
+                }
+            }
         },
         GUILDS = {
             empty = false,
@@ -336,6 +364,12 @@ equal(text_values.RelationTitleText, "Rakipler", "selected guild")
 equal(text_values.RelationStateText, "Savas", "relation state")
 equal(text_values.RelationDescriptionText, "Sinir catismasi", "relation detail")
 equal(text_values.AllianceMembersText, "Ittifak yok.", "empty alliance")
+equal(text_values.AllianceTitleText, "Ittifak secin", "alliance title")
+equal(text_values.AllianceStateText, "Ittifak durumu: -", "alliance state")
+equal(text_values.PreviousAllianceButtonText, "Onceki",
+    "alliance previous label")
+equal(enabled_values.NextAllianceButton, false,
+    "alliance next disabled")
 equal(text_values.ChatEmptyText,
     "Gezginler | Aktif | 4 uye | 2 cevrimici", "guild catalog")
 equal(text_values.ClanTabText, "Klanim (2)", "clan tab label")

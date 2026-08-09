@@ -58,6 +58,18 @@ local current_model = {
                     reason = "Bu aksiyon sunulmuyor."
                 }
             }
+        },
+        ALLIANCE = {
+            navigation_controls = {
+                PreviousAllianceButton = {
+                    step = -1,
+                    enabled = true
+                },
+                NextAllianceButton = {
+                    step = 1,
+                    enabled = true
+                }
+            }
         }
     }
 }
@@ -142,6 +154,16 @@ equal(navigation_disabled, false, "disabled navigation rejected")
 equal(navigation_dispatched, false, "disabled navigation not dispatched")
 equal(navigation_disabled_error, "Gezinme kapali.",
     "disabled navigation reason returned")
+
+current_model.active_tab = "ALLIANCE"
+local alliance_navigated, alliance_model, alliance_rendered,
+    alliance_error = router:handle("NextAllianceButton")
+equal(alliance_navigated, true, "alliance navigation handled")
+equal(alliance_model, current_model, "alliance navigation model returned")
+equal(alliance_rendered, true, "alliance navigation rendered")
+equal(alliance_error, nil, "alliance navigation has no error")
+equal(calls[#calls].step, 1, "alliance navigation step used")
+current_model.active_tab = "DIPLOMACY"
 
 local action_handled, action_model, action_dispatched, action_error =
     router:handle("WarRequestButton")

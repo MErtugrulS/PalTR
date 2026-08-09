@@ -193,6 +193,9 @@ function UMGViewBinder:bind(panel, model)
         { "RelationDescriptionText", diplomacy.description_text },
         { "AllianceSummaryText", alliance.summary_text },
         { "AllianceMembersText", alliance.members_text },
+        { "AllianceTitleText", alliance.title_text },
+        { "AllianceStateText", alliance.state_text },
+        { "AllianceDescriptionText", alliance.description_text },
         { "ChatEmptyText", guilds.list_text }
     }
 
@@ -284,6 +287,24 @@ function UMGViewBinder:bind(panel, model)
 
     for _, navigation_control in pairs(
         table_or_empty(diplomacy.navigation_controls)
+    ) do
+        navigation_control = table_or_empty(navigation_control)
+        local label_updated, label_error = self:_set_text(
+            controls,
+            text(navigation_control.text_control),
+            navigation_control.label
+        )
+        if not label_updated then return false, label_error end
+
+        local state_updated, state_error = self:_set_enabled(
+            controls,
+            text(navigation_control.control),
+            navigation_control.enabled
+        )
+        if not state_updated then return false, state_error end
+    end
+    for _, navigation_control in pairs(
+        table_or_empty(alliance.navigation_controls)
     ) do
         navigation_control = table_or_empty(navigation_control)
         local label_updated, label_error = self:_set_text(

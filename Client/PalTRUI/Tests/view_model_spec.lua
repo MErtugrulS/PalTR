@@ -97,6 +97,10 @@ equal(panel.view_model.views.CLAN.member_count, 2, "member count")
 equal(panel.view_model.views.CLAN.online_count, 1, "online count")
 equal(#panel.view_model.views.DIPLOMACY.relations, 3, "diplomacy count")
 equal(#panel.view_model.views.ALLIANCE.relations, 1, "alliance filter")
+equal(panel.view_model.views.ALLIANCE.title_text, relations[1].guild_name,
+    "selected alliance title")
+equal(panel.view_model.views.ALLIANCE.navigation_controls.PreviousAllianceButton.enabled,
+    false, "single alliance navigation disabled")
 equal(
     panel.view_model.views.DIPLOMACY.relations[2].actions[1].id,
     "CEASEFIRE",
