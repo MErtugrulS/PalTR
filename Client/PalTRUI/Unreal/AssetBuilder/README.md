@@ -93,4 +93,9 @@ dashboard into a wide status/member workspace and a compact relations,
 pending-offers, and quick-actions sidebar. Renderer-facing widget names and
 snapshot bindings remain unchanged.
 
+Run the commandlet with `-UpdatePresentationHierarchy` to add a framed command
+header, descriptive page introductions, a titled dashboard sidebar, and separate
+Diplomacy list/detail cards. It changes presentation hierarchy only and keeps
+the existing renderer and action widget names intact.
+
 Run the commandlet with `-Verify` to load both generated classes and check the renderer-facing widget names without modifying the assets.

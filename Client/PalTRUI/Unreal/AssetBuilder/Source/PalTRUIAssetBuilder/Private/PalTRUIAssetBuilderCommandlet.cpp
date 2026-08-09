@@ -1586,6 +1586,189 @@ namespace PalTRUIAssetBuilder
         return true;
     }
 
+    bool UpdatePresentationHierarchy()
+    {
+        UWidgetBlueprint* Panel = LoadObject<UWidgetBlueprint>(
+            nullptr,
+            TEXT("/Game/Mods/PalTRUI/WBP_PalTRPanel.WBP_PalTRPanel")
+        );
+        if (!Panel || !Panel->WidgetTree)
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI presentation hierarchy update failed: panel asset missing."));
+            return false;
+        }
+
+        UWidgetTree* Tree = Panel->WidgetTree;
+        UVerticalBox* Layout = Cast<UVerticalBox>(Tree->FindWidget(TEXT("PanelLayout")));
+        UHorizontalBox* Header = Cast<UHorizontalBox>(Tree->FindWidget(TEXT("HeaderRow")));
+        UBorder* HeaderFrame = Cast<UBorder>(Tree->FindWidget(TEXT("HeaderFrame")));
+        UVerticalBox* ClanPage = Cast<UVerticalBox>(Tree->FindWidget(TEXT("ClanPage")));
+        UVerticalBox* DiplomacyPage = Cast<UVerticalBox>(Tree->FindWidget(TEXT("DiplomacyPage")));
+        UVerticalBox* AlliancePage = Cast<UVerticalBox>(Tree->FindWidget(TEXT("AlliancePage")));
+        UVerticalBox* GuildPage = Cast<UVerticalBox>(Tree->FindWidget(TEXT("ChatPage")));
+        UVerticalBox* Sidebar = Cast<UVerticalBox>(Tree->FindWidget(TEXT("DashboardSidebarColumn")));
+        UHorizontalBox* DiplomacyColumns = Cast<UHorizontalBox>(Tree->FindWidget(TEXT("DiplomacyColumns")));
+        USizeBox* RelationListSize = Cast<USizeBox>(Tree->FindWidget(TEXT("RelationListSize")));
+        UVerticalBox* RelationDetail = Cast<UVerticalBox>(Tree->FindWidget(TEXT("RelationDetail")));
+        if (!Layout || !Header || !ClanPage || !DiplomacyPage || !AlliancePage || !GuildPage
+            || !Sidebar || !DiplomacyColumns || !RelationListSize || !RelationDetail)
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI presentation hierarchy update failed: required hierarchy missing."));
+            return false;
+        }
+
+        Panel->Modify();
+        Tree->Modify();
+
+        if (HeaderFrame)
+        {
+            if (HeaderFrame->GetContent() != Header || HeaderFrame->GetParent() != Layout)
+            {
+                UE_LOG(LogTemp, Error, TEXT("PalTRUI presentation hierarchy update refused: unexpected header frame."));
+                return false;
+            }
+        }
+        else
+        {
+            if (Header->GetParent() != Layout)
+            {
+                UE_LOG(LogTemp, Error, TEXT("PalTRUI presentation hierarchy update refused: header is outside layout."));
+                return false;
+            }
+            const int32 HeaderIndex = Layout->GetChildIndex(Header);
+            Header->Modify();
+            Layout->Modify();
+            Layout->RemoveChild(Header);
+            HeaderFrame = Tree->ConstructWidget<UBorder>(UBorder::StaticClass(), TEXT("HeaderFrame"));
+            HeaderFrame->SetContent(Header);
+            UVerticalBoxSlot* HeaderSlot = Cast<UVerticalBoxSlot>(Layout->InsertChildAt(HeaderIndex, HeaderFrame));
+            if (!HeaderSlot)
+            {
+                UE_LOG(LogTemp, Error, TEXT("PalTRUI presentation hierarchy update failed: header slot missing."));
+                return false;
+            }
+            HeaderSlot->SetPadding(FMargin(0, 0, 0, 12));
+            HeaderSlot->SetHorizontalAlignment(HAlign_Fill);
+        }
+        HeaderFrame->Modify();
+        HeaderFrame->SetBrushColor(FLinearColor(0.055f, 0.042f, 0.018f, 0.99f));
+        HeaderFrame->SetPadding(FMargin(14.0f, 10.0f));
+
+        struct FSubtitleSpec
+        {
+            UVerticalBox* Page;
+            const TCHAR* Name;
+            const TCHAR* Text;
+        };
+        const FSubtitleSpec Subtitles[] = {
+            { ClanPage, TEXT("ClanSubtitleText"), TEXT("Klan durumunu, uyeleri ve diplomasi hareketlerini tek ekrandan izleyin.") },
+            { DiplomacyPage, TEXT("DiplomacySubtitleText"), TEXT("Klan iliskilerini, savas durumunu ve bekleyen teklifleri yonetin.") },
+            { AlliancePage, TEXT("AllianceSubtitleText"), TEXT("Ittifak yapisini ve uye klanlari birlikte goruntuleyin.") },
+            { GuildPage, TEXT("GuildSubtitleText"), TEXT("Aktif ve kayitli klanlari sunucu verisinden inceleyin.") }
+        };
+        for (const FSubtitleSpec& Spec : Subtitles)
+        {
+            UTextBlock* Subtitle = Cast<UTextBlock>(Tree->FindWidget(FName(Spec.Name)));
+            if (!Subtitle)
+            {
+                Spec.Page->Modify();
+                Subtitle = MakeText(Tree, FName(Spec.Name), Spec.Text, 14);
+                Subtitle->SetAutoWrapText(true);
+                UVerticalBoxSlot* SubtitleSlot = Cast<UVerticalBoxSlot>(Spec.Page->InsertChildAt(1, Subtitle));
+                if (!SubtitleSlot)
+                {
+                    UE_LOG(LogTemp, Error, TEXT("PalTRUI presentation hierarchy update failed: subtitle slot missing: %s"), Spec.Name);
+                    return false;
+                }
+                SubtitleSlot->SetPadding(FMargin(0, 0, 0, 16));
+            }
+            else if (Subtitle->GetParent() != Spec.Page)
+            {
+                UE_LOG(LogTemp, Error, TEXT("PalTRUI presentation hierarchy update refused: unexpected subtitle parent: %s"), Spec.Name);
+                return false;
+            }
+            Subtitle->Modify();
+            Subtitle->SetColorAndOpacity(FSlateColor(FLinearColor(0.68f, 0.72f, 0.70f, 1.0f)));
+        }
+
+        UBorder* SidebarTitleFrame = Cast<UBorder>(Tree->FindWidget(TEXT("DashboardSidebarTitleFrame")));
+        UTextBlock* SidebarTitle = Cast<UTextBlock>(Tree->FindWidget(TEXT("DashboardSidebarTitleText")));
+        if (!SidebarTitleFrame && !SidebarTitle)
+        {
+            Sidebar->Modify();
+            SidebarTitleFrame = Tree->ConstructWidget<UBorder>(UBorder::StaticClass(), TEXT("DashboardSidebarTitleFrame"));
+            SidebarTitleFrame->SetBrushColor(FLinearColor(0.12f, 0.085f, 0.025f, 0.99f));
+            SidebarTitleFrame->SetPadding(FMargin(12.0f, 8.0f));
+            SidebarTitle = MakeText(Tree, TEXT("DashboardSidebarTitleText"), TEXT("ILISKILER VE ISLEMLER"), 16);
+            SidebarTitle->SetColorAndOpacity(FSlateColor(FLinearColor(0.98f, 0.84f, 0.52f, 1.0f)));
+            SidebarTitleFrame->SetContent(SidebarTitle);
+            UVerticalBoxSlot* SidebarTitleSlot = Cast<UVerticalBoxSlot>(Sidebar->InsertChildAt(0, SidebarTitleFrame));
+            if (!SidebarTitleSlot)
+            {
+                UE_LOG(LogTemp, Error, TEXT("PalTRUI presentation hierarchy update failed: sidebar title slot missing."));
+                return false;
+            }
+            SidebarTitleSlot->SetPadding(FMargin(0, 0, 0, 10));
+        }
+        else if (!SidebarTitleFrame || !SidebarTitle
+            || SidebarTitleFrame->GetContent() != SidebarTitle
+            || SidebarTitleFrame->GetParent() != Sidebar)
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI presentation hierarchy update refused: partial sidebar title."));
+            return false;
+        }
+
+        UBorder* ListFrame = Cast<UBorder>(Tree->FindWidget(TEXT("DiplomacyListFrame")));
+        UBorder* DetailFrame = Cast<UBorder>(Tree->FindWidget(TEXT("DiplomacyDetailFrame")));
+        if (!ListFrame && !DetailFrame)
+        {
+            if (RelationListSize->GetParent() != DiplomacyColumns || RelationDetail->GetParent() != DiplomacyColumns)
+            {
+                UE_LOG(LogTemp, Error, TEXT("PalTRUI presentation hierarchy update refused: diplomacy columns changed."));
+                return false;
+            }
+            DiplomacyColumns->Modify();
+            RelationListSize->Modify();
+            RelationDetail->Modify();
+            DiplomacyColumns->RemoveChild(RelationListSize);
+            DiplomacyColumns->RemoveChild(RelationDetail);
+
+            ListFrame = Tree->ConstructWidget<UBorder>(UBorder::StaticClass(), TEXT("DiplomacyListFrame"));
+            ListFrame->SetContent(RelationListSize);
+            AddHorizontal(DiplomacyColumns, ListFrame, FMargin(0, 0, 10, 0));
+            DetailFrame = Tree->ConstructWidget<UBorder>(UBorder::StaticClass(), TEXT("DiplomacyDetailFrame"));
+            DetailFrame->SetContent(RelationDetail);
+            UHorizontalBoxSlot* DetailSlot = AddHorizontal(DiplomacyColumns, DetailFrame, FMargin(10, 0, 0, 0));
+            DetailSlot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
+            DetailSlot->SetVerticalAlignment(VAlign_Fill);
+        }
+        else if (!ListFrame || !DetailFrame
+            || ListFrame->GetContent() != RelationListSize
+            || DetailFrame->GetContent() != RelationDetail
+            || ListFrame->GetParent() != DiplomacyColumns
+            || DetailFrame->GetParent() != DiplomacyColumns)
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI presentation hierarchy update refused: partial diplomacy frames."));
+            return false;
+        }
+        ListFrame->Modify();
+        DetailFrame->Modify();
+        ListFrame->SetBrushColor(FLinearColor(0.018f, 0.075f, 0.085f, 0.98f));
+        ListFrame->SetPadding(FMargin(14.0f));
+        DetailFrame->SetBrushColor(FLinearColor(0.022f, 0.055f, 0.075f, 0.98f));
+        DetailFrame->SetPadding(FMargin(18.0f));
+
+        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Panel);
+        FKismetEditorUtilities::CompileBlueprint(Panel);
+        if (!SaveAsset(Panel))
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI presentation hierarchy update failed while saving panel."));
+            return false;
+        }
+        UE_LOG(LogTemp, Display, TEXT("PALTR_UI_PRESENTATION_HIERARCHY_OK | header=framed | subtitles=4 | diplomacy=cards"));
+        return true;
+    }
+
     bool UpdatePanelInputShield()
     {
         UWidgetBlueprint* Panel = LoadObject<UWidgetBlueprint>(
@@ -1994,6 +2177,15 @@ namespace PalTRUIAssetBuilder
             TEXT("DashboardColumns"),
             TEXT("DashboardMainColumn"),
             TEXT("DashboardSidebarColumn"),
+            TEXT("HeaderFrame"),
+            TEXT("ClanSubtitleText"),
+            TEXT("DiplomacySubtitleText"),
+            TEXT("AllianceSubtitleText"),
+            TEXT("GuildSubtitleText"),
+            TEXT("DashboardSidebarTitleFrame"),
+            TEXT("DashboardSidebarTitleText"),
+            TEXT("DiplomacyListFrame"),
+            TEXT("DiplomacyDetailFrame"),
             TEXT("ClanNameText"),
             TEXT("ClanSummaryText"),
             TEXT("ClanMembersFrame"),
@@ -2198,6 +2390,11 @@ int32 UPalTRUIAssetBuilderCommandlet::Main(const FString& Params)
     if (FParse::Param(*Params, TEXT("UpdateDashboardColumnLayout")))
     {
         return UpdateDashboardColumnLayout() ? 0 : 22;
+    }
+
+    if (FParse::Param(*Params, TEXT("UpdatePresentationHierarchy")))
+    {
+        return UpdatePresentationHierarchy() ? 0 : 23;
     }
 
     const FString ModActorPackage = FString(AssetRoot) / TEXT("ModActor");
