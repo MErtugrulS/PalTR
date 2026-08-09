@@ -68,9 +68,12 @@ equal(toggle_error, nil, "successful toggle has no renderer error")
 equal(#rendered, 2, "toggle rendered")
 equal(rendered[2], toggled, "toggle model rendered")
 
-local accepted, diplomacy = controller:set_tab("DIPLOMACY")
+local accepted, diplomacy, tab_rendered, tab_error =
+    controller:set_tab("DIPLOMACY")
 equal(accepted, true, "known tab accepted")
 equal(diplomacy.active_tab, "DIPLOMACY", "tab model updated")
+equal(tab_rendered, true, "tab reports renderer success")
+equal(tab_error, nil, "successful tab has no renderer error")
 equal(rendered[#rendered], diplomacy, "tab model rendered")
 
 local snapshot_accepted, populated = controller:apply_snapshot(snapshot())
@@ -134,6 +137,14 @@ local failed_model, failed_rendered, failed_error = failed_renderer:toggle()
 equal(failed_model.open, true, "failed renderer preserves panel state")
 equal(failed_rendered, false, "renderer failure returned")
 equal(failed_error, "renderer failed", "renderer error returned")
+
+local failed_tab_accepted, failed_tab_model,
+    failed_tab_rendered, failed_tab_error =
+    failed_renderer:set_tab("CHAT")
+equal(failed_tab_accepted, true, "failed renderer accepts valid tab")
+equal(failed_tab_model.active_tab, "CHAT", "failed renderer updates tab")
+equal(failed_tab_rendered, false, "tab renderer failure returned")
+equal(failed_tab_error, "renderer failed", "tab renderer error returned")
 
 local transport_missing, transport_error =
     without_renderer:request_action("DECLARE_WAR")

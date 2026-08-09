@@ -58,8 +58,8 @@ end
 
 function PresentationController:set_tab(tab_id)
     local accepted = self.panel:set_tab(tab_id)
-    self:_render()
-    return accepted, self:model()
+    local rendered, render_error = self:_render()
+    return accepted, self:model(), rendered, render_error
 end
 
 function PresentationController:select_guild(guild_key)
