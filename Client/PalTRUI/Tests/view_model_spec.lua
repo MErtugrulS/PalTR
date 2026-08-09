@@ -209,7 +209,20 @@ equal(panel.selected_guild, "guild-alliance", "stale selection is replaced")
 local invalid = snapshot()
 invalid.members = "invalid"
 equal(panel:apply_snapshot(invalid), false, "invalid snapshot shape")
-equal(panel.view_model.error, "Sunucu UI veri sürümü uyumsuz.", "contract error")
+equal(
+    panel.view_model.error,
+    "Sunucu UI verisi geçersiz: members",
+    "contract field error"
+)
+
+local incompatible = snapshot()
+incompatible.schema_version = 2
+equal(panel:apply_snapshot(incompatible), false, "schema mismatch rejected")
+equal(
+    panel.view_model.error,
+    "Sunucu UI veri sürümü uyumsuz.",
+    "schema mismatch error"
+)
 
 local malformed_relation = snapshot({ "invalid" })
 equal(panel:apply_snapshot(malformed_relation), false, "malformed relation rejected")

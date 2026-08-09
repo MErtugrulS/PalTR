@@ -86,8 +86,11 @@ function PanelState:set_tab(tab_id)
 end
 
 function PanelState:apply_snapshot(snapshot)
-    if not Contract.accepts(snapshot) then
-        self.error = "Sunucu UI veri sürümü uyumsuz."
+    local accepted, contract_error = Contract.validate(snapshot)
+    if not accepted then
+        self.error = contract_error == "schema_version"
+            and "Sunucu UI veri sürümü uyumsuz."
+            or "Sunucu UI verisi geçersiz: " .. tostring(contract_error)
         self:_rebuild_view_model()
         return false
     end
