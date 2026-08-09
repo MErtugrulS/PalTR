@@ -1,0 +1,17 @@
+{
+  "FileVersion": 3,
+  "Version": 1,
+  "VersionName": "0.1.0",
+  "FriendlyName": "PalTR UI Asset Builder",
+  "Description": "Editor-only generator for the PalTRUI LogicMod and UMG shell assets.",
+  "Category": "PalTR",
+  "EnabledByDefault": true,
+  "CanContainContent": false,
+  "Modules": [
+    {
+      "Name": "PalTRUIAssetBuilder",
+      "Type": "Editor",
+      "LoadingPhase": "Default"
+    }
+  ]
+}
