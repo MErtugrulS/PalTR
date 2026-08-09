@@ -74,11 +74,11 @@ function PresentationSnapshotProbe.apply(controller)
         return false, nil, "UI sunum controller'i hazir degil."
     end
 
-    local accepted = controller:apply_snapshot(
-        PresentationSnapshotProbe.build()
-    )
-    if accepted ~= true then
-        return false, controller:model(), "Sunum probe snapshoti reddedildi."
+    local accepted, snapshot_model, snapshot_rendered, snapshot_error =
+        controller:apply_snapshot(PresentationSnapshotProbe.build())
+    if accepted ~= true or snapshot_rendered ~= true then
+        return false, snapshot_model,
+            snapshot_error or "Sunum probe snapshoti reddedildi."
     end
 
     local selected, selection_model, selection_rendered, selection_error =

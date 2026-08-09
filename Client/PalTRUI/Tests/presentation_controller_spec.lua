@@ -76,8 +76,11 @@ equal(tab_rendered, true, "tab reports renderer success")
 equal(tab_error, nil, "successful tab has no renderer error")
 equal(rendered[#rendered], diplomacy, "tab model rendered")
 
-local snapshot_accepted, populated = controller:apply_snapshot(snapshot())
+local snapshot_accepted, populated, snapshot_rendered, snapshot_error =
+    controller:apply_snapshot(snapshot())
 equal(snapshot_accepted, true, "snapshot accepted")
+equal(snapshot_rendered, true, "snapshot reports renderer success")
+equal(snapshot_error, nil, "snapshot has no renderer error")
 equal(populated.selected_guild, "guild-other", "relation selected")
 equal(rendered[#rendered], populated, "snapshot model rendered")
 equal(
@@ -158,6 +161,12 @@ equal(failed_tab_accepted, true, "failed renderer accepts valid tab")
 equal(failed_tab_model.active_tab, "CHAT", "failed renderer updates tab")
 equal(failed_tab_rendered, false, "tab renderer failure returned")
 equal(failed_tab_error, "renderer failed", "tab renderer error returned")
+
+local failed_snapshot_accepted, _, failed_snapshot_rendered,
+    failed_snapshot_error = failed_renderer:apply_snapshot(snapshot())
+equal(failed_snapshot_accepted, true, "failed renderer accepts snapshot")
+equal(failed_snapshot_rendered, false, "snapshot renderer failure returned")
+equal(failed_snapshot_error, "renderer failed", "snapshot error returned")
 
 local transport_missing, transport_error =
     without_renderer:request_action("DECLARE_WAR")

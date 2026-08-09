@@ -70,8 +70,8 @@ end
 
 function PresentationController:apply_snapshot(snapshot)
     local accepted = self.panel:apply_snapshot(snapshot)
-    self:_render()
-    return accepted, self:model()
+    local rendered, render_error = self:_render()
+    return accepted, self:model(), rendered, render_error
 end
 
 function PresentationController:set_chat_available(available)
