@@ -684,6 +684,14 @@ local function guild_catalog_view(snapshot)
             #guilds,
             active_count
         ),
+        active_heading_text = string.format(
+            "AKTİF KLANLAR (%d)",
+            active_count
+        ),
+        registered_heading_text = string.format(
+            "KAYITLI KLANLAR (%d)",
+            #guilds - active_count
+        ),
         list_text = empty and empty_message
             or table.concat(lines, "\n"),
         active_text = #active_lines == 0

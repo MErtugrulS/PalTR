@@ -409,6 +409,10 @@ equal(panel.view_model.views.GUILDS.active_count, 1,
     "active guild count")
 equal(panel.view_model.views.GUILDS.registered_count, 1,
     "registered guild count")
+equal(panel.view_model.views.GUILDS.active_heading_text,
+    "AKTİF KLANLAR (1)", "active guild heading count")
+equal(panel.view_model.views.GUILDS.registered_heading_text,
+    "KAYITLI KLANLAR (1)", "registered guild heading count")
 equal(string.find(panel.view_model.views.GUILDS.active_text,
     "Gezginler", 1, true) ~= nil, true, "active guild group")
 equal(string.find(panel.view_model.views.GUILDS.registered_text,

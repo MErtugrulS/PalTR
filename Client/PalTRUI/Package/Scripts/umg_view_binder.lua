@@ -204,7 +204,9 @@ function UMGViewBinder:bind(panel, model)
         { "AllianceDescriptionText", alliance.description_text },
         { "ChatEmptyText", guilds.list_text },
         { "GuildCatalogSummaryText", guilds.summary_text },
+        { "GuildCatalogActiveHeadingText", guilds.active_heading_text },
         { "GuildCatalogActiveText", guilds.active_text },
+        { "GuildCatalogRegisteredHeadingText", guilds.registered_heading_text },
         { "GuildCatalogRegisteredText", guilds.registered_text }
     }
 

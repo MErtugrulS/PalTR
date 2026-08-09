@@ -85,7 +85,9 @@ local names = {
     "AllianceDescriptionText",
     "ChatEmptyText",
     "GuildCatalogSummaryText",
+    "GuildCatalogActiveHeadingText",
     "GuildCatalogActiveText",
+    "GuildCatalogRegisteredHeadingText",
     "GuildCatalogRegisteredText"
 }
 local controls = { switcher }
@@ -331,8 +333,10 @@ local model = {
         GUILDS = {
             empty = false,
             summary_text = "2 klan | 1 aktif",
+            active_heading_text = "AKTİF KLANLAR (1)",
             list_text = "Gezginler | Aktif | 4 uye | 2 cevrimici",
             active_text = "Gezginler | Aktif | 4 uye | 2 cevrimici",
+            registered_heading_text = "KAYITLI KLANLAR (1)",
             registered_text = "Uykudakiler | Kayitli | 3 uye | 0 cevrimici",
             guilds = {
                 { name = "Gezginler", active = true }
@@ -401,8 +405,12 @@ equal(text_values.ChatEmptyText,
     "Gezginler | Aktif | 4 uye | 2 cevrimici", "guild catalog")
 equal(text_values.GuildCatalogSummaryText, "2 klan | 1 aktif",
     "guild catalog summary")
+equal(text_values.GuildCatalogActiveHeadingText, "AKTİF KLANLAR (1)",
+    "active guild heading")
 equal(text_values.GuildCatalogActiveText,
     "Gezginler | Aktif | 4 uye | 2 cevrimici", "active guild catalog")
+equal(text_values.GuildCatalogRegisteredHeadingText,
+    "KAYITLI KLANLAR (1)", "registered guild heading")
 equal(text_values.GuildCatalogRegisteredText,
     "Uykudakiler | Kayitli | 3 uye | 0 cevrimici",
     "registered guild catalog")
