@@ -95,6 +95,19 @@ equal(panel:apply_snapshot(snapshot(relations)), true, "valid snapshot")
 equal(panel.selected_guild, "guild-alliance", "default relation selection")
 equal(panel.view_model.views.CLAN.member_count, 2, "member count")
 equal(panel.view_model.views.CLAN.online_count, 1, "online count")
+equal(panel.view_model.views.CLAN.members[1].role_label, "Lider",
+    "leader presentation role")
+equal(panel.view_model.views.CLAN.members[1].presence_label, "Çevrimiçi",
+    "online presentation state")
+equal(panel.view_model.views.CLAN.members[2].role_label, "Üye",
+    "member presentation role")
+equal(panel.view_model.views.CLAN.members[2].presence_label, "Çevrimdışı",
+    "offline presentation state")
+equal(
+    panel.view_model.views.CLAN.members_text,
+    "Ada | Lider | Çevrimiçi\nBora | Üye | Çevrimdışı",
+    "member renderer text"
+)
 equal(#panel.view_model.views.DIPLOMACY.relations, 3, "diplomacy count")
 equal(#panel.view_model.views.ALLIANCE.relations, 1, "alliance filter")
 equal(panel.view_model.views.ALLIANCE.title_text, relations[1].guild_name,
@@ -231,7 +244,7 @@ equal(pending_panel.view_model.views.CLAN.quick_actions.DashboardOffersButton.ta
     "guild-offer", "pending quick action target guild")
 equal(
     panel.view_model.views.CLAN.members_text,
-    "Ada (cevrimici)\nBora",
+    "Ada | Lider | Çevrimiçi\nBora | Üye | Çevrimdışı",
     "clan members text"
 )
 equal(

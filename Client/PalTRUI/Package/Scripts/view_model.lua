@@ -216,20 +216,32 @@ end
 
 local function member_model(member)
     member = table_or_empty(member)
+    local name = text(member.name)
+    local is_master = member.is_master == true
+    local online = member.online == true
+    local role_label = is_master and "Lider" or "Üye"
+    local presence_label = online and "Çevrimiçi" or "Çevrimdışı"
     return {
         key = text(member.key),
-        name = text(member.name),
+        name = name,
         role = tonumber(member.role) or -1,
-        is_master = member.is_master == true,
-        online = member.online == true
+        is_master = is_master,
+        online = online,
+        role_label = role_label,
+        presence_label = presence_label,
+        display_text = string.format(
+            "%s | %s | %s",
+            name ~= "" and name or "-",
+            role_label,
+            presence_label
+        )
     }
 end
 
 local function member_lines(members)
     local lines = {}
     for _, member in ipairs(members) do
-        local suffix = member.online and " (cevrimici)" or ""
-        table.insert(lines, member.name .. suffix)
+        table.insert(lines, text(member.display_text))
     end
     return table.concat(lines, "\n")
 end
