@@ -133,6 +133,27 @@ equal(text_values.RelationDescriptionText, "Sinir catismasi", "relation detail")
 equal(text_values.AllianceMembersText, "Ittifak yok.", "empty alliance")
 equal(text_values.ChatEmptyText, "Ada: Merhaba", "chat messages")
 
+local converted_values = {}
+local fallback_binder = UMGViewBinder.new({
+    get_text_library = function()
+        return {
+            Conv_StringToText = function(_, value)
+                table.insert(converted_values, value)
+                return "FText:" .. value
+            end
+        }
+    end
+})
+local fallback_bound, fallback_error = fallback_binder:bind(panel, model)
+equal(fallback_bound, true, "Kismet text fallback bound")
+equal(fallback_error, nil, "Kismet text fallback has no error")
+equal(#converted_values > 0, true, "Kismet text fallback used")
+equal(
+    text_values.ClanNameText,
+    "FText:Anka",
+    "Kismet text fallback result passed to widget"
+)
+
 local invalid_model, model_error = binder:bind(panel, nil)
 equal(invalid_model, false, "missing model rejected")
 equal(model_error, "Gorunum modeli bulunamadi.", "model error")

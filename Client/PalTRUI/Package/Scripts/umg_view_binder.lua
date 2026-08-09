@@ -121,15 +121,50 @@ local function join_messages(messages)
     return table.concat(lines, "\n")
 end
 
-local function default_make_text(value)
-    if type(FText) ~= "function" then return nil end
-    return FText(value)
+local function valid_object(object)
+    if object == nil then return false end
+    local checked, valid = pcall(function()
+        return object:IsValid()
+    end)
+    if checked then return valid == true end
+    return true
+end
+
+local function default_get_text_library()
+    local loaded, UEHelpers = pcall(require, "UEHelpers")
+    if not loaded then return nil end
+    local found, library = pcall(UEHelpers.GetKismetTextLibrary)
+    if not found or not valid_object(library) then return nil end
+    return library
+end
+
+local function default_make_text(value, get_text_library)
+    if type(FText) == "function" then
+        local created, unreal_text = pcall(FText, value)
+        if created then return unreal_text end
+    end
+
+    local library = get_text_library()
+    if not valid_object(library) then return nil end
+    local converted, unreal_text = pcall(function()
+        return library:Conv_StringToText(value)
+    end)
+    if not converted then return nil end
+    return unreal_text
 end
 
 function UMGViewBinder.new(dependencies)
     dependencies = type(dependencies) == "table" and dependencies or {}
+    local get_text_library = dependencies.get_text_library
+        or default_get_text_library
+    local make_text = dependencies.make_text
+    if type(make_text) ~= "function" then
+        make_text = function(value)
+            return default_make_text(value, get_text_library)
+        end
+    end
     return setmetatable({
-        make_text = dependencies.make_text or default_make_text
+        make_text = make_text
     }, UMGViewBinder)
 end
 
