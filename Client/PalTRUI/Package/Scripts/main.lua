@@ -1,13 +1,26 @@
 local PresentationController = require("presentation_controller")
+local RendererHost = require("renderer_host")
+local UMGWidgetPort = require("umg_widget_port")
 local UMGProbe = require("umg_probe")
 local ChatReceiveProbe = require("chat_receive_probe")
 
-local presentation = PresentationController.new()
+local presentation = PresentationController.new(
+    RendererHost.new(UMGWidgetPort.new())
+)
 
 print("[PalTRUI] yuklendi\n")
 
 local function toggle_panel()
-    local model = presentation:toggle()
+    local model, rendered, render_error = presentation:toggle()
+    if rendered ~= true then
+        print(string.format(
+            "[PalTRUI] PALTR_UI_F6_ERROR | open=%s | tab=%s | error=%s\n",
+            tostring(model.open),
+            tostring(model.active_tab),
+            tostring(render_error or "bilinmeyen renderer hatasi")
+        ))
+        return
+    end
     print(string.format(
         "[PalTRUI] PALTR_UI_F6_OK | open=%s | tab=%s\n",
         tostring(model.open),

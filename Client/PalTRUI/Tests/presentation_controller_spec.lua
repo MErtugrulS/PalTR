@@ -61,8 +61,10 @@ equal(controller:model().open, false, "initial panel state")
 equal(#rendered, 1, "initial model rendered")
 equal(rendered[1], controller:model(), "renderer receives view model")
 
-local toggled = controller:toggle()
+local toggled, toggled_rendered, toggle_error = controller:toggle()
 equal(toggled.open, true, "toggle returns current model")
+equal(toggled_rendered, true, "toggle reports renderer success")
+equal(toggle_error, nil, "successful toggle has no renderer error")
 equal(#rendered, 2, "toggle rendered")
 equal(rendered[2], toggled, "toggle model rendered")
 
@@ -122,6 +124,16 @@ equal(rendered[#rendered], invalid, "error model rendered")
 
 local without_renderer = PresentationController.new()
 equal(without_renderer:model().active_tab, "CLAN", "renderer is optional")
+
+local failed_renderer = PresentationController.new({
+    render = function()
+        return false, "renderer failed"
+    end
+})
+local failed_model, failed_rendered, failed_error = failed_renderer:toggle()
+equal(failed_model.open, true, "failed renderer preserves panel state")
+equal(failed_rendered, false, "renderer failure returned")
+equal(failed_error, "renderer failed", "renderer error returned")
 
 local transport_missing, transport_error =
     without_renderer:request_action("DECLARE_WAR")

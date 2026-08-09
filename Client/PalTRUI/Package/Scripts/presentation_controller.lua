@@ -5,7 +5,7 @@ local PresentationController = {}
 PresentationController.__index = PresentationController
 
 local null_renderer = {
-    render = function() end
+    render = function() return true end
 }
 
 local null_action_sink = {
@@ -45,13 +45,15 @@ function PresentationController:model()
 end
 
 function PresentationController:_render()
-    self.renderer:render(self:model())
+    local rendered, render_error = self.renderer:render(self:model())
+    if rendered == false then return false, render_error end
+    return true
 end
 
 function PresentationController:toggle()
     self.panel:toggle()
-    self:_render()
-    return self:model()
+    local rendered, render_error = self:_render()
+    return self:model(), rendered, render_error
 end
 
 function PresentationController:set_tab(tab_id)
