@@ -12,7 +12,15 @@ local function equal(actual, expected, label)
 end
 
 local hud = { name = "hud" }
-local controller = { name = "controller" }
+local cursor_calls = {}
+local controller = {
+    name = "controller",
+    bShowMouseCursor = false,
+    SetShowMouseCursor = function(self, visible)
+        table.insert(cursor_calls, visible)
+        self.bShowMouseCursor = visible
+    end
+}
 local panel_class = { name = "WBP_PalTRPanel_C" }
 local create_calls = {}
 local viewport_calls = {}
@@ -80,6 +88,8 @@ equal(create_calls[1].owning_player, controller, "owning player passed")
 equal(viewport_calls[1], UMGWidgetPort.Z_ORDER, "stable viewport order")
 equal(bound_models[1], first_model, "initial model bound before viewport")
 equal(port.last_model, first_model, "open model retained")
+equal(cursor_calls[1], true, "mouse cursor shown on open")
+equal(controller.bShowMouseCursor, true, "mouse cursor is visible")
 
 equal(port:open(first_model), true, "open widget reused")
 equal(#create_calls, 1, "open does not duplicate widget")
@@ -90,6 +100,8 @@ equal(bound_models[2], diplomacy, "updated model bound")
 equal(port.last_model, diplomacy, "updated model retained")
 equal(port:close(), true, "widget closed")
 equal(remove_calls, 1, "widget removed once")
+equal(cursor_calls[2], false, "previous mouse cursor restored on close")
+equal(controller.bShowMouseCursor, false, "mouse cursor is restored")
 equal(port.widget, nil, "widget reference cleared")
 equal(port.last_model, nil, "model reference cleared")
 equal(port:close(), true, "closed widget is idempotent")

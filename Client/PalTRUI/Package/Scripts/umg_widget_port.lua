@@ -23,6 +23,30 @@ local function default_find_object(path)
     return StaticFindObject(path)
 end
 
+local function read_mouse_cursor_state(player_controller)
+    local read, visible = pcall(function()
+        return player_controller.bShowMouseCursor
+    end)
+    if read and type(visible) == "boolean" then return visible end
+    return nil
+end
+
+local function set_mouse_cursor(player_controller, visible)
+    if not valid_object(player_controller) then
+        return false, "PalTR oyuncu controller'i gecersiz."
+    end
+
+    local changed, change_error = pcall(function()
+        player_controller:SetShowMouseCursor(visible)
+    end)
+    if not changed then
+        return false,
+            "PalTR mouse imleci degistirilemedi: "
+                .. tostring(change_error)
+    end
+    return true
+end
+
 function UMGWidgetPort.new(dependencies)
     dependencies = type(dependencies) == "table" and dependencies or {}
     return setmetatable({
@@ -31,7 +55,9 @@ function UMGWidgetPort.new(dependencies)
         view_binder = dependencies.view_binder or UMGViewBinder.new(),
         find_object = dependencies.find_object or default_find_object,
         widget = nil,
-        last_model = nil
+        last_model = nil,
+        player_controller = nil,
+        previous_mouse_cursor = nil
     }, UMGWidgetPort)
 end
 
@@ -75,15 +101,29 @@ function UMGWidgetPort:open(model)
     local bound, bind_error = self.view_binder:bind(widget, model)
     if bound ~= true then return false, bind_error end
 
+    local previous_mouse_cursor =
+        read_mouse_cursor_state(context.player_controller)
+    local cursor_ready, cursor_error =
+        set_mouse_cursor(context.player_controller, true)
+    if cursor_ready ~= true then return false, cursor_error end
+
     local added = pcall(function()
         widget:AddToViewport(UMGWidgetPort.Z_ORDER)
     end)
     if not added then
+        if previous_mouse_cursor ~= nil then
+            set_mouse_cursor(
+                context.player_controller,
+                previous_mouse_cursor
+            )
+        end
         return false, "PalTR paneli viewport'a eklenemedi."
     end
 
     self.widget = widget
     self.last_model = model
+    self.player_controller = context.player_controller
+    self.previous_mouse_cursor = previous_mouse_cursor
     return true
 end
 
@@ -101,6 +141,8 @@ function UMGWidgetPort:close()
     if not valid_object(self.widget) then
         self.widget = nil
         self.last_model = nil
+        self.player_controller = nil
+        self.previous_mouse_cursor = nil
         return true
     end
 
@@ -111,8 +153,20 @@ function UMGWidgetPort:close()
         return false, "PalTR paneli viewport'tan kaldirilamadi."
     end
 
+    local cursor_restored = true
+    local cursor_error = nil
+    if self.previous_mouse_cursor ~= nil then
+        cursor_restored, cursor_error = set_mouse_cursor(
+            self.player_controller,
+            self.previous_mouse_cursor
+        )
+    end
+
     self.widget = nil
     self.last_model = nil
+    self.player_controller = nil
+    self.previous_mouse_cursor = nil
+    if cursor_restored ~= true then return false, cursor_error end
     return true
 end
 
