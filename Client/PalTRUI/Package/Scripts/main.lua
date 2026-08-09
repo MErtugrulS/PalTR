@@ -85,6 +85,19 @@ RegisterKeyBind(Key.F6, function()
     end
 end)
 
+RegisterKeyBind(Key.TAB, function()
+    local function close_open_panel()
+        local model = presentation:model()
+        if type(model) ~= "table" or model.open ~= true then return end
+        toggle_panel()
+    end
+    if type(ExecuteInGameThread) == "function" then
+        ExecuteInGameThread(close_open_panel)
+    else
+        close_open_panel()
+    end
+end)
+
 
 RegisterKeyBind(Key.F7, function()
     print("[PalTRUI][UMG] F7_PROBE_DISABLED | runtime guvenligi\n")
