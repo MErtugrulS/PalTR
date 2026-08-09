@@ -4,6 +4,7 @@
 #include "Blueprint/UserWidget.h"
 #include "Blueprint/WidgetBlueprintGeneratedClass.h"
 #include "Blueprint/WidgetTree.h"
+#include "Brushes/SlateNoResource.h"
 #include "Components/Border.h"
 #include "Components/Button.h"
 #include "Components/CanvasPanel.h"
@@ -1233,6 +1234,79 @@ namespace PalTRUIAssetBuilder
         return true;
     }
 
+    bool UpdatePanelInputShield()
+    {
+        UWidgetBlueprint* Panel = LoadObject<UWidgetBlueprint>(
+            nullptr,
+            TEXT("/Game/Mods/PalTRUI/WBP_PalTRPanel.WBP_PalTRPanel")
+        );
+        if (!Panel || !Panel->WidgetTree)
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI input shield update failed: panel asset missing."));
+            return false;
+        }
+
+        UWidgetTree* Tree = Panel->WidgetTree;
+        UCanvasPanel* Root = Cast<UCanvasPanel>(Tree->FindWidget(TEXT("RootCanvas")));
+        UBorder* Background = Cast<UBorder>(Tree->FindWidget(TEXT("PanelBackground")));
+        UButton* Shield = Cast<UButton>(Tree->FindWidget(TEXT("PanelInputShield")));
+        if (!Root || !Background)
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI input shield update failed: root or background missing."));
+            return false;
+        }
+        if (Shield && Shield->GetContent() == Background
+            && Shield->GetParent() == Root)
+        {
+            UE_LOG(LogTemp, Display, TEXT("PALTR_UI_INPUT_SHIELD_UPDATE_OK | changed=false"));
+            return true;
+        }
+        if (Shield || Background->GetParent() != Root)
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI input shield update refused: partial or unexpected hierarchy."));
+            return false;
+        }
+
+        Panel->Modify();
+        Tree->Modify();
+        Root->Modify();
+        Background->Modify();
+        Root->RemoveChild(Background);
+
+        Shield = Tree->ConstructWidget<UButton>(
+            UButton::StaticClass(),
+            TEXT("PanelInputShield")
+        );
+        FButtonStyle ShieldStyle = Shield->WidgetStyle;
+        const FSlateNoResource EmptyBrush;
+        ShieldStyle.SetNormal(EmptyBrush);
+        ShieldStyle.SetHovered(EmptyBrush);
+        ShieldStyle.SetPressed(EmptyBrush);
+        ShieldStyle.SetDisabled(EmptyBrush);
+        ShieldStyle.SetNormalPadding(FMargin(0.0f));
+        ShieldStyle.SetPressedPadding(FMargin(0.0f));
+        Shield->SetStyle(ShieldStyle);
+        Shield->SetBackgroundColor(FLinearColor::Transparent);
+        Shield->SetColorAndOpacity(FLinearColor::White);
+        Shield->IsFocusable = false;
+        Shield->SetContent(Background);
+
+        UCanvasPanelSlot* ShieldSlot = Root->AddChildToCanvas(Shield);
+        ShieldSlot->SetAnchors(FAnchors(0.5f));
+        ShieldSlot->SetAlignment(FVector2D(0.5f, 0.5f));
+        ShieldSlot->SetSize(FVector2D(1180.0f, 720.0f));
+
+        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Panel);
+        FKismetEditorUtilities::CompileBlueprint(Panel);
+        if (!SaveAsset(Panel))
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI input shield update failed while saving panel."));
+            return false;
+        }
+        UE_LOG(LogTemp, Display, TEXT("PALTR_UI_INPUT_SHIELD_UPDATE_OK | changed=true"));
+        return true;
+    }
+
     bool UpdateClanMembersPanel()
     {
         UWidgetBlueprint* Panel = LoadObject<UWidgetBlueprint>(
@@ -1419,6 +1493,7 @@ namespace PalTRUIAssetBuilder
 
         static const FName RequiredWidgets[] = {
             TEXT("RootCanvas"),
+            TEXT("PanelInputShield"),
             TEXT("PanelBackground"),
             TEXT("TitleText"),
             TEXT("ConnectionStatusText"),
@@ -1609,6 +1684,11 @@ int32 UPalTRUIAssetBuilderCommandlet::Main(const FString& Params)
     if (FParse::Param(*Params, TEXT("UpdateClanMembersPanel")))
     {
         return UpdateClanMembersPanel() ? 0 : 17;
+    }
+
+    if (FParse::Param(*Params, TEXT("UpdatePanelInputShield")))
+    {
+        return UpdatePanelInputShield() ? 0 : 18;
     }
 
     const FString ModActorPackage = FString(AssetRoot) / TEXT("ModActor");

@@ -69,4 +69,9 @@ list in a renderer-facing card with dynamic member-count and presence summary
 controls. It preserves the existing member list control, is idempotent, and
 refuses partial or unexpected widget hierarchies.
 
+Run the commandlet with `-UpdatePanelInputShield` to wrap the complete visual panel
+in a transparent renderer-facing button. The wrapper consumes otherwise-unhandled
+pointer clicks inside the panel bounds without adding gameplay behavior. The
+update is idempotent and refuses partial or unexpected widget hierarchies.
+
 Run the commandlet with `-Verify` to load both generated classes and check the renderer-facing widget names without modifying the assets.
