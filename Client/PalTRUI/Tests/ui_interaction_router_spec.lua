@@ -32,6 +32,11 @@ local current_model = {
                     target_tab = "DIPLOMACY",
                     enabled = false,
                     reason = "Bekleyen teklif yok."
+                },
+                DashboardPendingButton = {
+                    target_tab = "DIPLOMACY",
+                    target_guild = "guild-pending",
+                    enabled = true
                 }
             }
         },
@@ -98,6 +103,18 @@ local controller = {
             step = step
         })
         return true, current_model
+    end,
+    open_relation = function(_, tab_id, guild_key)
+        table.insert(calls, {
+            name = "open_relation",
+            tab_id = tab_id,
+            guild_key = guild_key
+        })
+        return true, {
+            open = true,
+            active_tab = tab_id,
+            selected_guild = guild_key
+        }, true
     end
 }
 local router = UIInteractionRouter.new(controller)
@@ -131,6 +148,16 @@ equal(quick_disabled, false, "disabled dashboard action rejected")
 equal(quick_disabled_rendered, false, "disabled dashboard action not rendered")
 equal(quick_disabled_error, "Bekleyen teklif yok.",
     "disabled dashboard reason")
+
+local pending_handled, pending_model, pending_rendered, pending_error =
+    router:handle("DashboardPendingButton")
+equal(pending_handled, true, "pending dashboard action handled")
+equal(pending_model.selected_guild, "guild-pending",
+    "pending dashboard guild selected")
+equal(pending_rendered, true, "pending dashboard rendered")
+equal(pending_error, nil, "pending dashboard has no error")
+equal(calls[#calls].name, "open_relation",
+    "pending relation opened atomically")
 
 local closed, closed_model, close_rendered =
     router:handle("CloseButton")

@@ -64,6 +64,16 @@ function PresentationController:set_tab(tab_id)
     return accepted, self:model(), rendered, render_error
 end
 
+function PresentationController:open_relation(tab_id, guild_key)
+    local tab_accepted = self.panel:set_tab(tab_id)
+    if tab_accepted ~= true then
+        return false, self:model(), false, self:model().error
+    end
+    local guild_accepted = self.panel:select_guild(guild_key)
+    local rendered, render_error = self:_render()
+    return guild_accepted, self:model(), rendered, render_error
+end
+
 function PresentationController:select_guild(guild_key)
     local accepted = self.panel:select_guild(guild_key)
     local rendered, render_error = self:_render()

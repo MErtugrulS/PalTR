@@ -227,6 +227,8 @@ equal(pending_panel.view_model.views.CLAN.pending_text,
     "pending offer presentation text")
 equal(pending_panel.view_model.views.CLAN.quick_actions.DashboardOffersButton.enabled,
     true, "pending quick action enabled")
+equal(pending_panel.view_model.views.CLAN.quick_actions.DashboardOffersButton.target_guild,
+    "guild-offer", "pending quick action target guild")
 equal(
     panel.view_model.views.CLAN.members_text,
     "Ada (cevrimici)\nBora",

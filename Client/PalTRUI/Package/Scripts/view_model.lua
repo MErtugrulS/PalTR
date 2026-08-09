@@ -470,6 +470,8 @@ local function clan_view(snapshot)
             text_control = definition.text_control,
             label = definition.label,
             target_tab = definition.target_tab,
+            target_guild = definition.requires_pending
+                and text(table_or_empty(pending_offers[1]).guild_key) or "",
             enabled = enabled,
             reason = reason
         }

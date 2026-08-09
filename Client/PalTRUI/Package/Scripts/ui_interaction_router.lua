@@ -88,8 +88,19 @@ function UIInteractionRouter:handle(control_name)
                 return false, dashboard_model, false,
                     tostring(dashboard.reason or "Hizli islem kullanilamaz.")
             end
-            local accepted, target_model, rendered, render_error =
-                self.controller:set_tab(dashboard.target_tab)
+            local target_guild = tostring(dashboard.target_guild or "")
+            local accepted, target_model, rendered, render_error
+            if target_guild ~= ""
+                and type(self.controller.open_relation) == "function" then
+                accepted, target_model, rendered, render_error =
+                    self.controller:open_relation(
+                        dashboard.target_tab,
+                        target_guild
+                    )
+            else
+                accepted, target_model, rendered, render_error =
+                    self.controller:set_tab(dashboard.target_tab)
+            end
             if accepted ~= true or rendered ~= true then
                 return false, target_model, rendered, render_error
             end

@@ -93,6 +93,17 @@ equal(
     "server action preserved"
 )
 
+local render_count_before_open = #rendered
+local opened_relation, opened_model, opened_rendered, opened_error =
+    controller:open_relation("DIPLOMACY", "guild-other")
+equal(opened_relation, true, "relation opened atomically")
+equal(opened_model.active_tab, "DIPLOMACY", "relation target tab")
+equal(opened_model.selected_guild, "guild-other", "relation target guild")
+equal(opened_rendered, true, "opened relation rendered")
+equal(opened_error, nil, "opened relation has no error")
+equal(#rendered, render_count_before_open + 1,
+    "atomic relation open renders once")
+
 local selection_accepted, selected, selection_rendered, selection_error =
     controller:select_guild("guild-other")
 equal(selection_accepted, true, "visible guild selected")
