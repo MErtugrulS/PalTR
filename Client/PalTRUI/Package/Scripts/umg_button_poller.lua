@@ -20,6 +20,7 @@ function UMGButtonPoller.new(options)
             options.resume_after_delayed_ticks
         ) or 8,
         active = false,
+        generation = 0,
         game_thread_pending = false,
         game_thread_callback = nil,
         loop_callback = nil,
@@ -73,11 +74,13 @@ function UMGButtonPoller:start()
     end
 
     self.active = true
+    self.generation = self.generation + 1
+    local generation = self.generation
     self.game_thread_pending = false
     self.delayed_ticks = 0
     self.previous = {}
     self.loop_callback = function()
-        if not self.active then return true end
+        if not self.active or self.generation ~= generation then return true end
         if self.game_thread_pending then
             self.delayed_ticks = self.delayed_ticks + 1
             return false
@@ -85,6 +88,7 @@ function UMGButtonPoller:start()
 
         self.game_thread_pending = true
         self.game_thread_callback = function()
+            if not self.active or self.generation ~= generation then return end
             local delayed_ticks = self.delayed_ticks
             self.game_thread_pending = false
             self.game_thread_callback = nil
@@ -112,6 +116,7 @@ function UMGButtonPoller:start()
 end
 
 function UMGButtonPoller:stop()
+    self.generation = self.generation + 1
     self.active = false
     self.game_thread_pending = false
     self.game_thread_callback = nil

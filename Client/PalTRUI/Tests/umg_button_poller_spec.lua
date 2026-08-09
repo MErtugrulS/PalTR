@@ -101,6 +101,32 @@ equal(deferred_loop(), false, "polling continues after resume")
 equal(execute_count, 2, "next callback queued after resume")
 guarded:stop()
 
+local stale_callback = nil
+local current_loop = nil
+local stale_polls = 0
+local generation_guard = UMGButtonPoller.new({
+    widget_provider = function() return {} end,
+    control_names = {},
+    sampler = {
+        sample = function()
+            stale_polls = stale_polls + 1
+            return true, {}
+        end
+    },
+    router = { handle = function() return true, { open = true } end },
+    schedule_loop = function(_, callback) current_loop = callback end,
+    execute_in_game_thread = function(callback) stale_callback = callback end
+})
+generation_guard:start()
+local first_loop = current_loop
+first_loop()
+generation_guard:stop()
+generation_guard:start()
+stale_callback()
+equal(stale_polls, 0, "stale game-thread callback ignored after restart")
+equal(first_loop(), true, "stale loop generation ends")
+generation_guard:stop()
+
 local unavailable, unavailable_error = UMGButtonPoller.new():start()
 equal(unavailable, false, "missing router rejected")
 equal(unavailable_error, "UI etkilesim router'i hazir degil.",
