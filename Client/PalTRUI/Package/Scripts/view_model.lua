@@ -224,6 +224,19 @@ local function relation_description(relation)
         or "Iliski ayrintisi yok."
 end
 
+local function action_transport_status(action_transport_ready)
+    if action_transport_ready == true then return "" end
+    return "Client-server UI transportu hazir degil."
+end
+
+local function append_status(description, status)
+    description = text(description)
+    status = text(status)
+    if status == "" then return description end
+    if description == "" then return status end
+    return description .. " | " .. status
+end
+
 local function clan_view(snapshot)
     snapshot = table_or_empty(snapshot)
     local guild = table_or_empty(snapshot.guild)
@@ -288,6 +301,9 @@ local function relation_views(snapshot, selected_guild, action_transport_ready)
     local selected_status = table_or_empty(
         table_or_empty(selected_relation).status
     )
+    local transport_status = action_transport_status(
+        action_transport_ready
+    )
     local alliance_empty = #alliance == 0
     local alliance_empty_message = alliance_empty
         and "Aktif veya bekleyen ittifak bulunamadı." or ""
@@ -308,7 +324,10 @@ local function relation_views(snapshot, selected_guild, action_transport_ready)
                 and selected_guild_model.name or "Klan secin",
             state_text = text(selected_status.label) ~= ""
                 and selected_status.label or "Iliski durumu: -",
-            description_text = relation_description(selected_relation)
+            description_text = append_status(
+                relation_description(selected_relation),
+                transport_status
+            )
         },
         alliance = {
             relations = alliance,
@@ -432,7 +451,10 @@ function ViewModel.build(snapshot, panel)
                     or "Sunucu baglantisi bekleniyor")
         },
         capabilities = {
-            action_transport_ready = action_transport_ready
+            action_transport_ready = action_transport_ready,
+            action_transport_status_text = action_transport_status(
+                action_transport_ready
+            )
         },
         player = {
             name = text(player.name),

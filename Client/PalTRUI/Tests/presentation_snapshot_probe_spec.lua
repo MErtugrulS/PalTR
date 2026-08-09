@@ -34,6 +34,11 @@ equal(
     "Client-server UI transportu hazir degil.",
     "probe action transport reason"
 )
+equal(
+    model.views.DIPLOMACY.description_text,
+    "Yerel sunum probu | Client-server UI transportu hazir degil.",
+    "probe transport status is visible"
+)
 equal(model.views.ALLIANCE.empty, false, "probe alliance populated")
 equal(PresentationSnapshotProbe.is_active(model), true, "probe model active")
 equal(PresentationSnapshotProbe.is_active({}), false, "normal model inactive")
