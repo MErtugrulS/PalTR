@@ -143,6 +143,10 @@ local model = {
         },
         DIPLOMACY = {
             empty = false,
+            list_text = "Rakipler | Savas",
+            title_text = "Rakipler",
+            state_text = "Savas",
+            description_text = "Sinir catismasi",
             action_controls = {
                 WarRequestButton = {
                     control = "WarRequestButton",
@@ -176,6 +180,8 @@ local model = {
         ALLIANCE = {
             empty = true,
             empty_message = "Ittifak yok.",
+            summary_text = "0 ittifak kaydi",
+            members_text = "Ittifak yok.",
             relations = {}
         },
         CHAT = {

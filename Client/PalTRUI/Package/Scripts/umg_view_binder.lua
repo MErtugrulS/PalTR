@@ -66,38 +66,6 @@ local function collect_widgets(widget, controls, depth)
     end
 end
 
-local function join_relations(relations)
-    local lines = {}
-    for _, relation in ipairs(table_or_empty(relations)) do
-        relation = table_or_empty(relation)
-        local guild = table_or_empty(relation.guild)
-        local status = table_or_empty(relation.status)
-        table.insert(lines, string.format(
-            "%s | %s",
-            text(guild.name),
-            text(status.label)
-        ))
-    end
-    return table.concat(lines, "\n")
-end
-
-local function relation_description(relation)
-    relation = table_or_empty(relation)
-    local status = table_or_empty(relation.status)
-    local permissions = table_or_empty(relation.permissions)
-    local parts = {}
-    for _, value in ipairs({
-        status.proposal_direction_label,
-        status.note,
-        permissions.reason
-    }) do
-        value = text(value)
-        if value ~= "" then table.insert(parts, value) end
-    end
-    return #parts > 0 and table.concat(parts, " | ")
-        or "Iliski ayrintisi yok."
-end
-
 local function join_messages(messages)
     local lines = {}
     for _, message in ipairs(table_or_empty(messages)) do
@@ -224,9 +192,6 @@ function UMGViewBinder:bind(panel, model)
     local diplomacy = table_or_empty(views.DIPLOMACY)
     local alliance = table_or_empty(views.ALLIANCE)
     local chat = table_or_empty(views.CHAT)
-    local selected = table_or_empty(diplomacy.selected_relation)
-    local selected_guild = table_or_empty(selected.guild)
-    local selected_status = table_or_empty(selected.status)
     local connection = table_or_empty(model.connection)
 
     local bindings = {
@@ -235,21 +200,12 @@ function UMGViewBinder:bind(panel, model)
         { "ClanNameText", clan.name_text },
         { "ClanSummaryText", clan.summary_text },
         { "ClanMembersText", clan.members_text },
-        { "RelationListEmptyText", diplomacy.empty == true
-            and text(diplomacy.empty_message)
-            or join_relations(diplomacy.relations) },
-        { "RelationTitleText", text(selected_guild.name) ~= ""
-            and selected_guild.name or "Klan secin" },
-        { "RelationStateText", text(selected_status.label) ~= ""
-            and selected_status.label or "Iliski durumu: -" },
-        { "RelationDescriptionText", relation_description(selected) },
-        { "AllianceSummaryText", string.format(
-            "%d ittifak kaydi",
-            #table_or_empty(alliance.relations)
-        ) },
-        { "AllianceMembersText", alliance.empty == true
-            and text(alliance.empty_message)
-            or join_relations(alliance.relations) },
+        { "RelationListEmptyText", diplomacy.list_text },
+        { "RelationTitleText", diplomacy.title_text },
+        { "RelationStateText", diplomacy.state_text },
+        { "RelationDescriptionText", diplomacy.description_text },
+        { "AllianceSummaryText", alliance.summary_text },
+        { "AllianceMembersText", alliance.members_text },
         { "ChatEmptyText", chat.empty == true
             and text(chat.empty_message) or join_messages(chat.messages) }
     }

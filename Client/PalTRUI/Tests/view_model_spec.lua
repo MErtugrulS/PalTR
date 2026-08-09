@@ -138,6 +138,21 @@ equal(panel.view_model.tabs[2].active, true, "diplomacy tab active")
 equal(panel.view_model.tabs[2].enabled, false, "active tab disabled")
 
 panel:select_guild("guild-neutral")
+equal(
+    panel.view_model.views.DIPLOMACY.list_text,
+    "Müttefikler | İttifak\nRakipler | Savaş\nTarafsızlar | Tarafsız",
+    "diplomacy list text"
+)
+equal(
+    panel.view_model.views.DIPLOMACY.title_text,
+    "Tarafsızlar",
+    "relation title text"
+)
+equal(
+    panel.view_model.views.DIPLOMACY.state_text,
+    "Tarafsız",
+    "relation state text"
+)
 local action_controls = panel.view_model.views.DIPLOMACY.action_controls
 equal(action_controls.WarRequestButton.enabled, true, "war action enabled")
 equal(

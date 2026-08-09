@@ -184,6 +184,35 @@ local function relation_model(relation, selected_guild)
     }
 end
 
+local function relation_lines(relations)
+    local lines = {}
+    for _, relation in ipairs(relations) do
+        table.insert(lines, string.format(
+            "%s | %s",
+            relation.guild.name,
+            relation.status.label
+        ))
+    end
+    return table.concat(lines, "\n")
+end
+
+local function relation_description(relation)
+    relation = table_or_empty(relation)
+    local status = table_or_empty(relation.status)
+    local permissions = table_or_empty(relation.permissions)
+    local parts = {}
+    for _, value in ipairs({
+        status.proposal_direction_label,
+        status.note,
+        permissions.reason
+    }) do
+        value = text(value)
+        if value ~= "" then table.insert(parts, value) end
+    end
+    return #parts > 0 and table.concat(parts, " | ")
+        or "Iliski ayrintisi yok."
+end
+
 local function clan_view(snapshot)
     snapshot = table_or_empty(snapshot)
     local guild = table_or_empty(snapshot.guild)
@@ -239,19 +268,42 @@ local function relation_views(snapshot, selected_guild)
         end
     end
 
+    local diplomacy_empty = #diplomacy == 0
+    local diplomacy_empty_message = diplomacy_empty
+        and "Diplomasi kaydı bulunamadı." or ""
+    local selected_guild_model = table_or_empty(
+        table_or_empty(selected_relation).guild
+    )
+    local selected_status = table_or_empty(
+        table_or_empty(selected_relation).status
+    )
+    local alliance_empty = #alliance == 0
+    local alliance_empty_message = alliance_empty
+        and "Aktif veya bekleyen ittifak bulunamadı." or ""
+
     return {
         diplomacy = {
             relations = diplomacy,
             selected_relation = selected_relation,
             action_controls = action_control_models(selected_relation),
-            empty = #diplomacy == 0,
-            empty_message = #diplomacy == 0 and "Diplomasi kaydı bulunamadı." or ""
+            empty = diplomacy_empty,
+            empty_message = diplomacy_empty_message,
+            list_text = diplomacy_empty
+                and diplomacy_empty_message or relation_lines(diplomacy),
+            title_text = text(selected_guild_model.name) ~= ""
+                and selected_guild_model.name or "Klan secin",
+            state_text = text(selected_status.label) ~= ""
+                and selected_status.label or "Iliski durumu: -",
+            description_text = relation_description(selected_relation)
         },
         alliance = {
             relations = alliance,
             selected_relation = selected_alliance,
-            empty = #alliance == 0,
-            empty_message = #alliance == 0 and "Aktif veya bekleyen ittifak bulunamadı." or ""
+            empty = alliance_empty,
+            empty_message = alliance_empty_message,
+            summary_text = string.format("%d ittifak kaydi", #alliance),
+            members_text = alliance_empty
+                and alliance_empty_message or relation_lines(alliance)
         }
     }
 end
