@@ -24,13 +24,21 @@ local registry = {
     players = {
         p1 = {
             name = "Ada",
+            uid = "AABB",
             guild_key = "own",
             role = 1,
             is_master = true
+        },
+        p2 = {
+            name = "Ada",
+            uid = "AA-BB",
+            guild_key = "own",
+            role = 1,
+            is_master = false
         }
     },
     runtime_players = {
-        p1 = { online = true }
+        p2 = { online = true }
     },
     runtime_guilds = {
         other = {}
@@ -84,6 +92,7 @@ equal(snapshot.guilds[1].key, "other", "server guild catalog preserved")
 equal(snapshot.guilds[1].active, true, "runtime guild marked active")
 equal(snapshot.guilds[1].member_count, 0, "catalog member count")
 equal(snapshot.members[1].online, true, "server member shape preserved")
+equal(#snapshot.members, 1, "duplicate player uid collapsed")
 equal(snapshot.relations[1].guild_key, "other", "server relation preserved")
 equal(snapshot.relations[1].actions[1].id, "DECLARE_WAR",
     "server action preserved")

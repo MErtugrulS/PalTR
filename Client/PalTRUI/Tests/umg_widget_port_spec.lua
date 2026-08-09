@@ -137,8 +137,8 @@ equal(controller.bShowMouseCursor, true, "mouse cursor is visible")
 equal(input_mode_calls[1].mode, "game_and_ui", "game-and-UI input enabled")
 equal(input_mode_calls[1].player_controller, controller,
     "UI-only input receives controller")
-equal(input_mode_calls[1].focused_widget, widget,
-    "UI-only input focuses panel")
+equal(input_mode_calls[1].focused_widget, nil,
+    "panel leaves keyboard focus with game keybinds")
 equal(input_mode_calls[1].mouse_lock_mode,
     UMGWidgetPort.MOUSE_LOCK_DO_NOT_LOCK, "mouse remains unlocked")
 equal(input_mode_calls[1].flush_input, true, "opening input is flushed")
@@ -156,7 +156,8 @@ equal(refresh_error, nil, "successful input refresh has no error")
 equal(cursor_calls[2], true, "input refresh keeps cursor visible")
 equal(input_mode_calls[2].mode, "game_and_ui",
     "input refresh restores game-and-UI mode")
-equal(input_mode_calls[2].focused_widget, widget, "input refresh refocuses panel")
+equal(input_mode_calls[2].focused_widget, nil,
+    "input refresh preserves game keybind focus")
 
 local diplomacy = { open = true, active_tab = "DIPLOMACY" }
 equal(port:update(diplomacy), true, "open widget accepts update")

@@ -19,20 +19,72 @@ local function proposal_direction(relation, own)
     return "incoming"
 end
 
-local function guild_catalog(registry, own)
-    local counts = {}
-    for player_key, player in pairs(registry.players or {}) do
-        local key = player.guild_key or ""
-        if key ~= "" then
-            local count = counts[key] or { members = 0, online = 0 }
-            count.members = count.members + 1
+local function member_identity(player_key, player)
+    local uid = tostring(player and player.uid or "")
+        :gsub("[^0-9A-Fa-f]", "")
+        :upper()
+    if uid ~= "" and not uid:match("^0+$") then
+        return "uid:" .. uid
+    end
+
+    return "key:" .. tostring(player_key or "")
+end
+
+local function guild_members(registry, guild_key)
+    local unique = {}
+    for player_key, stored in pairs(registry.players or {}) do
+        if stored.guild_key == guild_key then
+            local identity = member_identity(player_key, stored)
             local runtime = registry.runtime_players
                 and registry.runtime_players[player_key]
-            if runtime ~= nil and runtime.online == true then
-                count.online = count.online + 1
+            local online = runtime ~= nil and runtime.online == true
+            local existing = unique[identity]
+            if existing == nil then
+                unique[identity] = {
+                    key = player_key,
+                    name = stored.name or "",
+                    role = stored.role or -1,
+                    is_master = stored.is_master == true,
+                    online = online,
+                    last_seen = tonumber(stored.last_seen) or 0
+                }
+            else
+                existing.is_master = existing.is_master
+                    or stored.is_master == true
+                existing.online = existing.online or online
+                local last_seen = tonumber(stored.last_seen) or 0
+                if online or last_seen > existing.last_seen then
+                    existing.key = player_key
+                    existing.name = stored.name or existing.name
+                    existing.role = stored.role or existing.role
+                    existing.last_seen = last_seen
+                end
             end
-            counts[key] = count
         end
+    end
+
+    local result = {}
+    for _, member in pairs(unique) do
+        member.last_seen = nil
+        table.insert(result, member)
+    end
+    table.sort(result, function(a, b)
+        if a.is_master ~= b.is_master then return a.is_master end
+        if a.online ~= b.online then return a.online end
+        return string.lower(a.name) < string.lower(b.name)
+    end)
+    return result
+end
+
+local function guild_catalog(registry, own)
+    local counts = {}
+    for key in pairs(registry.guilds or {}) do
+        local members = guild_members(registry, key)
+        local online = 0
+        for _, member in ipairs(members) do
+            if member.online then online = online + 1 end
+        end
+        counts[key] = { members = #members, online = online }
     end
 
     local result = {}
@@ -77,24 +129,7 @@ function Snapshot:build(player)
 
     if own == "" then return result end
 
-    for key, stored in pairs(self.registry.players or {}) do
-        if stored.guild_key == own then
-            local runtime = self.registry.runtime_players and self.registry.runtime_players[key]
-            table.insert(result.members, {
-                key = key,
-                name = stored.name or "",
-                role = stored.role or -1,
-                is_master = stored.is_master == true,
-                online = runtime ~= nil and runtime.online == true
-            })
-        end
-    end
-
-    table.sort(result.members, function(a, b)
-        if a.is_master ~= b.is_master then return a.is_master end
-        if a.online ~= b.online then return a.online end
-        return string.lower(a.name) < string.lower(b.name)
-    end)
+    result.members = guild_members(self.registry, own)
 
     for _, relation in ipairs(self.diplomacy:relations_for(own)) do
         local other = relation.guild_a == own and relation.guild_b or relation.guild_a

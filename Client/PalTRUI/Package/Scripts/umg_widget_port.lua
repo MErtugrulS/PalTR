@@ -58,7 +58,7 @@ local function set_ui_input_mode(widget_library, player_controller, widget)
     local changed, change_error = pcall(function()
         widget_library:SetInputMode_GameAndUIEx(
             player_controller,
-            widget,
+            nil,
             UMGWidgetPort.MOUSE_LOCK_DO_NOT_LOCK,
             false,
             true
