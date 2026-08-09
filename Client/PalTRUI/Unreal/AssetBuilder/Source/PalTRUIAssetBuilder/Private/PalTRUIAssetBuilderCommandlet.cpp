@@ -328,6 +328,59 @@ namespace PalTRUIAssetBuilder
         return true;
     }
 
+    bool UpdateGuildCatalogPage()
+    {
+        UWidgetBlueprint* Panel = LoadObject<UWidgetBlueprint>(
+            nullptr,
+            TEXT("/Game/Mods/PalTRUI/WBP_PalTRPanel.WBP_PalTRPanel")
+        );
+        if (!Panel || !Panel->WidgetTree)
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI guild catalog update failed: panel asset missing."));
+            return false;
+        }
+
+        UWidgetTree* Tree = Panel->WidgetTree;
+        UTextBlock* Heading = Cast<UTextBlock>(Tree->FindWidget(TEXT("ChatHeadingText")));
+        UTextBlock* TabText = Cast<UTextBlock>(Tree->FindWidget(TEXT("ChatTabText")));
+        UHorizontalBox* Composer = Cast<UHorizontalBox>(Tree->FindWidget(TEXT("ChatComposer")));
+        if (!Heading || !TabText || !Composer)
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI guild catalog update failed: legacy page hierarchy changed."));
+            return false;
+        }
+
+        const bool AlreadyUpdated =
+            Heading->GetText().ToString() == TEXT("KLANLAR")
+            && TabText->GetText().ToString() == TEXT("Klanlar")
+            && Composer->GetVisibility() == ESlateVisibility::Collapsed;
+        if (AlreadyUpdated)
+        {
+            UE_LOG(LogTemp, Display, TEXT("PALTR_UI_GUILD_PAGE_UPDATE_OK | changed=false"));
+            return true;
+        }
+
+        Panel->Modify();
+        Tree->Modify();
+        Heading->Modify();
+        TabText->Modify();
+        Composer->Modify();
+        Heading->SetText(FText::FromString(TEXT("KLANLAR")));
+        TabText->SetText(FText::FromString(TEXT("Klanlar")));
+        Composer->SetVisibility(ESlateVisibility::Collapsed);
+
+        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Panel);
+        FKismetEditorUtilities::CompileBlueprint(Panel);
+        if (!SaveAsset(Panel))
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI guild catalog update failed while saving panel."));
+            return false;
+        }
+
+        UE_LOG(LogTemp, Display, TEXT("PALTR_UI_GUILD_PAGE_UPDATE_OK | changed=true"));
+        return true;
+    }
+
     bool VerifyAssets()
     {
         UBlueprint* ModActor = LoadObject<UBlueprint>(
@@ -420,6 +473,11 @@ int32 UPalTRUIAssetBuilderCommandlet::Main(const FString& Params)
     if (FParse::Param(*Params, TEXT("UpdateRelationNavigation")))
     {
         return UpdateRelationNavigation() ? 0 : 6;
+    }
+
+    if (FParse::Param(*Params, TEXT("UpdateGuildCatalogPage")))
+    {
+        return UpdateGuildCatalogPage() ? 0 : 7;
     }
 
     const FString ModActorPackage = FString(AssetRoot) / TEXT("ModActor");

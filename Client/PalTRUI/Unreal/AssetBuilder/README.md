@@ -14,4 +14,10 @@ panel in place with the renderer-facing `PreviousRelationButton` and
 `NextRelationButton` controls. The update is idempotent and refuses partial
 or unexpected widget hierarchies.
 
+Run the commandlet with `-UpdateGuildCatalogPage` to reuse the postponed
+chat page as the renderer-facing guild catalog page. The update changes the
+visible heading and tab defaults to `Klanlar` and collapses the unused chat
+composer without renaming renderer controls. It is idempotent and refuses an
+unexpected legacy page hierarchy.
+
 Run the commandlet with `-Verify` to load both generated classes and check the renderer-facing widget names without modifying the assets.
