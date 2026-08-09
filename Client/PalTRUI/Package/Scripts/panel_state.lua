@@ -52,17 +52,42 @@ local function first_relation_key(relations, tab_id)
     return ""
 end
 
+local function active_guild_exists(guilds, guild_key)
+    for _, guild in ipairs(guilds or {}) do
+        if type(guild) == "table"
+            and guild.active == true
+            and tostring(guild.key or "") == guild_key then
+            return true
+        end
+    end
+    return false
+end
+
+local function first_active_guild_key(guilds)
+    for _, guild in ipairs(guilds or {}) do
+        if type(guild) == "table" and guild.active == true then
+            return tostring(guild.key or "")
+        end
+    end
+    return ""
+end
+
 function PanelState:_normalize_relation_selection()
     local relations = self.snapshot and self.snapshot.relations or {}
+    local guilds = self.snapshot and self.snapshot.guilds or {}
     if not relation_exists(
         relations,
         self.selected_guild,
         self.active_tab
-    ) then
+    ) and not (self.active_tab == "DIPLOMACY"
+        and active_guild_exists(guilds, self.selected_guild)) then
         self.selected_guild = first_relation_key(
             relations,
             self.active_tab
         )
+        if self.selected_guild == "" and self.active_tab == "DIPLOMACY" then
+            self.selected_guild = first_active_guild_key(guilds)
+        end
     end
 end
 
@@ -106,7 +131,10 @@ end
 function PanelState:select_guild(guild_key)
     local requested = tostring(guild_key or "")
     local relations = self.snapshot and self.snapshot.relations or {}
-    if not relation_exists(relations, requested, self.active_tab) then
+    local guilds = self.snapshot and self.snapshot.guilds or {}
+    if not relation_exists(relations, requested, self.active_tab)
+        and not (self.active_tab == "DIPLOMACY"
+            and active_guild_exists(guilds, requested)) then
         self.error = "Seçilen klan bu sekmede bulunamadı."
         self:_rebuild_view_model()
         return false

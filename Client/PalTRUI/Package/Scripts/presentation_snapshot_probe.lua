@@ -37,6 +37,15 @@ function PresentationSnapshotProbe.build()
                 online = false
             }
         },
+        guilds = {
+            {
+                key = "probe-active",
+                name = "Gezginler",
+                member_count = 4,
+                online_count = 2,
+                active = true
+            }
+        },
         relations = {
             {
                 guild_key = "probe-alliance",

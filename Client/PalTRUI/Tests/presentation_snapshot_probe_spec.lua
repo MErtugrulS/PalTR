@@ -58,11 +58,11 @@ local selected_next, next_model, next_error =
     PresentationSnapshotProbe.select_next(cycle_controller)
 equal(selected_next, true, "next relation selected")
 equal(next_error, nil, "next relation has no error")
-equal(next_model.selected_guild, "probe-alliance", "relation wraps")
-equal(next_model.views.DIPLOMACY.title_text, "Müttefikler",
+equal(next_model.selected_guild, "probe-active", "relation wraps")
+equal(next_model.views.DIPLOMACY.title_text, "Gezginler",
     "selected relation rendered")
 equal(next_model.views.DIPLOMACY.list_text,
-    "> Müttefikler | İttifak\n  Tarafsızlar | Tarafsız",
+    "> Gezginler | Tarafsız\n  Müttefikler | İttifak\n  Tarafsızlar | Tarafsız",
     "selected relation marked")
 
 local rejected, _, rejection = PresentationSnapshotProbe.apply()

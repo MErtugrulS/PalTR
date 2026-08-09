@@ -248,6 +248,35 @@ equal(
     "malformed relation does not reach presentation"
 )
 
+local catalog_snapshot = snapshot({ relations[1] })
+catalog_snapshot.guilds = {
+    {
+        key = "guild-active",
+        name = "Gezginler",
+        member_count = 4,
+        online_count = 2,
+        active = true
+    },
+    {
+        key = "guild-inactive",
+        name = "Uykudakiler",
+        member_count = 3,
+        online_count = 0,
+        active = false
+    }
+}
+equal(panel:apply_snapshot(catalog_snapshot), true, "guild catalog accepted")
+equal(#panel.view_model.views.DIPLOMACY.relations, 2,
+    "active guild added to diplomacy presentation")
+equal(panel:select_guild("guild-active"), true,
+    "active guild can be selected")
+equal(panel.view_model.views.DIPLOMACY.selected_relation.status.id,
+    "NEUTRAL", "active guild defaults to neutral presentation")
+equal(panel.view_model.views.DIPLOMACY.selected_relation.permissions.can_manage,
+    false, "catalog guild does not infer permissions")
+equal(panel:select_guild("guild-inactive"), false,
+    "inactive guild is not selectable")
+
 panel:set_chat_available(true)
 equal(panel:append_chat({
     id = "message-1",

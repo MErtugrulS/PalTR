@@ -41,6 +41,9 @@ function Contract.validate(snapshot)
     end
     if type(snapshot.player) ~= "table" then return false, "player" end
     if type(snapshot.guild) ~= "table" then return false, "guild" end
+    if snapshot.guilds ~= nil and type(snapshot.guilds) ~= "table" then
+        return false, "guilds"
+    end
     if type(snapshot.members) ~= "table" then return false, "members" end
     if type(snapshot.relations) ~= "table" then return false, "relations" end
 
@@ -53,6 +56,17 @@ function Contract.validate(snapshot)
     if not optional_type(snapshot.guild, "key", "string")
         or not optional_type(snapshot.guild, "name", "string") then
         return false, "guild.fields"
+    end
+
+    for _, guild in ipairs(snapshot.guilds or {}) do
+        if type(guild) ~= "table"
+            or not optional_type(guild, "key", "string")
+            or not optional_type(guild, "name", "string")
+            or not optional_type(guild, "member_count", "number")
+            or not optional_type(guild, "online_count", "number")
+            or not optional_type(guild, "active", "boolean") then
+            return false, "guilds.item"
+        end
     end
 
     for _, member in ipairs(snapshot.members) do

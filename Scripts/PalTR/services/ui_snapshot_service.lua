@@ -19,6 +19,45 @@ local function proposal_direction(relation, own)
     return "incoming"
 end
 
+local function guild_catalog(registry, own)
+    local counts = {}
+    for player_key, player in pairs(registry.players or {}) do
+        local key = player.guild_key or ""
+        if key ~= "" then
+            local count = counts[key] or { members = 0, online = 0 }
+            count.members = count.members + 1
+            local runtime = registry.runtime_players
+                and registry.runtime_players[player_key]
+            if runtime ~= nil and runtime.online == true then
+                count.online = count.online + 1
+            end
+            counts[key] = count
+        end
+    end
+
+    local result = {}
+    for key, guild in pairs(registry.guilds or {}) do
+        if key ~= own then
+            local count = counts[key] or { members = 0, online = 0 }
+            table.insert(result, {
+                key = key,
+                name = guild.name or key,
+                member_count = count.members,
+                online_count = count.online,
+                active = (registry.runtime_guilds
+                    and registry.runtime_guilds[key] ~= nil)
+                    or count.online > 0
+            })
+        end
+    end
+
+    table.sort(result, function(a, b)
+        if a.active ~= b.active then return a.active end
+        return string.lower(a.name) < string.lower(b.name)
+    end)
+    return result
+end
+
 function Snapshot:build(player)
     local own = player and player.guild_key or ""
     local result = {
@@ -31,6 +70,7 @@ function Snapshot:build(player)
             is_master = player and player.is_master == true or false
         },
         guild = { key = own, name = guild_name(self.registry, own) },
+        guilds = guild_catalog(self.registry, own),
         members = {},
         relations = {}
     }

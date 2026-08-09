@@ -225,6 +225,47 @@ local function relation_model(relation, selected_guild)
     }
 end
 
+local function presentation_relations(snapshot)
+    local result = {}
+    local known = {}
+
+    for _, relation in ipairs(table_or_empty(snapshot.relations)) do
+        table.insert(result, relation)
+        if type(relation) == "table" then
+            known[text(relation.guild_key)] = true
+        end
+    end
+
+    for _, guild in ipairs(table_or_empty(snapshot.guilds)) do
+        guild = table_or_empty(guild)
+        local key = text(guild.key)
+        if guild.active == true and key ~= "" and not known[key] then
+            table.insert(result, {
+                guild_key = key,
+                guild_name = text(guild.name),
+                state = "NEUTRAL",
+                previous_state = "NEUTRAL",
+                proposal_direction = "none",
+                note = string.format(
+                    "%d uye | %d cevrimici",
+                    tonumber(guild.member_count) or 0,
+                    tonumber(guild.online_count) or 0
+                ),
+                can_manage = false,
+                action_reason = "Diplomasi kaydi henuz olusmadi.",
+                actions = {}
+            })
+            known[key] = true
+        end
+    end
+
+    table.sort(result, function(a, b)
+        return string.lower(text(table_or_empty(a).guild_name))
+            < string.lower(text(table_or_empty(b).guild_name))
+    end)
+    return result
+end
+
 local function relation_lines(relations)
     local lines = {}
     for _, relation in ipairs(relations) do
@@ -312,7 +353,7 @@ local function relation_views(snapshot, selected_guild, action_transport_ready)
     local selected_relation = nil
     local selected_alliance = nil
 
-    for _, relation in ipairs(table_or_empty(snapshot.relations)) do
+    for _, relation in ipairs(presentation_relations(snapshot)) do
         local item = relation_model(relation, selected_guild)
         table.insert(diplomacy, item)
 

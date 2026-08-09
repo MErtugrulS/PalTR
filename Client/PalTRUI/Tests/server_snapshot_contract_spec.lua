@@ -31,6 +31,9 @@ local registry = {
     },
     runtime_players = {
         p1 = { online = true }
+    },
+    runtime_guilds = {
+        other = {}
     }
 }
 local diplomacy = {
@@ -77,6 +80,9 @@ equal(contract_error, nil, "server snapshot has no contract error")
 equal(snapshot.schema_version, Contract.SCHEMA_VERSION, "schema versions match")
 equal(snapshot.generated_at, 500, "server timestamp preserved")
 equal(snapshot.guild.name, "Anka", "server guild preserved")
+equal(snapshot.guilds[1].key, "other", "server guild catalog preserved")
+equal(snapshot.guilds[1].active, true, "runtime guild marked active")
+equal(snapshot.guilds[1].member_count, 0, "catalog member count")
 equal(snapshot.members[1].online, true, "server member shape preserved")
 equal(snapshot.relations[1].guild_key, "other", "server relation preserved")
 equal(snapshot.relations[1].actions[1].id, "DECLARE_WAR",
