@@ -27,18 +27,18 @@ local function snapshot(relations)
         },
         members = {
             {
-                key = "player-1",
-                name = "Ada",
-                role = 1,
-                is_master = true,
-                online = true
-            },
-            {
                 key = "player-2",
                 name = "Bora",
                 role = 0,
                 is_master = false,
                 online = false
+            },
+            {
+                key = "player-1",
+                name = "Ada",
+                role = 1,
+                is_master = true,
+                online = true
             }
         },
         relations = relations or {}
@@ -95,6 +95,8 @@ equal(panel:apply_snapshot(snapshot(relations)), true, "valid snapshot")
 equal(panel.selected_guild, "guild-alliance", "default relation selection")
 equal(panel.view_model.views.CLAN.member_count, 2, "member count")
 equal(panel.view_model.views.CLAN.online_count, 1, "online count")
+equal(panel.view_model.views.CLAN.members[1].name, "Ada",
+    "leader sorted before snapshot order")
 equal(panel.view_model.views.CLAN.members[1].role_label, "Lider",
     "leader presentation role")
 equal(panel.view_model.views.CLAN.members[1].presence_label, "Çevrimiçi",

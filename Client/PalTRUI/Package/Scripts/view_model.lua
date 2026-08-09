@@ -246,6 +246,21 @@ local function member_lines(members)
     return table.concat(lines, "\n")
 end
 
+local function sort_members(members)
+    table.sort(members, function(left, right)
+        if left.is_master ~= right.is_master then
+            return left.is_master == true
+        end
+        if left.online ~= right.online then
+            return left.online == true
+        end
+        local left_name = string.lower(text(left.name))
+        local right_name = string.lower(text(right.name))
+        if left_name ~= right_name then return left_name < right_name end
+        return text(left.key) < text(right.key)
+    end)
+end
+
 local function relation_model(relation, selected_guild)
     relation = table_or_empty(relation)
     local state = text(relation.state)
@@ -375,6 +390,7 @@ local function clan_view(snapshot)
             leader_name = item.name
         end
     end
+    sort_members(members)
 
     local war_count = 0
     local alliance_count = 0
