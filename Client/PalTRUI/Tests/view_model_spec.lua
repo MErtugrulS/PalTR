@@ -116,6 +116,17 @@ equal(
     "Sunucu snapshoti hazir",
     "snapshot connection text"
 )
+equal(panel.view_model.views.CLAN.name_text, "Anka", "clan name text")
+equal(
+    panel.view_model.views.CLAN.summary_text,
+    "2 uye | 1 cevrimici",
+    "clan summary text"
+)
+equal(
+    panel.view_model.views.CLAN.members_text,
+    "Ada (cevrimici)\nBora",
+    "clan members text"
+)
 equal(panel.view_model.tabs[1].control, "ClanTabButton", "clan tab control")
 equal(panel.view_model.tabs[1].enabled, true, "inactive tab enabled")
 equal(

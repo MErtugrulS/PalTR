@@ -133,6 +133,9 @@ local model = {
             member_count = 2,
             online_count = 1,
             empty = false,
+            name_text = "Anka",
+            summary_text = "2 uye | 1 cevrimici",
+            members_text = "Ada (cevrimici)\nBora",
             members = {
                 { name = "Ada", online = true },
                 { name = "Bora", online = false }

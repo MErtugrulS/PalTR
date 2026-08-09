@@ -66,16 +66,6 @@ local function collect_widgets(widget, controls, depth)
     end
 end
 
-local function join_members(members)
-    local lines = {}
-    for _, member in ipairs(table_or_empty(members)) do
-        member = table_or_empty(member)
-        local suffix = member.online == true and " (cevrimici)" or ""
-        table.insert(lines, text(member.name) .. suffix)
-    end
-    return table.concat(lines, "\n")
-end
-
 local function join_relations(relations)
     local lines = {}
     for _, relation in ipairs(table_or_empty(relations)) do
@@ -237,22 +227,14 @@ function UMGViewBinder:bind(panel, model)
     local selected = table_or_empty(diplomacy.selected_relation)
     local selected_guild = table_or_empty(selected.guild)
     local selected_status = table_or_empty(selected.status)
-    local clan_guild = table_or_empty(clan.guild)
-
     local connection = table_or_empty(model.connection)
 
     local bindings = {
         { "TitleText", "PalTR" },
         { "ConnectionStatusText", connection.status_text },
-        { "ClanNameText", text(clan_guild.name) ~= ""
-            and clan_guild.name or "Klan bilgisi bekleniyor" },
-        { "ClanSummaryText", string.format(
-            "%d uye | %d cevrimici",
-            tonumber(clan.member_count) or 0,
-            tonumber(clan.online_count) or 0
-        ) },
-        { "ClanMembersText", clan.empty == true
-            and text(clan.empty_message) or join_members(clan.members) },
+        { "ClanNameText", clan.name_text },
+        { "ClanSummaryText", clan.summary_text },
+        { "ClanMembersText", clan.members_text },
         { "RelationListEmptyText", diplomacy.empty == true
             and text(diplomacy.empty_message)
             or join_relations(diplomacy.relations) },

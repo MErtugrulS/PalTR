@@ -146,6 +146,15 @@ local function member_model(member)
     }
 end
 
+local function member_lines(members)
+    local lines = {}
+    for _, member in ipairs(members) do
+        local suffix = member.online and " (cevrimici)" or ""
+        table.insert(lines, member.name .. suffix)
+    end
+    return table.concat(lines, "\n")
+end
+
 local function relation_model(relation, selected_guild)
     relation = table_or_empty(relation)
     local state = text(relation.state)
@@ -187,16 +196,28 @@ local function clan_view(snapshot)
         if item.online then online_count = online_count + 1 end
     end
 
+    local guild_name = text(guild.name)
+    local empty = #members == 0
+    local empty_message = empty and "Klan üyesi bulunamadı." or ""
+
     return {
         guild = {
             key = text(guild.key),
-            name = text(guild.name)
+            name = guild_name
         },
         members = members,
         member_count = #members,
         online_count = online_count,
-        empty = #members == 0,
-        empty_message = #members == 0 and "Klan üyesi bulunamadı." or ""
+        empty = empty,
+        empty_message = empty_message,
+        name_text = guild_name ~= ""
+            and guild_name or "Klan bilgisi bekleniyor",
+        summary_text = string.format(
+            "%d uye | %d cevrimici",
+            #members,
+            online_count
+        ),
+        members_text = empty and empty_message or member_lines(members)
     }
 end
 
