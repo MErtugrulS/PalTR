@@ -4,6 +4,7 @@ local UMGWidgetPort = require("umg_widget_port")
 local ChatReceiveProbe = require("chat_receive_probe")
 local UIInteractionRouter = require("ui_interaction_router")
 local PresentationSnapshotProbe = require("presentation_snapshot_probe")
+local RelationNavigator = require("relation_navigator")
 local SnapshotInbox = require("snapshot_inbox")
 local UMGButtonPoller = require("umg_button_poller")
 
@@ -101,6 +102,42 @@ end
 
 RegisterKeyBind(Key.TAB, close_panel_keybind)
 RegisterKeyBind(Key.ESCAPE, close_panel_keybind)
+
+local function navigate_relation(step)
+    local model = presentation:model()
+    if type(model) ~= "table" or model.open ~= true then return end
+    if model.active_tab ~= "DIPLOMACY"
+        and model.active_tab ~= "ALLIANCE" then return end
+
+    local navigated, selected_model, navigation_error =
+        RelationNavigator.select(presentation, step)
+    if navigated ~= true then
+        print(string.format(
+            "[PalTRUI] PALTR_UI_RELATION_NAV_ERROR | error=%s\n",
+            tostring(navigation_error or "bilinmeyen gezinme hatasi")
+        ))
+        return
+    end
+    print(string.format(
+        "[PalTRUI] PALTR_UI_RELATION_NAV_OK | tab=%s | guild=%s\n",
+        tostring(selected_model.active_tab),
+        tostring(selected_model.selected_guild)
+    ))
+end
+
+local function relation_keybind(step)
+    return function()
+        local callback = function() navigate_relation(step) end
+        if type(ExecuteInGameThread) == "function" then
+            ExecuteInGameThread(callback)
+        else
+            callback()
+        end
+    end
+end
+
+RegisterKeyBind(Key.UP_ARROW, relation_keybind(-1))
+RegisterKeyBind(Key.DOWN_ARROW, relation_keybind(1))
 
 
 RegisterKeyBind(Key.F7, function()
