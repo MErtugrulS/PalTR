@@ -77,6 +77,8 @@ local outbox = ActionOutbox.new({
 local controller = PresentationController.new(nil, outbox)
 local received, model = SnapshotInbox.new(controller):receive(snapshot)
 equal(received, true, "server snapshot enters client inbox")
+equal(model.capabilities.action_transport_ready, true,
+    "server pipeline exposes action transport capability")
 equal(model.selected_guild, "other", "server relation selected")
 equal(
     model.views.DIPLOMACY.action_controls.WarRequestButton.enabled,

@@ -86,7 +86,7 @@ local relations = {
     }
 }
 
-local panel = PanelState.new()
+local panel = PanelState.new({ action_transport_ready = true })
 equal(panel.view_model.active_tab, "CLAN", "default tab")
 equal(panel.view_model.views.CHAT.available, false, "chat transport")
 equal(panel.view_model.views.CHAT.message_count, 0, "empty chat")

@@ -22,16 +22,20 @@ end
 local function action_sink_or_null(action_sink)
     if type(action_sink) == "table"
         and type(action_sink.dispatch) == "function" then
-        return action_sink
+        return action_sink, true
     end
-    return null_action_sink
+    return null_action_sink, false
 end
 
 function PresentationController.new(renderer, action_sink)
+    local resolved_action_sink, action_transport_ready =
+        action_sink_or_null(action_sink)
     local controller = setmetatable({
-        panel = PanelState.new(),
+        panel = PanelState.new({
+            action_transport_ready = action_transport_ready
+        }),
         renderer = renderer_or_null(renderer),
-        action_sink = action_sink_or_null(action_sink)
+        action_sink = resolved_action_sink
     }, PresentationController)
     controller:_render()
     return controller

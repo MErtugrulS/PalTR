@@ -104,7 +104,7 @@ local function copy_actions(source)
     return result
 end
 
-local function action_control_models(relation)
+local function action_control_models(relation, action_transport_ready)
     relation = table_or_empty(relation)
     local permissions = table_or_empty(relation.permissions)
     local offered = {}
@@ -117,10 +117,15 @@ local function action_control_models(relation)
     for _, definition in ipairs(action_control_definitions) do
         local action = offered[definition.action_id]
         local label = action and text(action.label) or ""
-        local enabled = permissions.can_manage == true and action ~= nil
+        local enabled = action_transport_ready == true
+            and permissions.can_manage == true and action ~= nil
         local reason = ""
         if not enabled then
-            reason = text(permissions.reason)
+            if action_transport_ready ~= true then
+                reason = "Client-server UI transportu hazir degil."
+            else
+                reason = text(permissions.reason)
+            end
             if reason == "" then
                 reason = action == nil
                     and "Aksiyon güncel snapshotta sunulmuyor."
@@ -256,7 +261,7 @@ local function clan_view(snapshot)
     }
 end
 
-local function relation_views(snapshot, selected_guild)
+local function relation_views(snapshot, selected_guild, action_transport_ready)
     local diplomacy = {}
     local alliance = {}
     local selected_relation = nil
@@ -291,7 +296,10 @@ local function relation_views(snapshot, selected_guild)
         diplomacy = {
             relations = diplomacy,
             selected_relation = selected_relation,
-            action_controls = action_control_models(selected_relation),
+            action_controls = action_control_models(
+                selected_relation,
+                action_transport_ready
+            ),
             empty = diplomacy_empty,
             empty_message = diplomacy_empty_message,
             list_text = diplomacy_empty
@@ -395,7 +403,12 @@ function ViewModel.build(snapshot, panel)
     local schema_version = tonumber(snapshot.schema_version) or 0
     local panel_error = text(panel.error)
     local clan = clan_view(snapshot)
-    local relation_data = relation_views(snapshot, selected_guild)
+    local action_transport_ready = panel.action_transport_ready == true
+    local relation_data = relation_views(
+        snapshot,
+        selected_guild,
+        action_transport_ready
+    )
     local chat = chat_view(panel.chat)
     local views = {
         CLAN = clan,
@@ -417,6 +430,9 @@ function ViewModel.build(snapshot, panel)
                 or (schema_version > 0
                     and "Sunucu snapshoti hazir"
                     or "Sunucu baglantisi bekleniyor")
+        },
+        capabilities = {
+            action_transport_ready = action_transport_ready
         },
         player = {
             name = text(player.name),

@@ -58,6 +58,8 @@ local action_sink = {
 
 local controller = PresentationController.new(renderer, action_sink)
 equal(controller:model().open, false, "initial panel state")
+equal(controller:model().capabilities.action_transport_ready, true,
+    "injected action sink enables transport capability")
 equal(#rendered, 1, "initial model rendered")
 equal(rendered[1], controller:model(), "renderer receives view model")
 
@@ -143,6 +145,8 @@ equal(rendered[#rendered], invalid, "error model rendered")
 
 local without_renderer = PresentationController.new()
 equal(without_renderer:model().active_tab, "CLAN", "renderer is optional")
+equal(without_renderer:model().capabilities.action_transport_ready, false,
+    "missing action sink disables transport capability")
 
 local failed_renderer = PresentationController.new({
     render = function()

@@ -5,7 +5,8 @@ local ChatState = require("chat_state")
 local PanelState = {}
 PanelState.__index = PanelState
 
-function PanelState.new()
+function PanelState.new(options)
+    options = type(options) == "table" and options or {}
     local state = setmetatable({
         open = false,
         active_tab = Contract.DEFAULT_TAB,
@@ -13,7 +14,8 @@ function PanelState.new()
         snapshot = nil,
         chat = ChatState.new(),
         view_model = nil,
-        error = ""
+        error = "",
+        action_transport_ready = options.action_transport_ready == true
     }, PanelState)
     state:_rebuild_view_model()
     return state

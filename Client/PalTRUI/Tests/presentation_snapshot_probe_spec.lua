@@ -23,10 +23,17 @@ equal(apply_error, nil, "presentation snapshot has no error")
 equal(model.active_tab, "DIPLOMACY", "probe opens diplomacy")
 equal(model.selected_guild, "probe-neutral", "probe relation selected")
 equal(model.views.CLAN.member_count, 2, "probe clan members")
+equal(model.capabilities.action_transport_ready, false,
+    "probe action transport unavailable")
 equal(model.views.DIPLOMACY.action_controls.WarRequestButton.enabled,
-    true, "probe war action enabled")
+    false, "probe war action disabled without transport")
 equal(model.views.DIPLOMACY.action_controls.AllianceRequestButton.enabled,
-    true, "probe alliance action enabled")
+    false, "probe alliance action disabled without transport")
+equal(
+    model.views.DIPLOMACY.action_controls.WarRequestButton.reason,
+    "Client-server UI transportu hazir degil.",
+    "probe action transport reason"
+)
 equal(model.views.ALLIANCE.empty, false, "probe alliance populated")
 equal(PresentationSnapshotProbe.is_active(model), true, "probe model active")
 equal(PresentationSnapshotProbe.is_active({}), false, "normal model inactive")
