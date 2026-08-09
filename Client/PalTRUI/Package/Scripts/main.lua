@@ -6,10 +6,9 @@ local UIInteractionRouter = require("ui_interaction_router")
 local PresentationSnapshotProbe = require("presentation_snapshot_probe")
 local SnapshotInbox = require("snapshot_inbox")
 local SnapshotTransport = require("snapshot_transport")
-local UMGButtonPoller = require("umg_button_poller")
+local UMGButtonHookPoller = require("umg_button_hook_poller")
 local ActionOutbox = require("action_outbox")
 local ChatCommandSender = require("chat_command_sender")
-local ApplicationFocusGuard = require("application_focus_guard")
 
 local widget_port = UMGWidgetPort.new()
 local presentation = PresentationController.new(
@@ -38,16 +37,16 @@ local interactive_controls = {
     "RejectButton",
     "CancelButton"
 }
-local button_poller = UMGButtonPoller.new({
+local button_poller = UMGButtonHookPoller.new({
     widget_provider = function() return widget_port.widget end,
     router = interactions,
     control_names = interactive_controls,
-    on_resume = function(delayed_ticks)
+    on_resume = function(resumed_at)
         local refreshed, refresh_error = widget_port:refresh_input()
         print(string.format(
-            "[PalTRUI] PALTR_UI_INPUT_RESUME_%s | delayed_ticks=%s | error=%s\n",
+            "[PalTRUI] PALTR_UI_INPUT_RESUME_%s | resumed_at=%s | error=%s\n",
             refreshed == true and "OK" or "ERROR",
-            tostring(delayed_ticks),
+            tostring(resumed_at),
             tostring(refresh_error or "")
         ))
     end,
@@ -61,32 +60,6 @@ local button_poller = UMGButtonPoller.new({
         ))
     end
 })
-
-local focus_guard_ready, focus_guard_error = ApplicationFocusGuard.register({
-    on_focus_lost = function()
-        button_poller:stop()
-        print("[PalTRUI] PALTR_UI_FOCUS_LOST | poller=stopped\n")
-    end,
-    on_focus_gained = function()
-        local model = presentation:model()
-        if type(model) ~= "table" or model.open ~= true then return end
-        local refreshed, refresh_error = widget_port:refresh_input()
-        if refreshed == true then
-            button_poller:start()
-        end
-        print(string.format(
-            "[PalTRUI] PALTR_UI_FOCUS_GAINED | refreshed=%s | error=%s\n",
-            tostring(refreshed == true),
-            tostring(refresh_error or "")
-        ))
-    end
-})
-if focus_guard_ready ~= true then
-    print(string.format(
-        "[PalTRUI] PALTR_UI_FOCUS_GUARD_ERROR | %s\n",
-        tostring(focus_guard_error or "")
-    ))
-end
 
 ChatReceiveProbe.register(function(frame)
     if frame.kind ~= "SNAPSHOT_CHUNK" then return end
