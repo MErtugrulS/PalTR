@@ -5,6 +5,7 @@
 #include "Blueprint/WidgetBlueprintGeneratedClass.h"
 #include "Blueprint/WidgetTree.h"
 #include "Brushes/SlateNoResource.h"
+#include "Brushes/SlateRoundedBoxBrush.h"
 #include "Components/Border.h"
 #include "Components/Button.h"
 #include "Components/CanvasPanel.h"
@@ -77,11 +78,46 @@ namespace PalTRUIAssetBuilder
         }
 
         Button->Modify();
-        Button->SetBackgroundColor(Color);
+        const FLinearColor Outline(0.32f, 0.68f, 0.72f, 0.95f);
+        const FLinearColor Hover(
+            FMath::Min(Color.R * 1.20f, 1.0f),
+            FMath::Min(Color.G * 1.20f, 1.0f),
+            FMath::Min(Color.B * 1.20f, 1.0f),
+            Color.A
+        );
+        const FLinearColor Pressed(Color.R * 0.82f, Color.G * 0.82f, Color.B * 0.82f, Color.A);
+        FButtonStyle Style = Button->WidgetStyle;
+        Style.SetNormal(FSlateRoundedBoxBrush(Color, 6.0f, Outline, 1.0f));
+        Style.SetHovered(FSlateRoundedBoxBrush(Hover, 6.0f, FLinearColor(0.42f, 0.88f, 0.90f, 1.0f), 1.5f));
+        Style.SetPressed(FSlateRoundedBoxBrush(Pressed, 6.0f, FLinearColor(0.85f, 0.66f, 0.30f, 1.0f), 1.5f));
+        Style.SetDisabled(FSlateRoundedBoxBrush(FLinearColor(0.06f, 0.08f, 0.09f, 0.72f), 6.0f, FLinearColor(0.22f, 0.25f, 0.25f, 0.7f), 1.0f));
+        Style.SetNormalPadding(FMargin(7.0f, 5.0f));
+        Style.SetPressedPadding(FMargin(7.0f, 6.0f, 7.0f, 4.0f));
+        Button->SetStyle(Style);
+        Button->SetBackgroundColor(FLinearColor::White);
         if (UTextBlock* Label = Cast<UTextBlock>(Button->GetContent()))
         {
             Label->Modify();
             Label->SetColorAndOpacity(FSlateColor(FLinearColor(0.95f, 0.88f, 0.70f, 1.0f)));
+        }
+    }
+
+    void StyleRoundedFrame(
+        UWidgetTree* Tree,
+        const FName Name,
+        const FLinearColor Fill,
+        const FLinearColor Outline,
+        const float Radius,
+        const float OutlineWidth,
+        const FMargin Padding
+    )
+    {
+        if (UBorder* Frame = Cast<UBorder>(Tree->FindWidget(Name)))
+        {
+            Frame->Modify();
+            Frame->SetBrush(FSlateRoundedBoxBrush(Fill, Radius, Outline, OutlineWidth));
+            Frame->SetBrushColor(FLinearColor::White);
+            Frame->SetPadding(Padding);
         }
     }
 
@@ -1940,7 +1976,13 @@ namespace PalTRUIAssetBuilder
         // Runtime fallback: the imported ornamental texture may fail to draw on
         // some UE4SS/Palworld builds. Keep the panel independently opaque so
         // gameplay never bleeds through the dashboard.
-        Background->SetBrushColor(FLinearColor(0.008f, 0.025f, 0.045f, 0.995f));
+        Background->SetBrush(FSlateRoundedBoxBrush(
+            FLinearColor(0.008f, 0.025f, 0.045f, 0.995f),
+            12.0f,
+            FLinearColor(0.62f, 0.43f, 0.16f, 0.98f),
+            2.0f
+        ));
+        Background->SetBrushColor(FLinearColor::White);
         Background->SetPadding(FMargin(0));
         if (UButton* InputShield = Cast<UButton>(Tree->FindWidget(TEXT("PanelInputShield"))))
         {
@@ -2197,20 +2239,23 @@ namespace PalTRUIAssetBuilder
             UE_LOG(LogTemp, Error, TEXT("PalTRUI art dashboard update refused: partial lower row."));
             return false;
         }
-        RecentFrame->SetBrushColor(FLinearColor(0.012f, 0.045f, 0.07f, 0.97f));
-
-        HeaderFrame->SetBrushColor(FLinearColor(0.008f, 0.02f, 0.035f, 0.99f));
-        HeaderFrame->SetPadding(FMargin(8.0f, 8.0f));
-        ContentFrame->SetBrushColor(FLinearColor(0.008f, 0.025f, 0.045f, 0.965f));
-        FooterFrame->SetBrushColor(FLinearColor(0.008f, 0.02f, 0.035f, 0.99f));
-        NavigationFrame->SetBrushColor(FLinearColor(0.006f, 0.025f, 0.04f, 0.985f));
-        StyleFrame(Tree, TEXT("DashboardClanCardFrame"), FLinearColor(0.02f, 0.16f, 0.16f, 0.96f), FMargin(14.0f));
-        StyleFrame(Tree, TEXT("DashboardDiplomacyCardFrame"), FLinearColor(0.025f, 0.10f, 0.17f, 0.96f), FMargin(14.0f));
-        StyleFrame(Tree, TEXT("DashboardProtectionCardFrame"), FLinearColor(0.18f, 0.12f, 0.035f, 0.96f), FMargin(14.0f));
-        StyleFrame(Tree, TEXT("DashboardBuildingsCardFrame"), FLinearColor(0.16f, 0.085f, 0.025f, 0.96f), FMargin(14.0f));
-        StyleFrame(Tree, TEXT("DashboardRelationsFrame"), FLinearColor(0.075f, 0.055f, 0.02f, 0.97f), FMargin(14.0f));
-        StyleFrame(Tree, TEXT("PendingOffersFrame"), FLinearColor(0.075f, 0.055f, 0.02f, 0.97f), FMargin(14.0f));
-        StyleFrame(Tree, TEXT("DashboardQuickActionsFrame"), FLinearColor(0.01f, 0.055f, 0.08f, 0.97f), FMargin(14.0f));
+        const FLinearColor GoldEdge(0.62f, 0.43f, 0.16f, 0.96f);
+        const FLinearColor SoftGoldEdge(0.48f, 0.34f, 0.14f, 0.82f);
+        const FLinearColor CyanEdge(0.12f, 0.66f, 0.70f, 0.92f);
+        const FLinearColor BlueEdge(0.17f, 0.48f, 0.66f, 0.90f);
+        StyleRoundedFrame(Tree, TEXT("HeaderFrame"), FLinearColor(0.008f, 0.02f, 0.035f, 0.99f), GoldEdge, 8.0f, 1.5f, FMargin(8.0f));
+        StyleRoundedFrame(Tree, TEXT("ContentFrame"), FLinearColor(0.008f, 0.025f, 0.045f, 0.965f), SoftGoldEdge, 8.0f, 1.0f, FMargin(12.0f));
+        StyleRoundedFrame(Tree, TEXT("FooterFrame"), FLinearColor(0.008f, 0.02f, 0.035f, 0.99f), GoldEdge, 7.0f, 1.25f, FMargin(10.0f, 7.0f));
+        StyleRoundedFrame(Tree, TEXT("LeftNavigationFrame"), FLinearColor(0.006f, 0.025f, 0.04f, 0.985f), GoldEdge, 9.0f, 1.5f, FMargin(14.0f));
+        StyleRoundedFrame(Tree, TEXT("DashboardClanCardFrame"), FLinearColor(0.02f, 0.16f, 0.16f, 0.96f), CyanEdge, 9.0f, 1.5f, FMargin(14.0f));
+        StyleRoundedFrame(Tree, TEXT("DashboardDiplomacyCardFrame"), FLinearColor(0.025f, 0.10f, 0.17f, 0.96f), BlueEdge, 9.0f, 1.5f, FMargin(14.0f));
+        StyleRoundedFrame(Tree, TEXT("DashboardProtectionCardFrame"), FLinearColor(0.18f, 0.12f, 0.035f, 0.96f), GoldEdge, 9.0f, 1.5f, FMargin(14.0f));
+        StyleRoundedFrame(Tree, TEXT("DashboardBuildingsCardFrame"), FLinearColor(0.16f, 0.085f, 0.025f, 0.96f), FLinearColor(0.68f, 0.34f, 0.12f, 0.94f), 9.0f, 1.5f, FMargin(14.0f));
+        StyleRoundedFrame(Tree, TEXT("DashboardRecentEventsFrame"), FLinearColor(0.012f, 0.045f, 0.07f, 0.97f), SoftGoldEdge, 8.0f, 1.0f, FMargin(16.0f));
+        StyleRoundedFrame(Tree, TEXT("DashboardRelationsFrame"), FLinearColor(0.075f, 0.055f, 0.02f, 0.97f), GoldEdge, 8.0f, 1.25f, FMargin(14.0f));
+        StyleRoundedFrame(Tree, TEXT("PendingOffersFrame"), FLinearColor(0.075f, 0.055f, 0.02f, 0.97f), GoldEdge, 8.0f, 1.25f, FMargin(14.0f));
+        StyleRoundedFrame(Tree, TEXT("DashboardQuickActionsFrame"), FLinearColor(0.01f, 0.055f, 0.08f, 0.97f), CyanEdge, 8.0f, 1.25f, FMargin(14.0f));
+        StyleRoundedFrame(Tree, TEXT("DashboardSidebarTitleFrame"), FLinearColor(0.16f, 0.105f, 0.035f, 0.99f), GoldEdge, 7.0f, 1.25f, FMargin(12.0f, 8.0f));
         for (const FName NavigationButton : {
             FName(TEXT("ClanTabButton")),
             FName(TEXT("DiplomacyTabButton")),
@@ -2220,6 +2265,10 @@ namespace PalTRUIAssetBuilder
         {
             StyleButton(Tree, NavigationButton, FLinearColor(0.01f, 0.055f, 0.075f, 0.96f));
         }
+        StyleButton(Tree, TEXT("DashboardDiplomacyButton"), FLinearColor(0.015f, 0.20f, 0.24f, 0.98f));
+        StyleButton(Tree, TEXT("DashboardOffersButton"), FLinearColor(0.015f, 0.16f, 0.20f, 0.98f));
+        StyleButton(Tree, TEXT("DashboardGuildsButton"), FLinearColor(0.015f, 0.16f, 0.20f, 0.98f));
+        StyleButton(Tree, TEXT("CloseButton"), FLinearColor(0.32f, 0.055f, 0.04f, 0.98f));
         if (UTextBlock* Title = Cast<UTextBlock>(Tree->FindWidget(TEXT("TitleText"))))
         {
             Title->SetText(FText::FromString(TEXT("PALTR PANEL")));
