@@ -534,6 +534,71 @@ namespace PalTRUIAssetBuilder
         return true;
     }
 
+    bool UpdatePendingOffersPanel()
+    {
+        UWidgetBlueprint* Panel = LoadObject<UWidgetBlueprint>(
+            nullptr,
+            TEXT("/Game/Mods/PalTRUI/WBP_PalTRPanel.WBP_PalTRPanel")
+        );
+        if (!Panel || !Panel->WidgetTree)
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI pending offers update failed: panel asset missing."));
+            return false;
+        }
+
+        UWidgetTree* Tree = Panel->WidgetTree;
+        UVerticalBox* ClanPage = Cast<UVerticalBox>(Tree->FindWidget(TEXT("ClanPage")));
+        UBorder* Frame = Cast<UBorder>(Tree->FindWidget(TEXT("PendingOffersFrame")));
+        UTextBlock* Heading = Cast<UTextBlock>(Tree->FindWidget(TEXT("PendingOffersHeadingText")));
+        UTextBlock* Offers = Cast<UTextBlock>(Tree->FindWidget(TEXT("PendingOffersText")));
+        if (!ClanPage)
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI pending offers update failed: clan page missing."));
+            return false;
+        }
+        if (Frame && Heading && Offers)
+        {
+            UE_LOG(LogTemp, Display, TEXT("PALTR_UI_PENDING_OFFERS_UPDATE_OK | changed=false"));
+            return true;
+        }
+        if (Frame || Heading || Offers)
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI pending offers update refused: partial controls exist."));
+            return false;
+        }
+
+        Panel->Modify();
+        Tree->Modify();
+        ClanPage->Modify();
+
+        Frame = Tree->ConstructWidget<UBorder>(UBorder::StaticClass(), TEXT("PendingOffersFrame"));
+        Frame->SetBrushColor(FLinearColor(0.07f, 0.055f, 0.025f, 0.94f));
+        Frame->SetPadding(FMargin(14.0f));
+
+        UVerticalBox* Content = Tree->ConstructWidget<UVerticalBox>(
+            UVerticalBox::StaticClass(),
+            TEXT("PendingOffersContent")
+        );
+        Frame->SetContent(Content);
+        Heading = MakeText(Tree, TEXT("PendingOffersHeadingText"), TEXT("BEKLEYEN TEKLİFLER"), 20);
+        Heading->SetColorAndOpacity(FSlateColor(FLinearColor(0.92f, 0.68f, 0.25f, 1.0f)));
+        Offers = MakeText(Tree, TEXT("PendingOffersText"), TEXT("Bekleyen teklif yok."), 16);
+        AddVertical(Content, Heading, FMargin(0, 0, 0, 10));
+        AddVertical(Content, Offers);
+        AddVertical(ClanPage, Frame, FMargin(0, 22, 0, 0));
+
+        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Panel);
+        FKismetEditorUtilities::CompileBlueprint(Panel);
+        if (!SaveAsset(Panel))
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI pending offers update failed while saving panel."));
+            return false;
+        }
+
+        UE_LOG(LogTemp, Display, TEXT("PALTR_UI_PENDING_OFFERS_UPDATE_OK | changed=true"));
+        return true;
+    }
+
     bool VerifyAssets()
     {
         UBlueprint* ModActor = LoadObject<UBlueprint>(
@@ -566,6 +631,9 @@ namespace PalTRUIAssetBuilder
             TEXT("ClanNameText"),
             TEXT("ClanSummaryText"),
             TEXT("ClanMembersText"),
+            TEXT("PendingOffersFrame"),
+            TEXT("PendingOffersHeadingText"),
+            TEXT("PendingOffersText"),
             TEXT("RelationList"),
             TEXT("RelationTitleText"),
             TEXT("RelationStateText"),
@@ -638,6 +706,11 @@ int32 UPalTRUIAssetBuilderCommandlet::Main(const FString& Params)
     if (FParse::Param(*Params, TEXT("UpdateDiplomacyTheme")))
     {
         return UpdateDiplomacyTheme() ? 0 : 8;
+    }
+
+    if (FParse::Param(*Params, TEXT("UpdatePendingOffersPanel")))
+    {
+        return UpdatePendingOffersPanel() ? 0 : 9;
     }
 
     const FString ModActorPackage = FString(AssetRoot) / TEXT("ModActor");
