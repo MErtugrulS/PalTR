@@ -1969,10 +1969,13 @@ namespace PalTRUIAssetBuilder
             UE_LOG(LogTemp, Error, TEXT("PalTRUI art dashboard update refused: partial art overlay."));
             return false;
         }
+        ContentPadding->SetBrushFromTexture(PanelTexture);
+        ContentPadding->SetBrushColor(FLinearColor::White);
         ContentPadding->SetPadding(FMargin(16.0f, 12.0f));
         ArtImage->Modify();
         ArtImage->SetBrushFromTexture(PanelTexture, true);
         ArtImage->SetColorAndOpacity(FLinearColor::White);
+        ArtImage->SetVisibility(ESlateVisibility::Collapsed);
         // Runtime fallback: the imported ornamental texture may fail to draw on
         // some UE4SS/Palworld builds. Keep the panel independently opaque so
         // gameplay never bleeds through the dashboard.
@@ -2002,7 +2005,7 @@ namespace PalTRUIAssetBuilder
         if (!HeaderCrestSpacer)
         {
             HeaderCrestSpacer = Tree->ConstructWidget<USizeBox>(USizeBox::StaticClass(), TEXT("HeaderCrestSpacer"));
-            HeaderCrestSpacer->SetWidthOverride(122.0f);
+            HeaderCrestSpacer->SetWidthOverride(34.0f);
             UHorizontalBoxSlot* CrestSlot = Cast<UHorizontalBoxSlot>(HeaderRow->InsertChildAt(0, HeaderCrestSpacer));
             if (!CrestSlot)
             {
@@ -2015,7 +2018,36 @@ namespace PalTRUIAssetBuilder
             UE_LOG(LogTemp, Error, TEXT("PalTRUI art dashboard update refused: header crest spacer moved."));
             return false;
         }
-        HeaderCrestSpacer->SetWidthOverride(122.0f);
+        HeaderCrestSpacer->SetWidthOverride(34.0f);
+
+        USizeBox* HeaderCrestImageSize = Cast<USizeBox>(Tree->FindWidget(TEXT("HeaderCrestImageSize")));
+        UImage* HeaderCrestImage = Cast<UImage>(Tree->FindWidget(TEXT("HeaderCrestImage")));
+        if (!HeaderCrestImageSize && !HeaderCrestImage)
+        {
+            HeaderCrestImageSize = Tree->ConstructWidget<USizeBox>(USizeBox::StaticClass(), TEXT("HeaderCrestImageSize"));
+            HeaderCrestImageSize->SetWidthOverride(72.0f);
+            HeaderCrestImageSize->SetHeightOverride(70.0f);
+            HeaderCrestImage = Tree->ConstructWidget<UImage>(UImage::StaticClass(), TEXT("HeaderCrestImage"));
+            HeaderCrestImageSize->SetContent(HeaderCrestImage);
+            UHorizontalBoxSlot* CrestImageSlot = Cast<UHorizontalBoxSlot>(HeaderRow->InsertChildAt(0, HeaderCrestImageSize));
+            if (!CrestImageSlot)
+            {
+                UE_LOG(LogTemp, Error, TEXT("PalTRUI art dashboard update failed: header crest image slot."));
+                return false;
+            }
+            CrestImageSlot->SetPadding(FMargin(0, 0, 8, 0));
+            CrestImageSlot->SetVerticalAlignment(VAlign_Center);
+        }
+        else if (!HeaderCrestImageSize || !HeaderCrestImage
+            || HeaderCrestImageSize->GetContent() != HeaderCrestImage
+            || HeaderCrestImageSize->GetParent() != HeaderRow)
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI art dashboard update refused: partial header crest image."));
+            return false;
+        }
+        HeaderCrestImageSize->SetWidthOverride(72.0f);
+        HeaderCrestImageSize->SetHeightOverride(70.0f);
+        HeaderCrestImage->SetBrushFromTexture(ClanIcon, true);
 
         UHorizontalBox* BodyRow = Cast<UHorizontalBox>(Tree->FindWidget(TEXT("PanelBodyRow")));
         USizeBox* NavigationSize = Cast<USizeBox>(Tree->FindWidget(TEXT("LeftNavigationSize")));
@@ -2729,6 +2761,8 @@ namespace PalTRUIAssetBuilder
             TEXT("LeftNavigation"),
             TEXT("LeftNavigationHeadingText"),
             TEXT("HeaderCrestSpacer"),
+            TEXT("HeaderCrestImageSize"),
+            TEXT("HeaderCrestImage"),
             TEXT("DashboardClanIcon"),
             TEXT("DashboardDiplomacyIcon"),
             TEXT("DashboardProtectionCardFrame"),
