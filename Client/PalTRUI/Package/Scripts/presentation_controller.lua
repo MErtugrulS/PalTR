@@ -1,5 +1,6 @@
 local PanelState = require("panel_state")
 local ActionIntent = require("action_intent")
+local ActionOutbox = require("action_outbox")
 
 local PresentationController = {}
 PresentationController.__index = PresentationController
@@ -8,11 +9,7 @@ local null_renderer = {
     render = function() return true end
 }
 
-local null_action_sink = {
-    dispatch = function()
-        return false, "Client-server UI transportu hazir degil."
-    end
-}
+local null_action_sink = ActionOutbox.new()
 
 local function renderer_or_null(renderer)
     if type(renderer) == "table"
