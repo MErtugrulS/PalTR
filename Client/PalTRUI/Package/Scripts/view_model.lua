@@ -19,6 +19,25 @@ local direction_labels = {
     none = ""
 }
 
+local tab_control_definitions = {
+    CLAN = {
+        control = "ClanTabButton",
+        text_control = "ClanTabText"
+    },
+    DIPLOMACY = {
+        control = "DiplomacyTabButton",
+        text_control = "DiplomacyTabText"
+    },
+    ALLIANCE = {
+        control = "AllianceTabButton",
+        text_control = "AllianceTabText"
+    },
+    CHAT = {
+        control = "ChatTabButton",
+        text_control = "ChatTabText"
+    }
+}
+
 local action_control_definitions = {
     {
         control = "AllianceRequestButton",
@@ -254,10 +273,14 @@ local function tab_models(active_tab, counts)
     local result = {}
 
     for _, tab in ipairs(Contract.TABS) do
+        local definition = tab_control_definitions[tab.id] or {}
         table.insert(result, {
             id = tab.id,
             label = tab.label,
+            control = definition.control or "",
+            text_control = definition.text_control or "",
             active = tab.id == active_tab,
+            enabled = tab.id ~= active_tab,
             badge_count = counts[tab.id] or 0
         })
     end

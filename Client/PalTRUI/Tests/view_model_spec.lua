@@ -110,6 +110,15 @@ equal(
 
 panel:set_tab("DIPLOMACY")
 equal(panel.view_model.content, panel.view_model.views.DIPLOMACY, "active content")
+equal(panel.view_model.tabs[1].control, "ClanTabButton", "clan tab control")
+equal(panel.view_model.tabs[1].enabled, true, "inactive tab enabled")
+equal(
+    panel.view_model.tabs[2].text_control,
+    "DiplomacyTabText",
+    "diplomacy tab text control"
+)
+equal(panel.view_model.tabs[2].active, true, "diplomacy tab active")
+equal(panel.view_model.tabs[2].enabled, false, "active tab disabled")
 
 panel:select_guild("guild-neutral")
 local action_controls = panel.view_model.views.DIPLOMACY.action_controls
