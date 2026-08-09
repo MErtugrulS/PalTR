@@ -51,6 +51,14 @@ local tab_cycle = {
 print("[PalTRUI] yuklendi\n")
 
 local function toggle_panel()
+    local current_model = presentation:model()
+    local closing = type(current_model) == "table"
+        and current_model.open == true
+    if closing then
+        button_poller:stop()
+        print("[PalTRUI] PALTR_UI_CLOSE_STAGE | stage=poller_stopped\n")
+    end
+
     local model, rendered, render_error = presentation:toggle()
     if rendered ~= true then
         print(string.format(
@@ -74,7 +82,7 @@ local function toggle_panel()
                 tostring(start_error)
             ))
         end
-    else
+    elseif not closing then
         button_poller:stop()
     end
 end

@@ -33,11 +33,13 @@ local create_calls = {}
 local input_mode_calls = {}
 local viewport_calls = {}
 local remove_calls = 0
+local close_order = {}
 local widget = {
     AddToViewport = function(_, z_order)
         table.insert(viewport_calls, z_order)
     end,
     RemoveFromParent = function()
+        table.insert(close_order, "remove")
         remove_calls = remove_calls + 1
     end
 }
@@ -62,6 +64,7 @@ local library = {
         })
     end,
     SetInputMode_GameOnly = function(_, player_controller, flush_input)
+        table.insert(close_order, "game_input")
         table.insert(input_mode_calls, {
             mode = "game_only",
             player_controller = player_controller,
@@ -140,6 +143,8 @@ equal(input_mode_calls[2].mode, "game_only", "game input restored")
 equal(input_mode_calls[2].player_controller, controller,
     "game input receives controller")
 equal(input_mode_calls[2].flush_input, true, "closing input is flushed")
+equal(close_order[1], "game_input", "game input restored before removal")
+equal(close_order[2], "remove", "widget removed after input restore")
 equal(port.widget, nil, "widget reference cleared")
 equal(port.last_model, nil, "model reference cleared")
 equal(port:close(), true, "closed widget is idempotent")

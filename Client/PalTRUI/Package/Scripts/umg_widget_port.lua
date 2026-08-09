@@ -88,6 +88,13 @@ local function report_input_warning(message)
     end
 end
 
+local function report_close_stage(stage)
+    if type(print) == "function" then
+        print("[PalTRUI] PALTR_UI_CLOSE_STAGE | stage="
+            .. tostring(stage) .. "\n")
+    end
+end
+
 function UMGWidgetPort.new(dependencies)
     dependencies = type(dependencies) == "table" and dependencies or {}
     return setmetatable({
@@ -197,18 +204,13 @@ function UMGWidgetPort:close()
         return true
     end
 
-    local removed = pcall(function()
-        self.widget:RemoveFromParent()
-    end)
-    if not removed then
-        return false, "PalTR paneli viewport'tan kaldirilamadi."
-    end
-
+    report_close_stage("input_restore_begin")
     local input_restored, input_error = restore_game_input_mode(
         self.widget_library,
         self.player_controller
     )
     if input_restored ~= true then report_input_warning(input_error) end
+    report_close_stage("input_restore_end")
 
     local cursor_restored = true
     local cursor_error = nil
@@ -218,6 +220,16 @@ function UMGWidgetPort:close()
             self.previous_mouse_cursor
         )
     end
+    report_close_stage("cursor_restore_end")
+
+    report_close_stage("remove_begin")
+    local removed = pcall(function()
+        self.widget:RemoveFromParent()
+    end)
+    if not removed then
+        return false, "PalTR paneli viewport'tan kaldirilamadi."
+    end
+    report_close_stage("remove_end")
 
     self.widget = nil
     self.last_model = nil
