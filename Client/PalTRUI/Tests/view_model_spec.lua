@@ -295,6 +295,18 @@ equal(outgoing_panel.view_model.views.CLAN.quick_actions.DashboardPendingRejectB
 equal(outgoing_panel.view_model.views.CLAN.quick_actions.DashboardPendingAcceptButton.reason,
     "Aksiyon guncel sunucu snapshotinda sunulmuyor.",
     "unoffered dashboard action reason")
+
+local mixed_pending_panel = PanelState.new({ action_transport_ready = true })
+equal(mixed_pending_panel:apply_snapshot(snapshot({
+    outgoing_pending[2],
+    pending_relations[2]
+})), true, "mixed pending snapshot accepted")
+equal(mixed_pending_panel.view_model.views.CLAN.dashboard.pending_guild_text,
+    "Teklifçiler", "actionable incoming offer prioritized")
+equal(mixed_pending_panel.view_model.views.CLAN.quick_actions.DashboardPendingAcceptButton.target_guild,
+    "guild-offer", "dashboard accept targets actionable offer")
+equal(mixed_pending_panel.view_model.views.CLAN.quick_actions.DashboardPendingAcceptButton.enabled,
+    true, "prioritized incoming accept enabled")
 equal(
     panel.view_model.views.CLAN.members_text,
     "Ada | Lider | Çevrimiçi\nBora | Üye | Çevrimdışı",

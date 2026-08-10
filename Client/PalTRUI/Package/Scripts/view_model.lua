@@ -183,6 +183,17 @@ local function offers_action(source, action_id)
     return false
 end
 
+local function primary_pending_offer(offers)
+    for _, offer in ipairs(table_or_empty(offers)) do
+        offer = table_or_empty(offer)
+        if offers_action(offer.actions, "ACCEPT")
+            or offers_action(offer.actions, "REJECT") then
+            return offer
+        end
+    end
+    return table_or_empty(table_or_empty(offers)[1])
+end
+
 local function action_control_models(
     relation,
     action_transport_ready,
@@ -535,7 +546,7 @@ local function clan_view(snapshot, action_transport_ready, action_pending)
     }
     local quick_actions = {}
     local guild_count = #table_or_empty(snapshot.guilds)
-    local primary_offer = table_or_empty(pending_offers[1])
+    local primary_offer = primary_pending_offer(pending_offers)
     for _, definition in ipairs(dashboard_action_definitions) do
         local enabled = true
         local reason = ""
