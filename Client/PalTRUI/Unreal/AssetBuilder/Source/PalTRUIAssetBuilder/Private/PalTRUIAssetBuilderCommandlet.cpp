@@ -3769,15 +3769,17 @@ namespace PalTRUIAssetBuilder
             Slot->SetOffsets(FMargin(0.0f));
         }
 
-        HeaderCrestSize->SetWidthOverride(88.0f);
-        HeaderCrestSize->SetHeightOverride(80.0f);
-        NavigationSize->SetWidthOverride(296.0f);
-        DashboardSize->SetHeightOverride(650.0f);
+        // Literal 1672x941 reference geometry. The visible panel runs from
+        // x=62..1573 and its body is split into 304 / 821 / 391 pixel regions.
+        HeaderCrestSize->SetWidthOverride(92.0f);
+        HeaderCrestSize->SetHeightOverride(77.0f);
+        NavigationSize->SetWidthOverride(304.0f);
+        DashboardSize->SetHeightOverride(725.0f);
 
-        StyleTransparentFrame(Tree, TEXT("HeaderFrame"), FMargin(8.0f, 6.0f));
-        StyleTransparentFrame(Tree, TEXT("ContentFrame"), FMargin(12.0f));
-        StyleTransparentFrame(Tree, TEXT("FooterFrame"), FMargin(10.0f, 8.0f));
-        StyleTransparentFrame(Tree, TEXT("LeftNavigationFrame"), FMargin(14.0f));
+        StyleTransparentFrame(Tree, TEXT("HeaderFrame"), FMargin(12.0f, 0.0f));
+        StyleTransparentFrame(Tree, TEXT("ContentFrame"), FMargin(0.0f));
+        StyleTransparentFrame(Tree, TEXT("FooterFrame"), FMargin(10.0f, 14.0f));
+        StyleTransparentFrame(Tree, TEXT("LeftNavigationFrame"), FMargin(16.0f, 18.0f));
 
         StyleRoundedFrame(Tree, TEXT("HeaderServerFrame"), PixelTheme::FromSRGB(9, 31, 39, 0.98f),
             PixelTheme::GoldMuted, 5.0f, 1.0f, FMargin(11.0f, 7.0f));
@@ -3790,15 +3792,15 @@ namespace PalTRUIAssetBuilder
 
         if (UVerticalBoxSlot* HeaderSlot = Cast<UVerticalBoxSlot>(HeaderFrame->Slot))
         {
-            HeaderSlot->SetPadding(FMargin(0, 0, 0, 10));
+            HeaderSlot->SetPadding(FMargin(0.0f));
         }
         if (UVerticalBoxSlot* FooterSlot = Cast<UVerticalBoxSlot>(FooterFrame->Slot))
         {
-            FooterSlot->SetPadding(FMargin(0, 10, 0, 0));
+            FooterSlot->SetPadding(FMargin(0.0f));
         }
         if (UHorizontalBoxSlot* NavigationSlot = Cast<UHorizontalBoxSlot>(NavigationSize->Slot))
         {
-            NavigationSlot->SetPadding(FMargin(0, 0, 32, 0));
+            NavigationSlot->SetPadding(FMargin(0.0f));
             NavigationSlot->SetVerticalAlignment(VAlign_Fill);
         }
         FooterHint->SetText(FText::FromString(TEXT("F6  Panel     |     Esc  Kapat")));
@@ -3809,17 +3811,17 @@ namespace PalTRUIAssetBuilder
         if (UHorizontalBoxSlot* MainSlot = Cast<UHorizontalBoxSlot>(MainColumn->Slot))
         {
             FSlateChildSize Size(ESlateSizeRule::Fill);
-            Size.Value = 2.25f;
+            Size.Value = 821.0f;
             MainSlot->SetSize(Size);
-            MainSlot->SetPadding(FMargin(0, 0, 16, 0));
+            MainSlot->SetPadding(FMargin(18.0f, 0.0f, 8.0f, 0.0f));
             MainSlot->SetVerticalAlignment(VAlign_Fill);
         }
         if (UHorizontalBoxSlot* SidebarSlot = Cast<UHorizontalBoxSlot>(SidebarColumn->Slot))
         {
             FSlateChildSize Size(ESlateSizeRule::Fill);
-            Size.Value = 1.0f;
+            Size.Value = 391.0f;
             SidebarSlot->SetSize(Size);
-            SidebarSlot->SetPadding(FMargin(16, 0, 0, 0));
+            SidebarSlot->SetPadding(FMargin(8.0f, 0.0f, 16.0f, 0.0f));
             SidebarSlot->SetVerticalAlignment(VAlign_Fill);
         }
         if (UHorizontalBoxSlot* RecentSlot = Cast<UHorizontalBoxSlot>(RecentFrame->Slot))
@@ -3969,12 +3971,15 @@ namespace PalTRUIAssetBuilder
             IconSize->SetWidthOverride(Spec.bLive ? 46.0f : 40.0f);
             IconSize->SetHeightOverride(Spec.bLive ? 46.0f : 40.0f);
             FButtonStyle Style = Button->WidgetStyle;
-            Style.SetNormal(FSlateRoundedBoxBrush(PixelTheme::FromSRGB(9, 39, 50, 0.98f), 3.0f, PixelTheme::GoldMuted, 1.0f));
-            Style.SetHovered(FSlateRoundedBoxBrush(PixelTheme::CyanDark, 3.0f, PixelTheme::Cyan, 1.5f));
-            Style.SetPressed(FSlateRoundedBoxBrush(PixelTheme::FromSRGB(10, 89, 98, 0.99f), 3.0f, PixelTheme::Cyan, 2.0f));
+            const bool bHomeEntry = FName(Spec.Button) == FName(TEXT("ClanTabButton"));
+            Style.SetNormal(bHomeEntry
+                ? FSlateRoundedBoxBrush(PixelTheme::FromSRGB(7, 87, 108, 0.96f), 4.0f, PixelTheme::Cyan, 1.5f)
+                : FSlateRoundedBoxBrush(PixelTheme::FromSRGB(3, 18, 29, 0.06f), 0.0f));
+            Style.SetHovered(FSlateRoundedBoxBrush(PixelTheme::FromSRGB(7, 72, 91, 0.94f), 4.0f, PixelTheme::Cyan, 1.5f));
+            Style.SetPressed(FSlateRoundedBoxBrush(PixelTheme::FromSRGB(10, 102, 116, 0.99f), 4.0f, PixelTheme::Cyan, 2.0f));
             Style.SetDisabled(FSlateRoundedBoxBrush(PixelTheme::FromSRGB(31, 38, 41, 0.92f), 3.0f, PixelTheme::FromSRGB(62, 68, 68, 0.90f), 1.0f));
-            Style.SetNormalPadding(FMargin(12.0f, 9.0f));
-            Style.SetPressedPadding(FMargin(12.0f, 10.0f, 12.0f, 8.0f));
+            Style.SetNormalPadding(FMargin(12.0f, 7.0f));
+            Style.SetPressedPadding(FMargin(12.0f, 8.0f, 12.0f, 6.0f));
             Button->SetStyle(Style);
             SetTextFontSize(Tree, FName(Spec.Label), Spec.bLive ? 17 : 12);
         }
@@ -4078,7 +4083,7 @@ namespace PalTRUIAssetBuilder
             SetTextColor(Tree, HeadingName, PixelTheme::TextPrimary);
             StyleTextShadow(Tree, HeadingName, FVector2D(1, 2), FLinearColor(0, 0, 0, 0.92f));
         }
-        SetTextFontSize(Tree, TEXT("TitleText"), 32);
+        SetTextFontSize(Tree, TEXT("TitleText"), 36);
         SetTextColor(Tree, TEXT("TitleText"), PixelTheme::TextPrimary);
         for (const FName SubtitleName : {
             FName(TEXT("ClanSubtitleText")),
@@ -4473,7 +4478,7 @@ namespace PalTRUIAssetBuilder
             : nullptr;
         if (!DashboardColumnsSize
             || DashboardColumnsSize->GetContent() != DashboardColumns
-            || !FMath::IsNearlyEqual(DashboardColumnsSize->GetHeightOverride(), 650.0f)
+            || !FMath::IsNearlyEqual(DashboardColumnsSize->GetHeightOverride(), 725.0f)
             || !DashboardLowerSlot
             || DashboardLowerSlot->GetSize().SizeRule != ESlateSizeRule::Fill
             || !DashboardRelationsSlot
