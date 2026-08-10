@@ -46,17 +46,26 @@ namespace PalTRUIAssetBuilder
 
     namespace PixelTheme
     {
-        const FLinearColor Background(0.043f, 0.090f, 0.125f, 0.995f);
-        const FLinearColor PanelDark(0.094f, 0.157f, 0.200f, 0.98f);
-        const FLinearColor PanelBlue(0.157f, 0.259f, 0.333f, 0.94f);
-        const FLinearColor Gold(0.776f, 0.604f, 0.282f, 0.98f);
-        const FLinearColor GoldMuted(0.514f, 0.420f, 0.235f, 0.94f);
-        const FLinearColor Cyan(0.157f, 0.851f, 0.929f, 0.96f);
-        const FLinearColor CyanDark(0.055f, 0.180f, 0.220f, 0.98f);
-        const FLinearColor Parchment(0.765f, 0.643f, 0.482f, 1.0f);
-        const FLinearColor TextPrimary(0.949f, 0.910f, 0.835f, 1.0f);
-        const FLinearColor TextSecondary(0.722f, 0.725f, 0.710f, 1.0f);
-        const FLinearColor RelationDark(0.035f, 0.035f, 0.030f, 0.96f);
+        FLinearColor FromSRGB(const uint8 R, const uint8 G, const uint8 B, const float Alpha = 1.0f)
+        {
+            FLinearColor Result = FLinearColor::FromSRGBColor(FColor(R, G, B, 255));
+            Result.A = Alpha;
+            return Result;
+        }
+
+        // Slate consumes linear colors. Keeping the palette in authored sRGB avoids
+        // the washed-out gray result produced by passing sRGB channel values directly.
+        const FLinearColor Background = FromSRGB(7, 18, 27, 0.995f);
+        const FLinearColor PanelDark = FromSRGB(11, 27, 40, 0.985f);
+        const FLinearColor PanelBlue = FromSRGB(24, 52, 70, 0.96f);
+        const FLinearColor Gold = FromSRGB(198, 154, 72, 0.98f);
+        const FLinearColor GoldMuted = FromSRGB(131, 107, 60, 0.96f);
+        const FLinearColor Cyan = FromSRGB(40, 217, 237, 0.96f);
+        const FLinearColor CyanDark = FromSRGB(14, 58, 70, 0.98f);
+        const FLinearColor Parchment = FromSRGB(195, 164, 123, 1.0f);
+        const FLinearColor TextPrimary = FromSRGB(242, 232, 213, 1.0f);
+        const FLinearColor TextSecondary = FromSRGB(184, 185, 181, 1.0f);
+        const FLinearColor RelationDark = FromSRGB(28, 29, 25, 0.97f);
     }
 
     UTextBlock* MakeText(UWidgetTree* Tree, const FName Name, const TCHAR* Value, const int32 Size)
@@ -96,7 +105,7 @@ namespace PalTRUIAssetBuilder
         }
 
         Button->Modify();
-        const FLinearColor Outline(0.72f, 0.54f, 0.24f, 0.98f);
+        const FLinearColor Outline = PixelTheme::GoldMuted;
         const FLinearColor Hover(
             FMath::Min(Color.R * 1.20f, 1.0f),
             FMath::Min(Color.G * 1.20f, 1.0f),
@@ -106,9 +115,9 @@ namespace PalTRUIAssetBuilder
         const FLinearColor Pressed(Color.R * 0.82f, Color.G * 0.82f, Color.B * 0.82f, Color.A);
         FButtonStyle Style = Button->WidgetStyle;
         Style.SetNormal(FSlateRoundedBoxBrush(Color, 6.0f, Outline, 1.5f));
-        Style.SetHovered(FSlateRoundedBoxBrush(Hover, 6.0f, FLinearColor(0.42f, 0.88f, 0.90f, 1.0f), 2.0f));
-        Style.SetPressed(FSlateRoundedBoxBrush(Pressed, 5.0f, FLinearColor(0.85f, 0.66f, 0.30f, 1.0f), 2.0f));
-        Style.SetDisabled(FSlateRoundedBoxBrush(FLinearColor(0.06f, 0.08f, 0.09f, 0.72f), 6.0f, FLinearColor(0.22f, 0.25f, 0.25f, 0.7f), 1.0f));
+        Style.SetHovered(FSlateRoundedBoxBrush(Hover, 6.0f, PixelTheme::Cyan, 2.0f));
+        Style.SetPressed(FSlateRoundedBoxBrush(Pressed, 5.0f, PixelTheme::Gold, 2.0f));
+        Style.SetDisabled(FSlateRoundedBoxBrush(PixelTheme::FromSRGB(25, 31, 34, 0.78f), 6.0f, PixelTheme::FromSRGB(67, 71, 70, 0.72f), 1.0f));
         Style.SetNormalPadding(FMargin(7.0f, 5.0f));
         Style.SetPressedPadding(FMargin(7.0f, 6.0f, 7.0f, 4.0f));
         Button->SetStyle(Style);
@@ -116,7 +125,7 @@ namespace PalTRUIAssetBuilder
         if (UTextBlock* Label = Cast<UTextBlock>(Button->GetContent()))
         {
             Label->Modify();
-            Label->SetColorAndOpacity(FSlateColor(FLinearColor(0.95f, 0.88f, 0.70f, 1.0f)));
+            Label->SetColorAndOpacity(FSlateColor(PixelTheme::TextPrimary));
             Label->SetShadowOffset(FVector2D(1.0f, 2.0f));
             Label->SetShadowColorAndOpacity(FLinearColor(0, 0, 0, 0.85f));
         }
@@ -3693,19 +3702,28 @@ namespace PalTRUIAssetBuilder
             Slot->SetOffsets(FMargin(0.0f));
         }
 
-        HeaderCrestSize->SetWidthOverride(72.0f);
-        HeaderCrestSize->SetHeightOverride(64.0f);
+        HeaderCrestSize->SetWidthOverride(88.0f);
+        HeaderCrestSize->SetHeightOverride(80.0f);
         NavigationSize->SetWidthOverride(296.0f);
         DashboardSize->SetHeightOverride(650.0f);
 
         StyleRoundedFrame(Tree, TEXT("HeaderFrame"), PixelTheme::PanelDark,
             PixelTheme::GoldMuted, 4.0f, 1.25f, FMargin(8.0f, 6.0f));
-        StyleRoundedFrame(Tree, TEXT("ContentFrame"), FLinearColor(0.015f, 0.055f, 0.085f, 0.28f),
+        StyleRoundedFrame(Tree, TEXT("ContentFrame"), PixelTheme::FromSRGB(5, 17, 26, 0.90f),
             PixelTheme::GoldMuted, 3.0f, 1.0f, FMargin(12.0f));
         StyleRoundedFrame(Tree, TEXT("FooterFrame"), PixelTheme::PanelDark,
             PixelTheme::GoldMuted, 3.0f, 1.0f, FMargin(10.0f, 8.0f));
-        StyleRoundedFrame(Tree, TEXT("LeftNavigationFrame"), FLinearColor(0.01f, 0.04f, 0.06f, 0.94f),
+        StyleRoundedFrame(Tree, TEXT("LeftNavigationFrame"), PixelTheme::FromSRGB(5, 21, 31, 0.97f),
             PixelTheme::GoldMuted, 4.0f, 1.0f, FMargin(14.0f));
+
+        StyleRoundedFrame(Tree, TEXT("HeaderServerFrame"), PixelTheme::FromSRGB(9, 31, 39, 0.98f),
+            PixelTheme::GoldMuted, 5.0f, 1.0f, FMargin(11.0f, 7.0f));
+        StyleRoundedFrame(Tree, TEXT("HeaderGuildFrame"), PixelTheme::FromSRGB(20, 86, 91, 0.98f),
+            PixelTheme::CyanDark, 4.0f, 1.0f, FMargin(10.0f, 7.0f));
+        StyleRoundedFrame(Tree, TEXT("HeaderRoleFrame"), PixelTheme::FromSRGB(91, 69, 26, 0.98f),
+            PixelTheme::GoldMuted, 4.0f, 1.0f, FMargin(10.0f, 7.0f));
+        StyleRoundedFrame(Tree, TEXT("HeaderNotificationFrame"), PixelTheme::FromSRGB(111, 43, 33, 0.98f),
+            PixelTheme::FromSRGB(155, 71, 52, 1.0f), 4.0f, 1.0f, FMargin(10.0f, 7.0f));
 
         if (UVerticalBoxSlot* HeaderSlot = Cast<UVerticalBoxSlot>(HeaderFrame->Slot))
         {
@@ -3778,17 +3796,17 @@ namespace PalTRUIAssetBuilder
             }
         }
 
-        StyleRoundedFrame(Tree, TEXT("DashboardClanCardFrame"), FLinearColor(0.06f, 0.25f, 0.24f, 0.96f),
+        StyleRoundedFrame(Tree, TEXT("DashboardClanCardFrame"), PixelTheme::FromSRGB(23, 67, 67, 0.98f),
             PixelTheme::Cyan, 5.0f, 1.25f, FMargin(14.0f));
-        StyleRoundedFrame(Tree, TEXT("DashboardDiplomacyCardFrame"), FLinearColor(0.07f, 0.20f, 0.29f, 0.96f),
-            FLinearColor(0.32f, 0.62f, 0.76f, 0.96f), 5.0f, 1.25f, FMargin(14.0f));
-        StyleRoundedFrame(Tree, TEXT("DashboardProtectionCardFrame"), FLinearColor(0.29f, 0.24f, 0.12f, 0.96f),
+        StyleRoundedFrame(Tree, TEXT("DashboardDiplomacyCardFrame"), PixelTheme::FromSRGB(24, 58, 82, 0.98f),
+            PixelTheme::FromSRGB(82, 158, 194, 0.98f), 5.0f, 1.25f, FMargin(14.0f));
+        StyleRoundedFrame(Tree, TEXT("DashboardProtectionCardFrame"), PixelTheme::FromSRGB(71, 58, 34, 0.98f),
             PixelTheme::Gold, 5.0f, 1.25f, FMargin(14.0f));
-        StyleRoundedFrame(Tree, TEXT("DashboardBuildingsCardFrame"), FLinearColor(0.26f, 0.16f, 0.075f, 0.96f),
-            FLinearColor(0.70f, 0.40f, 0.16f, 0.96f), 5.0f, 1.25f, FMargin(14.0f));
-        StyleRoundedFrame(Tree, TEXT("DashboardRecentEventsFrame"), FLinearColor(0.025f, 0.10f, 0.14f, 0.94f),
+        StyleRoundedFrame(Tree, TEXT("DashboardBuildingsCardFrame"), PixelTheme::FromSRGB(59, 44, 32, 0.98f),
+            PixelTheme::FromSRGB(178, 102, 41, 0.98f), 5.0f, 1.25f, FMargin(14.0f));
+        StyleRoundedFrame(Tree, TEXT("DashboardRecentEventsFrame"), PixelTheme::FromSRGB(15, 43, 57, 0.97f),
             PixelTheme::GoldMuted, 4.0f, 1.0f, FMargin(16.0f));
-        StyleRoundedFrame(Tree, TEXT("DashboardQuickActionsFrame"), FLinearColor(0.025f, 0.11f, 0.15f, 0.94f),
+        StyleRoundedFrame(Tree, TEXT("DashboardQuickActionsFrame"), PixelTheme::FromSRGB(16, 49, 62, 0.97f),
             PixelTheme::Cyan, 4.0f, 1.0f, FMargin(14.0f));
         StyleRoundedFrame(Tree, TEXT("DashboardRelationsFrame"), PixelTheme::RelationDark,
             PixelTheme::GoldMuted, 4.0f, 1.0f, FMargin(14.0f));
@@ -3806,7 +3824,7 @@ namespace PalTRUIAssetBuilder
         for (const FName FrameName : ParchmentFrames)
         {
             StyleTextureFrame(Tree, FrameName, ParchmentTexture,
-                FMargin(0.06f, 0.16f), FMargin(14.0f, 9.0f));
+                FMargin(0.025f, 0.075f), FMargin(16.0f, 9.0f));
         }
         for (const FName ParchmentText : {
             FName(TEXT("DashboardSidebarTitleText")),
@@ -3819,8 +3837,8 @@ namespace PalTRUIAssetBuilder
         {
             if (UTextBlock* Text = Cast<UTextBlock>(Tree->FindWidget(ParchmentText)))
             {
-                Text->SetColorAndOpacity(FSlateColor(FLinearColor(0.16f, 0.11f, 0.045f, 1.0f)));
-                StyleTextShadow(Tree, ParchmentText, FVector2D(0, 1), FLinearColor(1, 1, 1, 0.28f));
+                Text->SetColorAndOpacity(FSlateColor(PixelTheme::FromSRGB(66, 48, 24, 1.0f)));
+                StyleTextShadow(Tree, ParchmentText, FVector2D(0, 1), PixelTheme::FromSRGB(255, 244, 210, 0.34f));
             }
         }
 
@@ -3882,11 +3900,13 @@ namespace PalTRUIAssetBuilder
                 return false;
             }
             Icon->SetBrushFromTexture(Spec.Texture, true);
+            IconSize->SetWidthOverride(Spec.bLive ? 46.0f : 40.0f);
+            IconSize->SetHeightOverride(Spec.bLive ? 46.0f : 40.0f);
             FButtonStyle Style = Button->WidgetStyle;
-            Style.SetNormal(FSlateRoundedBoxBrush(FLinearColor(0.015f, 0.09f, 0.12f, 0.96f), 3.0f, PixelTheme::GoldMuted, 1.0f));
+            Style.SetNormal(FSlateRoundedBoxBrush(PixelTheme::FromSRGB(9, 39, 50, 0.98f), 3.0f, PixelTheme::GoldMuted, 1.0f));
             Style.SetHovered(FSlateRoundedBoxBrush(PixelTheme::CyanDark, 3.0f, PixelTheme::Cyan, 1.5f));
-            Style.SetPressed(FSlateRoundedBoxBrush(FLinearColor(0.02f, 0.20f, 0.24f, 0.98f), 3.0f, PixelTheme::Cyan, 2.0f));
-            Style.SetDisabled(FSlateRoundedBoxBrush(FLinearColor(0.07f, 0.08f, 0.08f, 0.90f), 3.0f, FLinearColor(0.20f, 0.21f, 0.20f, 0.90f), 1.0f));
+            Style.SetPressed(FSlateRoundedBoxBrush(PixelTheme::FromSRGB(10, 89, 98, 0.99f), 3.0f, PixelTheme::Cyan, 2.0f));
+            Style.SetDisabled(FSlateRoundedBoxBrush(PixelTheme::FromSRGB(31, 38, 41, 0.92f), 3.0f, PixelTheme::FromSRGB(62, 68, 68, 0.90f), 1.0f));
             Style.SetNormalPadding(FMargin(12.0f, 9.0f));
             Style.SetPressedPadding(FMargin(12.0f, 10.0f, 12.0f, 8.0f));
             Button->SetStyle(Style);
@@ -3930,7 +3950,56 @@ namespace PalTRUIAssetBuilder
                 return false;
             }
             Icon->SetBrushFromTexture(EventTextures[Index - 1], true);
+            IconSize->SetWidthOverride(38.0f);
+            IconSize->SetHeightOverride(38.0f);
         }
+
+        for (const FName CardIconSizeName : {
+            FName(TEXT("DashboardClanIconSize")),
+            FName(TEXT("DashboardDiplomacyIconSize")),
+            FName(TEXT("DashboardProtectionIconSize")),
+            FName(TEXT("DashboardBuildingsIconSize"))
+        })
+        {
+            if (USizeBox* IconSize = Cast<USizeBox>(Tree->FindWidget(CardIconSizeName)))
+            {
+                IconSize->SetWidthOverride(104.0f);
+                IconSize->SetHeightOverride(104.0f);
+            }
+        }
+        for (int32 Index = 1; Index <= 3; ++Index)
+        {
+            if (USizeBox* IconSize = Cast<USizeBox>(Tree->FindWidget(
+                FName(*FString::Printf(TEXT("DashboardRelation%dIconSize"), Index)))))
+            {
+                IconSize->SetWidthOverride(64.0f);
+                IconSize->SetHeightOverride(64.0f);
+            }
+        }
+        if (USizeBox* PendingIconSize = Cast<USizeBox>(Tree->FindWidget(TEXT("DashboardPendingIconSize"))))
+        {
+            PendingIconSize->SetWidthOverride(74.0f);
+            PendingIconSize->SetHeightOverride(74.0f);
+        }
+        for (const FName QuickIconSizeName : {
+            FName(TEXT("DashboardDiplomacyButtonIconSize")),
+            FName(TEXT("DashboardOffersButtonIconSize")),
+            FName(TEXT("DashboardGuildsButtonIconSize")),
+            FName(TEXT("DashboardProtectionButtonIconSize"))
+        })
+        {
+            if (USizeBox* IconSize = Cast<USizeBox>(Tree->FindWidget(QuickIconSizeName)))
+            {
+                IconSize->SetWidthOverride(34.0f);
+                IconSize->SetHeightOverride(34.0f);
+            }
+        }
+
+        StyleButton(Tree, TEXT("DashboardDiplomacyButton"), PixelTheme::FromSRGB(16, 103, 116, 0.99f));
+        StyleButton(Tree, TEXT("DashboardOffersButton"), PixelTheme::FromSRGB(13, 62, 73, 0.98f));
+        StyleButton(Tree, TEXT("DashboardGuildsButton"), PixelTheme::FromSRGB(13, 75, 84, 0.98f));
+        StyleButton(Tree, TEXT("DashboardProtectionButton"), PixelTheme::FromSRGB(34, 43, 45, 0.92f));
+        StyleButton(Tree, TEXT("CloseButton"), PixelTheme::FromSRGB(111, 43, 33, 0.99f));
 
         for (const FName HeadingName : {
             FName(TEXT("ClanHeadingText")),
