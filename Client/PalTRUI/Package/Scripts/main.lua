@@ -90,6 +90,12 @@ end)
 
 PalTRUIKeybindCallbacks = PalTRUIKeybindCallbacks or {}
 local keybind_callbacks = PalTRUIKeybindCallbacks
+PalTRUIToggleGate = PalTRUIToggleGate or {
+    busy = false,
+    last_toggle_at = 0
+}
+local toggle_gate = PalTRUIToggleGate
+local TOGGLE_COOLDOWN_SECONDS = 2
 local function register_retained_keybind(name, key, callback)
     keybind_callbacks[name] = callback
     RegisterKeyBind(key, keybind_callbacks[name])
@@ -143,26 +149,51 @@ local function toggle_panel()
     end
 end
 
-register_retained_keybind("F6", Key.F6, function()
-    if type(ExecuteInGameThread) == "function" then
-        ExecuteInGameThread(toggle_panel)
-    else
-        toggle_panel()
-    end
-end)
-
-local function close_open_panel()
+local function request_panel_toggle(source, close_only)
     local model = presentation:model()
-    if type(model) ~= "table" or model.open ~= true then return end
-    toggle_panel()
+    if close_only == true
+        and (type(model) ~= "table" or model.open ~= true) then
+        return
+    end
+
+    local now = os.time()
+    if toggle_gate.busy == true
+        or now - toggle_gate.last_toggle_at < TOGGLE_COOLDOWN_SECONDS then
+        print(string.format(
+            "[PalTRUI] PALTR_UI_TOGGLE_IGNORED | source=%s | busy=%s | cooldown=true\n",
+            tostring(source),
+            tostring(toggle_gate.busy == true)
+        ))
+        return
+    end
+
+    toggle_gate.busy = true
+    toggle_gate.last_toggle_at = now
+    local function guarded_toggle()
+        local completed, toggle_error = pcall(toggle_panel)
+        toggle_gate.busy = false
+        if completed ~= true then
+            print(string.format(
+                "[PalTRUI] PALTR_UI_TOGGLE_ERROR | source=%s | error=%s\n",
+                tostring(source),
+                tostring(toggle_error or "bilinmeyen toggle hatasi")
+            ))
+        end
+    end
+
+    if type(ExecuteInGameThread) == "function" then
+        ExecuteInGameThread(guarded_toggle)
+    else
+        guarded_toggle()
+    end
 end
 
+register_retained_keybind("F6", Key.F6, function()
+    request_panel_toggle("F6", false)
+end)
+
 local function close_panel_keybind()
-    if type(ExecuteInGameThread) == "function" then
-        ExecuteInGameThread(close_open_panel)
-    else
-        close_open_panel()
-    end
+    request_panel_toggle("TAB", true)
 end
 
 register_retained_keybind("TAB", Key.TAB, close_panel_keybind)
