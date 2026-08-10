@@ -7,6 +7,7 @@
 #include "Brushes/SlateNoResource.h"
 #include "Brushes/SlateRoundedBoxBrush.h"
 #include "Components/Border.h"
+#include "Components/BorderSlot.h"
 #include "Components/Button.h"
 #include "Components/ButtonSlot.h"
 #include "Components/CanvasPanel.h"
@@ -1970,6 +1971,28 @@ namespace PalTRUIAssetBuilder
             UE_LOG(LogTemp, Error, TEXT("PalTRUI art dashboard update refused: partial art overlay."));
             return false;
         }
+        Background->SetHorizontalAlignment(HAlign_Fill);
+        Background->SetVerticalAlignment(VAlign_Fill);
+        if (UBorderSlot* ArtOverlaySlot = Cast<UBorderSlot>(ArtOverlay->Slot))
+        {
+            ArtOverlaySlot->Modify();
+            ArtOverlaySlot->SetHorizontalAlignment(HAlign_Fill);
+            ArtOverlaySlot->SetVerticalAlignment(VAlign_Fill);
+        }
+        if (UOverlaySlot* ArtImageSlot = Cast<UOverlaySlot>(ArtImage->Slot))
+        {
+            ArtImageSlot->Modify();
+            ArtImageSlot->SetHorizontalAlignment(HAlign_Fill);
+            ArtImageSlot->SetVerticalAlignment(VAlign_Fill);
+        }
+        if (UOverlaySlot* ContentPaddingSlot = Cast<UOverlaySlot>(ContentPadding->Slot))
+        {
+            ContentPaddingSlot->Modify();
+            ContentPaddingSlot->SetHorizontalAlignment(HAlign_Fill);
+            ContentPaddingSlot->SetVerticalAlignment(VAlign_Fill);
+        }
+        ContentPadding->SetHorizontalAlignment(HAlign_Fill);
+        ContentPadding->SetVerticalAlignment(VAlign_Fill);
         ContentPadding->SetBrushFromTexture(PanelTexture);
         ContentPadding->SetBrushColor(FLinearColor::White);
         ContentPadding->SetPadding(FMargin(16.0f, 12.0f));
@@ -2927,6 +2950,14 @@ namespace PalTRUIAssetBuilder
         UButtonSlot* PanelContentSlot = PanelBackground
             ? Cast<UButtonSlot>(PanelBackground->Slot)
             : nullptr;
+        UOverlay* PanelArtOverlay = Cast<UOverlay>(Panel->WidgetTree->FindWidget(TEXT("PanelArtOverlay")));
+        UBorder* PanelContentPadding = Cast<UBorder>(Panel->WidgetTree->FindWidget(TEXT("PanelArtContentPadding")));
+        UBorderSlot* PanelArtOverlaySlot = PanelArtOverlay
+            ? Cast<UBorderSlot>(PanelArtOverlay->Slot)
+            : nullptr;
+        UOverlaySlot* PanelContentPaddingSlot = PanelContentPadding
+            ? Cast<UOverlaySlot>(PanelContentPadding->Slot)
+            : nullptr;
         const FAnchors ExpectedPanelAnchors(0.04f, 0.05f, 0.96f, 0.95f);
         const FAnchors ActualPanelAnchors = InputShieldSlot
             ? InputShieldSlot->GetAnchors()
@@ -2952,16 +2983,27 @@ namespace PalTRUIAssetBuilder
         }
         if (!PanelContentSlot
             || PanelContentSlot->GetHorizontalAlignment() != HAlign_Fill
-            || PanelContentSlot->GetVerticalAlignment() != VAlign_Fill)
+            || PanelContentSlot->GetVerticalAlignment() != VAlign_Fill
+            || !PanelBackground
+            || PanelBackground->GetHorizontalAlignment() != HAlign_Fill
+            || PanelBackground->GetVerticalAlignment() != VAlign_Fill
+            || !PanelArtOverlaySlot
+            || PanelArtOverlaySlot->GetHorizontalAlignment() != HAlign_Fill
+            || PanelArtOverlaySlot->GetVerticalAlignment() != VAlign_Fill
+            || !PanelContentPaddingSlot
+            || PanelContentPaddingSlot->GetHorizontalAlignment() != HAlign_Fill
+            || PanelContentPaddingSlot->GetVerticalAlignment() != VAlign_Fill
+            || PanelContentPadding->GetHorizontalAlignment() != HAlign_Fill
+            || PanelContentPadding->GetVerticalAlignment() != VAlign_Fill)
         {
-            UE_LOG(LogTemp, Error, TEXT("PalTRUI asset verification failed: panel content does not fill input shield."));
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI asset verification failed: panel fill chain is incomplete."));
             return false;
         }
 
         UE_LOG(
             LogTemp,
             Display,
-            TEXT("PALTR_UI_ASSET_VERIFY_OK | mod_actor=%s | panel=%s | widgets=%d | textures=%d | viewport=92x90pct | content=fill"),
+            TEXT("PALTR_UI_ASSET_VERIFY_OK | mod_actor=%s | panel=%s | widgets=%d | textures=%d | viewport=92x90pct | fill_chain=complete"),
             *ModActor->GeneratedClass->GetPathName(),
             *Panel->GeneratedClass->GetPathName(),
             UE_ARRAY_COUNT(RequiredWidgets),
