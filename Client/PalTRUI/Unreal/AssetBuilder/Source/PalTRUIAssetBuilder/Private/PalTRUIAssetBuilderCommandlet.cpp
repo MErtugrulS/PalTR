@@ -2472,13 +2472,103 @@ namespace PalTRUIAssetBuilder
         }
         if (UTextBlock* RecentEvents = Cast<UTextBlock>(Tree->FindWidget(TEXT("DashboardRecentEventsText"))))
         {
-            RecentEvents->SetText(FText::FromString(TEXT(
-                "Exceed ile savas devam ediyor.                5 dk once\n"
-                "Saru tarafsiz durumda.                       18 dk once\n"
-                "Ana us koruma kontrolu tamamlandi.           1 saat once\n"
-                "Bir teklif cevap bekliyor.                   2 saat once\n"
-                "Yapi takibi sonraki fazda baglanacak.        3 saat once"
-            )));
+            RecentEvents->SetVisibility(ESlateVisibility::Collapsed);
+        }
+        struct FRecentEventSpec
+        {
+            const TCHAR* FrameName;
+            const TCHAR* RowName;
+            const TCHAR* MessageName;
+            const TCHAR* TimeName;
+            const TCHAR* Message;
+            const TCHAR* Time;
+        };
+        const FRecentEventSpec RecentEventSpecs[] = {
+            { TEXT("DashboardRecentEvent1Frame"), TEXT("DashboardRecentEvent1Row"), TEXT("DashboardRecentEvent1MessageText"), TEXT("DashboardRecentEvent1TimeText"), TEXT("Exceed ile savas devam ediyor."), TEXT("5 dk once") },
+            { TEXT("DashboardRecentEvent2Frame"), TEXT("DashboardRecentEvent2Row"), TEXT("DashboardRecentEvent2MessageText"), TEXT("DashboardRecentEvent2TimeText"), TEXT("Saru tarafsiz durumda."), TEXT("18 dk once") },
+            { TEXT("DashboardRecentEvent3Frame"), TEXT("DashboardRecentEvent3Row"), TEXT("DashboardRecentEvent3MessageText"), TEXT("DashboardRecentEvent3TimeText"), TEXT("Ana us koruma kontrolu tamamlandi."), TEXT("1 saat once") },
+            { TEXT("DashboardRecentEvent4Frame"), TEXT("DashboardRecentEvent4Row"), TEXT("DashboardRecentEvent4MessageText"), TEXT("DashboardRecentEvent4TimeText"), TEXT("Bir teklif cevap bekliyor."), TEXT("2 saat once") },
+            { TEXT("DashboardRecentEvent5Frame"), TEXT("DashboardRecentEvent5Row"), TEXT("DashboardRecentEvent5MessageText"), TEXT("DashboardRecentEvent5TimeText"), TEXT("Yapi takibi sonraki fazda baglanacak."), TEXT("3 saat once") }
+        };
+        for (int32 EventIndex = 0; EventIndex < UE_ARRAY_COUNT(RecentEventSpecs); ++EventIndex)
+        {
+            const FRecentEventSpec& Spec = RecentEventSpecs[EventIndex];
+            UBorder* EventFrame = Cast<UBorder>(Tree->FindWidget(FName(Spec.FrameName)));
+            UHorizontalBox* EventRow = Cast<UHorizontalBox>(Tree->FindWidget(FName(Spec.RowName)));
+            UTextBlock* EventMessage = Cast<UTextBlock>(Tree->FindWidget(FName(Spec.MessageName)));
+            UTextBlock* EventTime = Cast<UTextBlock>(Tree->FindWidget(FName(Spec.TimeName)));
+            if (!EventFrame && !EventRow && !EventMessage && !EventTime)
+            {
+                EventFrame = Tree->ConstructWidget<UBorder>(UBorder::StaticClass(), FName(Spec.FrameName));
+                EventFrame->SetBrushColor(EventIndex % 2 == 0
+                    ? FLinearColor(0.02f, 0.085f, 0.11f, 0.72f)
+                    : FLinearColor(0.012f, 0.055f, 0.075f, 0.72f));
+                EventFrame->SetPadding(FMargin(10.0f, 7.0f));
+                EventRow = Tree->ConstructWidget<UHorizontalBox>(UHorizontalBox::StaticClass(), FName(Spec.RowName));
+                EventFrame->SetContent(EventRow);
+                EventMessage = MakeText(Tree, FName(Spec.MessageName), Spec.Message, 13);
+                EventMessage->SetAutoWrapText(false);
+                UHorizontalBoxSlot* MessageSlot = AddHorizontal(EventRow, EventMessage);
+                MessageSlot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
+                MessageSlot->SetVerticalAlignment(VAlign_Center);
+                EventTime = MakeText(Tree, FName(Spec.TimeName), Spec.Time, 11);
+                EventTime->SetColorAndOpacity(FSlateColor(FLinearColor(0.88f, 0.72f, 0.42f, 1.0f)));
+                EventTime->SetJustification(ETextJustify::Right);
+                UHorizontalBoxSlot* TimeSlot = AddHorizontal(EventRow, EventTime, FMargin(12.0f, 0, 0, 0));
+                TimeSlot->SetVerticalAlignment(VAlign_Center);
+                AddVertical(RecentContent, EventFrame, FMargin(0, 0, 0, EventIndex + 1 == UE_ARRAY_COUNT(RecentEventSpecs) ? 0.0f : 5.0f));
+            }
+            else if (!EventFrame || !EventRow || !EventMessage || !EventTime
+                || EventFrame->GetContent() != EventRow
+                || EventFrame->GetParent() != RecentContent
+                || EventMessage->GetParent() != EventRow
+                || EventTime->GetParent() != EventRow)
+            {
+                UE_LOG(LogTemp, Error, TEXT("PalTRUI art dashboard update refused: partial recent event row: %s"), Spec.FrameName);
+                return false;
+            }
+            EventMessage->SetText(FText::FromString(Spec.Message));
+            EventTime->SetText(FText::FromString(Spec.Time));
+        }
+        UVerticalBox* QuickActionsContent = Cast<UVerticalBox>(Tree->FindWidget(TEXT("DashboardQuickActionsContent")));
+        UButton* ProtectionAction = Cast<UButton>(Tree->FindWidget(TEXT("DashboardProtectionButton")));
+        UTextBlock* ProtectionActionText = Cast<UTextBlock>(Tree->FindWidget(TEXT("DashboardProtectionButtonText")));
+        if (!ProtectionActionText && ProtectionAction)
+        {
+            ProtectionActionText = Cast<UTextBlock>(ProtectionAction->GetContent());
+        }
+        if (!ProtectionAction && !ProtectionActionText && QuickActionsContent)
+        {
+            ProtectionAction = MakeTabButton(Tree, TEXT("DashboardProtectionButton"), TEXT("DashboardProtectionButtonText"), TEXT("Koruma Durumu  |  YAKINDA"));
+            ProtectionActionText = Cast<UTextBlock>(ProtectionAction->GetContent());
+            UVerticalBoxSlot* ProtectionActionSlot = AddVertical(QuickActionsContent, ProtectionAction);
+            ProtectionActionSlot->SetHorizontalAlignment(HAlign_Fill);
+        }
+        else if (!ProtectionAction || !ProtectionActionText || !QuickActionsContent
+            || ProtectionAction->GetParent() != QuickActionsContent)
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI art dashboard update refused: partial protection quick action."));
+            return false;
+        }
+        ProtectionAction->SetIsEnabled(false);
+        ProtectionActionText->SetText(FText::FromString(TEXT("Koruma Durumu  |  YAKINDA")));
+        StyleButton(Tree, TEXT("DashboardProtectionButton"), FLinearColor(0.012f, 0.10f, 0.12f, 0.92f));
+
+        if (UTextBlock* ClanHeading = Cast<UTextBlock>(Tree->FindWidget(TEXT("ClanHeadingText"))))
+        {
+            ClanHeading->SetText(FText::FromString(TEXT("KLAN DURUMU")));
+        }
+        if (UTextBlock* ClanSubtitle = Cast<UTextBlock>(Tree->FindWidget(TEXT("ClanSubtitleText"))))
+        {
+            ClanSubtitle->SetText(FText::FromString(TEXT("Klaninizin genel durumunu ve onemli bilgileri buradan takip edin.")));
+        }
+        if (UTextBlock* SidebarTitle = Cast<UTextBlock>(Tree->FindWidget(TEXT("DashboardSidebarTitleText"))))
+        {
+            SidebarTitle->SetText(FText::FromString(TEXT("ILISKILER")));
+        }
+        if (UTextBlock* RelationsHeading = Cast<UTextBlock>(Tree->FindWidget(TEXT("DashboardRelationsHeadingText"))))
+        {
+            RelationsHeading->SetVisibility(ESlateVisibility::Collapsed);
         }
         const FLinearColor GoldEdge(0.62f, 0.43f, 0.16f, 0.96f);
         const FLinearColor SoftGoldEdge(0.48f, 0.34f, 0.14f, 0.82f);
@@ -3029,6 +3119,26 @@ namespace PalTRUIAssetBuilder
             TEXT("DashboardRecentEventsFrame"),
             TEXT("DashboardRecentEventsHeadingText"),
             TEXT("DashboardRecentEventsText"),
+            TEXT("DashboardRecentEvent1Frame"),
+            TEXT("DashboardRecentEvent1Row"),
+            TEXT("DashboardRecentEvent1MessageText"),
+            TEXT("DashboardRecentEvent1TimeText"),
+            TEXT("DashboardRecentEvent2Frame"),
+            TEXT("DashboardRecentEvent2Row"),
+            TEXT("DashboardRecentEvent2MessageText"),
+            TEXT("DashboardRecentEvent2TimeText"),
+            TEXT("DashboardRecentEvent3Frame"),
+            TEXT("DashboardRecentEvent3Row"),
+            TEXT("DashboardRecentEvent3MessageText"),
+            TEXT("DashboardRecentEvent3TimeText"),
+            TEXT("DashboardRecentEvent4Frame"),
+            TEXT("DashboardRecentEvent4Row"),
+            TEXT("DashboardRecentEvent4MessageText"),
+            TEXT("DashboardRecentEvent4TimeText"),
+            TEXT("DashboardRecentEvent5Frame"),
+            TEXT("DashboardRecentEvent5Row"),
+            TEXT("DashboardRecentEvent5MessageText"),
+            TEXT("DashboardRecentEvent5TimeText"),
             TEXT("ClanNameText"),
             TEXT("ClanSummaryText"),
             TEXT("ClanMembersFrame"),
@@ -3048,6 +3158,8 @@ namespace PalTRUIAssetBuilder
             TEXT("DashboardOffersButtonText"),
             TEXT("DashboardGuildsButton"),
             TEXT("DashboardGuildsButtonText"),
+            TEXT("DashboardProtectionButton"),
+            TEXT("DashboardProtectionButtonText"),
             TEXT("DashboardStatusCardsFrame"),
             TEXT("DashboardClanCardFrame"),
             TEXT("DashboardClanCardContent"),
@@ -3221,11 +3333,24 @@ namespace PalTRUIAssetBuilder
                 return false;
             }
         }
+        UButton* ProtectionQuickAction = Cast<UButton>(Panel->WidgetTree->FindWidget(TEXT("DashboardProtectionButton")));
+        UTextBlock* LegacyRecentEvents = Cast<UTextBlock>(Panel->WidgetTree->FindWidget(TEXT("DashboardRecentEventsText")));
+        UTextBlock* RelationsHeading = Cast<UTextBlock>(Panel->WidgetTree->FindWidget(TEXT("DashboardRelationsHeadingText")));
+        if (!ProtectionQuickAction
+            || ProtectionQuickAction->GetIsEnabled()
+            || !LegacyRecentEvents
+            || LegacyRecentEvents->GetVisibility() != ESlateVisibility::Collapsed
+            || !RelationsHeading
+            || RelationsHeading->GetVisibility() != ESlateVisibility::Collapsed)
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI asset verification failed: reference dashboard content state is incomplete."));
+            return false;
+        }
 
         UE_LOG(
             LogTemp,
             Display,
-            TEXT("PALTR_UI_ASSET_VERIFY_OK | mod_actor=%s | panel=%s | widgets=%d | textures=%d | viewport=92x90pct | fill_chain=complete | dashboard=reference_proportions"),
+            TEXT("PALTR_UI_ASSET_VERIFY_OK | mod_actor=%s | panel=%s | widgets=%d | textures=%d | viewport=92x90pct | events=5 | fill_chain=complete | dashboard=reference_proportions"),
             *ModActor->GeneratedClass->GetPathName(),
             *Panel->GeneratedClass->GetPathName(),
             UE_ARRAY_COUNT(RequiredWidgets),
