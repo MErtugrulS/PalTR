@@ -175,6 +175,14 @@ local function copy_actions(source)
     return result
 end
 
+local function offers_action(source, action_id)
+    local requested = text(action_id)
+    for _, action in ipairs(table_or_empty(source)) do
+        if text(table_or_empty(action).id) == requested then return true end
+    end
+    return false
+end
+
 local function action_control_models(
     relation,
     action_transport_ready,
@@ -448,7 +456,10 @@ local function clan_view(snapshot, action_transport_ready, action_pending)
                 direction_label = label_for(
                     direction_labels,
                     relation.proposal_direction
-                )
+                ),
+                can_manage = relation.can_manage == true,
+                action_reason = text(relation.action_reason),
+                actions = copy_actions(relation.actions)
             })
         end
         local relation_name = text(relation.guild_name)
@@ -524,6 +535,7 @@ local function clan_view(snapshot, action_transport_ready, action_pending)
     }
     local quick_actions = {}
     local guild_count = #table_or_empty(snapshot.guilds)
+    local primary_offer = table_or_empty(pending_offers[1])
     for _, definition in ipairs(dashboard_action_definitions) do
         local enabled = true
         local reason = ""
@@ -540,10 +552,16 @@ local function clan_view(snapshot, action_transport_ready, action_pending)
         elseif definition.requires_transport and action_pending == true then
             enabled = false
             reason = "Sunucu sonucu bekleniyor."
-        elseif definition.requires_transport
-            and player.is_master ~= true then
+        elseif definition.action_id ~= nil
+            and primary_offer.can_manage ~= true then
             enabled = false
-            reason = "Yalnizca klan lideri yonetebilir."
+            reason = text(primary_offer.action_reason) ~= ""
+                and text(primary_offer.action_reason)
+                or "Diplomasi aksiyonu kullanilamaz."
+        elseif definition.action_id ~= nil
+            and not offers_action(primary_offer.actions, definition.action_id) then
+            enabled = false
+            reason = "Aksiyon guncel sunucu snapshotinda sunulmuyor."
         end
         quick_actions[definition.control] = {
             control = definition.control,
@@ -573,8 +591,6 @@ local function clan_view(snapshot, action_transport_ready, action_pending)
             state_label = text(relation_card.state_label)
         }
     end
-    local primary_offer = table_or_empty(pending_offers[1])
-
     return {
         guild = {
             key = text(guild.key),

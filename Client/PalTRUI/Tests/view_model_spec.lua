@@ -259,6 +259,42 @@ equal(pending_panel.view_model.views.CLAN.dashboard.pending_state_text,
     "İttifak teklifi bekliyor", "pending dashboard state")
 equal(pending_panel.view_model.views.CLAN.quick_actions.DashboardPendingAcceptButton.enabled,
     false, "pending accept requires transport")
+
+local action_ready_pending_panel = PanelState.new({
+    action_transport_ready = true
+})
+equal(action_ready_pending_panel:apply_snapshot(snapshot(pending_relations)), true,
+    "action-ready pending snapshot accepted")
+equal(action_ready_pending_panel.view_model.views.CLAN.quick_actions.DashboardPendingAcceptButton.enabled,
+    true, "server-offered pending accept enabled")
+equal(action_ready_pending_panel.view_model.views.CLAN.quick_actions.DashboardPendingRejectButton.enabled,
+    true, "server-offered pending reject enabled")
+
+local outgoing_pending = {
+    relations[1],
+    {
+        guild_key = "guild-outgoing",
+        guild_name = "Giden Teklif",
+        state = "ALLIANCE_PENDING",
+        previous_state = "NEUTRAL",
+        proposal_direction = "outgoing",
+        can_manage = true,
+        action_reason = "",
+        actions = {
+            { id = "CANCEL", label = "Teklifi Iptal Et" }
+        }
+    }
+}
+local outgoing_panel = PanelState.new({ action_transport_ready = true })
+equal(outgoing_panel:apply_snapshot(snapshot(outgoing_pending)), true,
+    "outgoing pending snapshot accepted")
+equal(outgoing_panel.view_model.views.CLAN.quick_actions.DashboardPendingAcceptButton.enabled,
+    false, "unoffered dashboard accept disabled")
+equal(outgoing_panel.view_model.views.CLAN.quick_actions.DashboardPendingRejectButton.enabled,
+    false, "unoffered dashboard reject disabled")
+equal(outgoing_panel.view_model.views.CLAN.quick_actions.DashboardPendingAcceptButton.reason,
+    "Aksiyon guncel sunucu snapshotinda sunulmuyor.",
+    "unoffered dashboard action reason")
 equal(
     panel.view_model.views.CLAN.members_text,
     "Ada | Lider | Çevrimiçi\nBora | Üye | Çevrimdışı",
