@@ -8,6 +8,8 @@ local Probe = {
 }
 
 local HOOK_PATH = "/Script/Pal.PalUIChat:OnReceivedChat"
+local SYSTEM_CHAT_CATEGORY = "1"
+local SYSTEM_CHAT_SENDER = "SYSTEM"
 local PRIVATE_PROBE_MARKER =
     "[FAZ-04] HEDEFLI SISTEM SOHBETI CALISIYOR"
 local WIRE_PROBE_PAYLOAD =
@@ -62,6 +64,11 @@ function Probe.suppress_transport_frame(message_param, frame)
     return cleared == true
 end
 
+function Probe.is_trusted_source(category, sender)
+    return text(category) == SYSTEM_CHAT_CATEGORY
+        and text(sender) == SYSTEM_CHAT_SENDER
+end
+
 local function on_received_chat(_context, message_param)
     local message = text(read(message_param, "Message"))
     local category = text(read(message_param, "Category"))
@@ -82,6 +89,15 @@ local function on_received_chat(_context, message_param)
 
     local frame = UIWire.decode(message)
     if frame ~= nil then
+        if not Probe.is_trusted_source(category, sender) then
+            print(string.format(
+                "[PalTRUI][CHAT] WIRE_UNTRUSTED | category=%s | sender=%s | kind=%s\n",
+                category,
+                sender,
+                frame.kind
+            ))
+            return
+        end
         Probe.suppress_transport_frame(message_param, frame)
         print(string.format(
             "[PalTRUI][CHAT] WIRE_FRAME | kind=%s | request_id=%s | payload_length=%d\n",
