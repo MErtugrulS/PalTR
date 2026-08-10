@@ -21,6 +21,7 @@
 #include "Components/PanelWidget.h"
 #include "Components/ScrollBox.h"
 #include "Components/SizeBox.h"
+#include "Components/SizeBoxSlot.h"
 #include "Components/TextBlock.h"
 #include "Components/VerticalBox.h"
 #include "Components/VerticalBoxSlot.h"
@@ -2159,6 +2160,81 @@ namespace PalTRUIAssetBuilder
             return false;
         }
         NavigationSize->SetWidthOverride(278.0f);
+        if (UHorizontalBoxSlot* NavigationOuterSlot = Cast<UHorizontalBoxSlot>(NavigationSize->Slot))
+        {
+            NavigationOuterSlot->Modify();
+            NavigationOuterSlot->SetVerticalAlignment(VAlign_Fill);
+        }
+        if (USizeBoxSlot* NavigationInnerSlot = Cast<USizeBoxSlot>(NavigationFrame->Slot))
+        {
+            NavigationInnerSlot->Modify();
+            NavigationInnerSlot->SetHorizontalAlignment(HAlign_Fill);
+            NavigationInnerSlot->SetVerticalAlignment(VAlign_Fill);
+        }
+        NavigationFrame->SetHorizontalAlignment(HAlign_Fill);
+        NavigationFrame->SetVerticalAlignment(VAlign_Fill);
+        if (UVerticalBoxSlot* BodySlot = Cast<UVerticalBoxSlot>(BodyRow->Slot))
+        {
+            BodySlot->Modify();
+            BodySlot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
+            BodySlot->SetHorizontalAlignment(HAlign_Fill);
+            BodySlot->SetVerticalAlignment(VAlign_Fill);
+        }
+
+        struct FFutureNavigationSpec
+        {
+            const TCHAR* ButtonName;
+            const TCHAR* TextName;
+            const TCHAR* Label;
+        };
+        const FFutureNavigationSpec FutureNavigation[] = {
+            { TEXT("FutureProtectionButton"), TEXT("FutureProtectionButtonText"), TEXT("Savas / Koruma") },
+            { TEXT("FutureStructuresButton"), TEXT("FutureStructuresButtonText"), TEXT("Yapilar") },
+            { TEXT("FutureRegionsButton"), TEXT("FutureRegionsButtonText"), TEXT("Bolgeler") },
+            { TEXT("FuturePlayersButton"), TEXT("FuturePlayersButtonText"), TEXT("Oyuncular") },
+            { TEXT("FutureNotificationsButton"), TEXT("FutureNotificationsButtonText"), TEXT("Bildirimler") },
+            { TEXT("FutureSettingsButton"), TEXT("FutureSettingsButtonText"), TEXT("Ayarlar") }
+        };
+        for (const FFutureNavigationSpec& Spec : FutureNavigation)
+        {
+            UButton* Button = Cast<UButton>(Tree->FindWidget(FName(Spec.ButtonName)));
+            UTextBlock* ButtonText = Cast<UTextBlock>(Tree->FindWidget(FName(Spec.TextName)));
+            if (!ButtonText && Button)
+            {
+                ButtonText = Cast<UTextBlock>(Button->GetContent());
+            }
+            if (!Button && !ButtonText)
+            {
+                Button = MakeTabButton(Tree, FName(Spec.ButtonName), FName(Spec.TextName), Spec.Label);
+                ButtonText = Cast<UTextBlock>(Button->GetContent());
+                UVerticalBoxSlot* ButtonSlot = AddVertical(Navigation, Button, FMargin(0, 0, 0, 6));
+                ButtonSlot->SetHorizontalAlignment(HAlign_Fill);
+            }
+            else if (!Button || !ButtonText || Button->GetParent() != Navigation)
+            {
+                UE_LOG(LogTemp, Error, TEXT("PalTRUI art dashboard update refused: partial future navigation: %s"), Spec.ButtonName);
+                return false;
+            }
+            Button->SetIsEnabled(false);
+            ButtonText->SetText(FText::FromString(FString::Printf(TEXT("%s  |  YAKINDA"), Spec.Label)));
+            SetTextFontSize(Tree, FName(Spec.TextName), 13);
+            StyleButton(Tree, FName(Spec.ButtonName), FLinearColor(0.012f, 0.04f, 0.055f, 0.84f));
+        }
+        for (const FName LiveNavigationButton : {
+            FName(TEXT("ClanTabButton")),
+            FName(TEXT("DiplomacyTabButton")),
+            FName(TEXT("AllianceTabButton")),
+            FName(TEXT("ChatTabButton"))
+        })
+        {
+            if (UButton* Button = Cast<UButton>(Tree->FindWidget(LiveNavigationButton)))
+            {
+                if (UVerticalBoxSlot* ButtonSlot = Cast<UVerticalBoxSlot>(Button->Slot))
+                {
+                    ButtonSlot->SetPadding(FMargin(0, 0, 0, 6));
+                }
+            }
+        }
 
         auto EnsureCardIcon = [Tree](
             UVerticalBox* Card,
@@ -2314,6 +2390,95 @@ namespace PalTRUIAssetBuilder
         {
             UE_LOG(LogTemp, Error, TEXT("PalTRUI art dashboard update refused: partial lower row."));
             return false;
+        }
+        UHorizontalBox* DashboardColumns = Cast<UHorizontalBox>(Tree->FindWidget(TEXT("DashboardColumns")));
+        USizeBox* DashboardColumnsSize = Cast<USizeBox>(Tree->FindWidget(TEXT("DashboardColumnsSize")));
+        if (!DashboardColumns)
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI art dashboard update failed: dashboard columns missing."));
+            return false;
+        }
+        if (!DashboardColumnsSize)
+        {
+            if (DashboardColumns->GetParent() != Cast<UVerticalBox>(Tree->FindWidget(TEXT("ClanPage"))))
+            {
+                UE_LOG(LogTemp, Error, TEXT("PalTRUI art dashboard update refused: dashboard columns parent changed."));
+                return false;
+            }
+            UVerticalBox* ClanPage = Cast<UVerticalBox>(DashboardColumns->GetParent());
+            const int32 ColumnsIndex = ClanPage->GetChildIndex(DashboardColumns);
+            ClanPage->RemoveChild(DashboardColumns);
+            DashboardColumnsSize = Tree->ConstructWidget<USizeBox>(USizeBox::StaticClass(), TEXT("DashboardColumnsSize"));
+            DashboardColumnsSize->SetContent(DashboardColumns);
+            UVerticalBoxSlot* ColumnsSizeSlot = Cast<UVerticalBoxSlot>(ClanPage->InsertChildAt(ColumnsIndex, DashboardColumnsSize));
+            if (!ColumnsSizeSlot)
+            {
+                UE_LOG(LogTemp, Error, TEXT("PalTRUI art dashboard update failed: dashboard size slot missing."));
+                return false;
+            }
+            ColumnsSizeSlot->SetHorizontalAlignment(HAlign_Fill);
+        }
+        else if (DashboardColumnsSize->GetContent() != DashboardColumns)
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI art dashboard update refused: dashboard size wrapper changed."));
+            return false;
+        }
+        DashboardColumnsSize->SetHeightOverride(650.0f);
+        if (USizeBoxSlot* ColumnsInnerSlot = Cast<USizeBoxSlot>(DashboardColumns->Slot))
+        {
+            ColumnsInnerSlot->SetHorizontalAlignment(HAlign_Fill);
+            ColumnsInnerSlot->SetVerticalAlignment(VAlign_Fill);
+        }
+        if (UHorizontalBoxSlot* MainSlot = Cast<UHorizontalBoxSlot>(MainColumn->Slot))
+        {
+            MainSlot->SetVerticalAlignment(VAlign_Fill);
+        }
+        if (UHorizontalBoxSlot* SidebarSlot = Cast<UHorizontalBoxSlot>(Sidebar->Slot))
+        {
+            SidebarSlot->SetVerticalAlignment(VAlign_Fill);
+        }
+        if (UVerticalBoxSlot* LowerSlot = Cast<UVerticalBoxSlot>(LowerRow->Slot))
+        {
+            LowerSlot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
+            LowerSlot->SetVerticalAlignment(VAlign_Fill);
+        }
+        if (UHorizontalBoxSlot* RecentSlot = Cast<UHorizontalBoxSlot>(RecentFrame->Slot))
+        {
+            RecentSlot->SetVerticalAlignment(VAlign_Fill);
+        }
+        if (UHorizontalBoxSlot* QuickSlot = Cast<UHorizontalBoxSlot>(QuickActions->Slot))
+        {
+            QuickSlot->SetVerticalAlignment(VAlign_Fill);
+        }
+        if (UBorder* RelationsFrame = Cast<UBorder>(Tree->FindWidget(TEXT("DashboardRelationsFrame"))))
+        {
+            if (UVerticalBoxSlot* RelationsSlot = Cast<UVerticalBoxSlot>(RelationsFrame->Slot))
+            {
+                FSlateChildSize FillSize(ESlateSizeRule::Fill);
+                FillSize.Value = 1.0f;
+                RelationsSlot->SetSize(FillSize);
+                RelationsSlot->SetVerticalAlignment(VAlign_Fill);
+            }
+        }
+        if (UBorder* OffersFrame = Cast<UBorder>(Tree->FindWidget(TEXT("PendingOffersFrame"))))
+        {
+            if (UVerticalBoxSlot* OffersSlot = Cast<UVerticalBoxSlot>(OffersFrame->Slot))
+            {
+                FSlateChildSize FillSize(ESlateSizeRule::Fill);
+                FillSize.Value = 1.0f;
+                OffersSlot->SetSize(FillSize);
+                OffersSlot->SetVerticalAlignment(VAlign_Fill);
+            }
+        }
+        if (UTextBlock* RecentEvents = Cast<UTextBlock>(Tree->FindWidget(TEXT("DashboardRecentEventsText"))))
+        {
+            RecentEvents->SetText(FText::FromString(TEXT(
+                "Exceed ile savas devam ediyor.                5 dk once\n"
+                "Saru tarafsiz durumda.                       18 dk once\n"
+                "Ana us koruma kontrolu tamamlandi.           1 saat once\n"
+                "Bir teklif cevap bekliyor.                   2 saat once\n"
+                "Yapi takibi sonraki fazda baglanacak.        3 saat once"
+            )));
         }
         const FLinearColor GoldEdge(0.62f, 0.43f, 0.16f, 0.96f);
         const FLinearColor SoftGoldEdge(0.48f, 0.34f, 0.14f, 0.82f);
@@ -2819,6 +2984,7 @@ namespace PalTRUIAssetBuilder
             TEXT("AlliancePageScroll"),
             TEXT("GuildPageScroll"),
             TEXT("DashboardColumns"),
+            TEXT("DashboardColumnsSize"),
             TEXT("DashboardMainColumn"),
             TEXT("DashboardSidebarColumn"),
             TEXT("HeaderFrame"),
@@ -2838,6 +3004,18 @@ namespace PalTRUIAssetBuilder
             TEXT("LeftNavigationFrame"),
             TEXT("LeftNavigation"),
             TEXT("LeftNavigationHeadingText"),
+            TEXT("FutureProtectionButton"),
+            TEXT("FutureProtectionButtonText"),
+            TEXT("FutureStructuresButton"),
+            TEXT("FutureStructuresButtonText"),
+            TEXT("FutureRegionsButton"),
+            TEXT("FutureRegionsButtonText"),
+            TEXT("FuturePlayersButton"),
+            TEXT("FuturePlayersButtonText"),
+            TEXT("FutureNotificationsButton"),
+            TEXT("FutureNotificationsButtonText"),
+            TEXT("FutureSettingsButton"),
+            TEXT("FutureSettingsButtonText"),
             TEXT("HeaderCrestSpacer"),
             TEXT("HeaderCrestImageSize"),
             TEXT("HeaderCrestImage"),
@@ -3000,10 +3178,54 @@ namespace PalTRUIAssetBuilder
             return false;
         }
 
+        USizeBox* DashboardColumnsSize = Cast<USizeBox>(Panel->WidgetTree->FindWidget(TEXT("DashboardColumnsSize")));
+        UHorizontalBox* DashboardColumns = Cast<UHorizontalBox>(Panel->WidgetTree->FindWidget(TEXT("DashboardColumns")));
+        UHorizontalBox* DashboardLowerRow = Cast<UHorizontalBox>(Panel->WidgetTree->FindWidget(TEXT("DashboardLowerRow")));
+        UBorder* DashboardRelations = Cast<UBorder>(Panel->WidgetTree->FindWidget(TEXT("DashboardRelationsFrame")));
+        UBorder* DashboardOffers = Cast<UBorder>(Panel->WidgetTree->FindWidget(TEXT("PendingOffersFrame")));
+        UVerticalBoxSlot* DashboardLowerSlot = DashboardLowerRow
+            ? Cast<UVerticalBoxSlot>(DashboardLowerRow->Slot)
+            : nullptr;
+        UVerticalBoxSlot* DashboardRelationsSlot = DashboardRelations
+            ? Cast<UVerticalBoxSlot>(DashboardRelations->Slot)
+            : nullptr;
+        UVerticalBoxSlot* DashboardOffersSlot = DashboardOffers
+            ? Cast<UVerticalBoxSlot>(DashboardOffers->Slot)
+            : nullptr;
+        if (!DashboardColumnsSize
+            || DashboardColumnsSize->GetContent() != DashboardColumns
+            || !FMath::IsNearlyEqual(DashboardColumnsSize->GetHeightOverride(), 650.0f)
+            || !DashboardLowerSlot
+            || DashboardLowerSlot->GetSize().SizeRule != ESlateSizeRule::Fill
+            || !DashboardRelationsSlot
+            || DashboardRelationsSlot->GetSize().SizeRule != ESlateSizeRule::Fill
+            || !DashboardOffersSlot
+            || DashboardOffersSlot->GetSize().SizeRule != ESlateSizeRule::Fill)
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI asset verification failed: reference dashboard proportions are incomplete."));
+            return false;
+        }
+        for (const FName FutureButtonName : {
+            FName(TEXT("FutureProtectionButton")),
+            FName(TEXT("FutureStructuresButton")),
+            FName(TEXT("FutureRegionsButton")),
+            FName(TEXT("FuturePlayersButton")),
+            FName(TEXT("FutureNotificationsButton")),
+            FName(TEXT("FutureSettingsButton"))
+        })
+        {
+            UButton* FutureButton = Cast<UButton>(Panel->WidgetTree->FindWidget(FutureButtonName));
+            if (!FutureButton || FutureButton->GetIsEnabled())
+            {
+                UE_LOG(LogTemp, Error, TEXT("PalTRUI asset verification failed: future navigation must remain disabled: %s."), *FutureButtonName.ToString());
+                return false;
+            }
+        }
+
         UE_LOG(
             LogTemp,
             Display,
-            TEXT("PALTR_UI_ASSET_VERIFY_OK | mod_actor=%s | panel=%s | widgets=%d | textures=%d | viewport=92x90pct | fill_chain=complete"),
+            TEXT("PALTR_UI_ASSET_VERIFY_OK | mod_actor=%s | panel=%s | widgets=%d | textures=%d | viewport=92x90pct | fill_chain=complete | dashboard=reference_proportions"),
             *ModActor->GeneratedClass->GetPathName(),
             *Panel->GeneratedClass->GetPathName(),
             UE_ARRAY_COUNT(RequiredWidgets),
