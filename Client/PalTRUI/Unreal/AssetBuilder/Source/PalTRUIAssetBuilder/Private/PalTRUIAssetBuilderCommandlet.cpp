@@ -2005,7 +2005,7 @@ namespace PalTRUIAssetBuilder
         if (!HeaderCrestSpacer)
         {
             HeaderCrestSpacer = Tree->ConstructWidget<USizeBox>(USizeBox::StaticClass(), TEXT("HeaderCrestSpacer"));
-            HeaderCrestSpacer->SetWidthOverride(34.0f);
+            HeaderCrestSpacer->SetWidthOverride(18.0f);
             UHorizontalBoxSlot* CrestSlot = Cast<UHorizontalBoxSlot>(HeaderRow->InsertChildAt(0, HeaderCrestSpacer));
             if (!CrestSlot)
             {
@@ -2018,15 +2018,15 @@ namespace PalTRUIAssetBuilder
             UE_LOG(LogTemp, Error, TEXT("PalTRUI art dashboard update refused: header crest spacer moved."));
             return false;
         }
-        HeaderCrestSpacer->SetWidthOverride(34.0f);
+        HeaderCrestSpacer->SetWidthOverride(18.0f);
 
         USizeBox* HeaderCrestImageSize = Cast<USizeBox>(Tree->FindWidget(TEXT("HeaderCrestImageSize")));
         UImage* HeaderCrestImage = Cast<UImage>(Tree->FindWidget(TEXT("HeaderCrestImage")));
         if (!HeaderCrestImageSize && !HeaderCrestImage)
         {
             HeaderCrestImageSize = Tree->ConstructWidget<USizeBox>(USizeBox::StaticClass(), TEXT("HeaderCrestImageSize"));
-            HeaderCrestImageSize->SetWidthOverride(72.0f);
-            HeaderCrestImageSize->SetHeightOverride(70.0f);
+            HeaderCrestImageSize->SetWidthOverride(84.0f);
+            HeaderCrestImageSize->SetHeightOverride(78.0f);
             HeaderCrestImage = Tree->ConstructWidget<UImage>(UImage::StaticClass(), TEXT("HeaderCrestImage"));
             HeaderCrestImageSize->SetContent(HeaderCrestImage);
             UHorizontalBoxSlot* CrestImageSlot = Cast<UHorizontalBoxSlot>(HeaderRow->InsertChildAt(0, HeaderCrestImageSize));
@@ -2045,9 +2045,19 @@ namespace PalTRUIAssetBuilder
             UE_LOG(LogTemp, Error, TEXT("PalTRUI art dashboard update refused: partial header crest image."));
             return false;
         }
-        HeaderCrestImageSize->SetWidthOverride(72.0f);
-        HeaderCrestImageSize->SetHeightOverride(70.0f);
+        HeaderCrestImageSize->SetWidthOverride(84.0f);
+        HeaderCrestImageSize->SetHeightOverride(78.0f);
         HeaderCrestImage->SetBrushFromTexture(ClanIcon, true);
+
+        if (UScrollBox* ClanPageScroll = Cast<UScrollBox>(Tree->FindWidget(TEXT("ClanPageScroll"))))
+        {
+            ClanPageScroll->SetScrollBarVisibility(ESlateVisibility::Collapsed);
+            ClanPageScroll->SetAlwaysShowScrollbar(false);
+        }
+        if (UBorder* ClanMembersFrame = Cast<UBorder>(Tree->FindWidget(TEXT("ClanMembersFrame"))))
+        {
+            ClanMembersFrame->SetVisibility(ESlateVisibility::Collapsed);
+        }
 
         UHorizontalBox* BodyRow = Cast<UHorizontalBox>(Tree->FindWidget(TEXT("PanelBodyRow")));
         USizeBox* NavigationSize = Cast<USizeBox>(Tree->FindWidget(TEXT("LeftNavigationSize")));
@@ -2275,19 +2285,45 @@ namespace PalTRUIAssetBuilder
         const FLinearColor SoftGoldEdge(0.48f, 0.34f, 0.14f, 0.82f);
         const FLinearColor CyanEdge(0.12f, 0.66f, 0.70f, 0.92f);
         const FLinearColor BlueEdge(0.17f, 0.48f, 0.66f, 0.90f);
-        StyleRoundedFrame(Tree, TEXT("HeaderFrame"), FLinearColor(0.008f, 0.02f, 0.035f, 0.99f), GoldEdge, 8.0f, 1.5f, FMargin(8.0f));
-        StyleRoundedFrame(Tree, TEXT("ContentFrame"), FLinearColor(0.008f, 0.025f, 0.045f, 0.965f), SoftGoldEdge, 8.0f, 1.0f, FMargin(12.0f));
-        StyleRoundedFrame(Tree, TEXT("FooterFrame"), FLinearColor(0.008f, 0.02f, 0.035f, 0.99f), GoldEdge, 7.0f, 1.25f, FMargin(10.0f, 7.0f));
-        StyleRoundedFrame(Tree, TEXT("LeftNavigationFrame"), FLinearColor(0.006f, 0.025f, 0.04f, 0.985f), GoldEdge, 9.0f, 1.5f, FMargin(14.0f));
-        StyleRoundedFrame(Tree, TEXT("DashboardClanCardFrame"), FLinearColor(0.02f, 0.16f, 0.16f, 0.96f), CyanEdge, 9.0f, 1.5f, FMargin(14.0f));
-        StyleRoundedFrame(Tree, TEXT("DashboardDiplomacyCardFrame"), FLinearColor(0.025f, 0.10f, 0.17f, 0.96f), BlueEdge, 9.0f, 1.5f, FMargin(14.0f));
-        StyleRoundedFrame(Tree, TEXT("DashboardProtectionCardFrame"), FLinearColor(0.18f, 0.12f, 0.035f, 0.96f), GoldEdge, 9.0f, 1.5f, FMargin(14.0f));
-        StyleRoundedFrame(Tree, TEXT("DashboardBuildingsCardFrame"), FLinearColor(0.16f, 0.085f, 0.025f, 0.96f), FLinearColor(0.68f, 0.34f, 0.12f, 0.94f), 9.0f, 1.5f, FMargin(14.0f));
-        StyleRoundedFrame(Tree, TEXT("DashboardRecentEventsFrame"), FLinearColor(0.012f, 0.045f, 0.07f, 0.97f), SoftGoldEdge, 8.0f, 1.0f, FMargin(16.0f));
-        StyleRoundedFrame(Tree, TEXT("DashboardRelationsFrame"), FLinearColor(0.075f, 0.055f, 0.02f, 0.97f), GoldEdge, 8.0f, 1.25f, FMargin(14.0f));
-        StyleRoundedFrame(Tree, TEXT("PendingOffersFrame"), FLinearColor(0.075f, 0.055f, 0.02f, 0.97f), GoldEdge, 8.0f, 1.25f, FMargin(14.0f));
-        StyleRoundedFrame(Tree, TEXT("DashboardQuickActionsFrame"), FLinearColor(0.01f, 0.055f, 0.08f, 0.97f), CyanEdge, 8.0f, 1.25f, FMargin(14.0f));
-        StyleRoundedFrame(Tree, TEXT("DashboardSidebarTitleFrame"), FLinearColor(0.16f, 0.105f, 0.035f, 0.99f), GoldEdge, 7.0f, 1.25f, FMargin(12.0f, 8.0f));
+        StyleRoundedFrame(Tree, TEXT("HeaderFrame"), FLinearColor(0.008f, 0.02f, 0.035f, 0.78f), GoldEdge, 8.0f, 1.5f, FMargin(8.0f));
+        StyleRoundedFrame(Tree, TEXT("ContentFrame"), FLinearColor(0.008f, 0.025f, 0.045f, 0.20f), SoftGoldEdge, 8.0f, 1.0f, FMargin(12.0f));
+        StyleRoundedFrame(Tree, TEXT("FooterFrame"), FLinearColor(0.008f, 0.02f, 0.035f, 0.72f), GoldEdge, 7.0f, 1.25f, FMargin(10.0f, 7.0f));
+        StyleRoundedFrame(Tree, TEXT("LeftNavigationFrame"), FLinearColor(0.006f, 0.025f, 0.04f, 0.48f), GoldEdge, 9.0f, 1.5f, FMargin(14.0f));
+        StyleRoundedFrame(Tree, TEXT("DashboardClanCardFrame"), FLinearColor(0.015f, 0.13f, 0.13f, 0.80f), CyanEdge, 9.0f, 1.5f, FMargin(14.0f));
+        StyleRoundedFrame(Tree, TEXT("DashboardDiplomacyCardFrame"), FLinearColor(0.02f, 0.08f, 0.14f, 0.80f), BlueEdge, 9.0f, 1.5f, FMargin(14.0f));
+        StyleRoundedFrame(Tree, TEXT("DashboardProtectionCardFrame"), FLinearColor(0.14f, 0.095f, 0.028f, 0.80f), GoldEdge, 9.0f, 1.5f, FMargin(14.0f));
+        StyleRoundedFrame(Tree, TEXT("DashboardBuildingsCardFrame"), FLinearColor(0.12f, 0.065f, 0.02f, 0.80f), FLinearColor(0.68f, 0.34f, 0.12f, 0.94f), 9.0f, 1.5f, FMargin(14.0f));
+        StyleRoundedFrame(Tree, TEXT("DashboardRecentEventsFrame"), FLinearColor(0.012f, 0.045f, 0.07f, 0.74f), SoftGoldEdge, 8.0f, 1.0f, FMargin(16.0f));
+        StyleRoundedFrame(Tree, TEXT("DashboardRelationsFrame"), FLinearColor(0.055f, 0.04f, 0.015f, 0.72f), GoldEdge, 8.0f, 1.25f, FMargin(14.0f));
+        StyleRoundedFrame(Tree, TEXT("PendingOffersFrame"), FLinearColor(0.055f, 0.04f, 0.015f, 0.72f), GoldEdge, 8.0f, 1.25f, FMargin(14.0f));
+        StyleRoundedFrame(Tree, TEXT("DashboardQuickActionsFrame"), FLinearColor(0.01f, 0.055f, 0.08f, 0.76f), CyanEdge, 8.0f, 1.25f, FMargin(14.0f));
+        StyleRoundedFrame(Tree, TEXT("DashboardSidebarTitleFrame"), FLinearColor(0.18f, 0.12f, 0.04f, 0.76f), GoldEdge, 7.0f, 1.25f, FMargin(12.0f, 8.0f));
+        for (const FName CardTextName : {
+            FName(TEXT("DashboardClanCardTitleText")),
+            FName(TEXT("DashboardClanCardValueText")),
+            FName(TEXT("DashboardClanCardDetailText")),
+            FName(TEXT("DashboardDiplomacyCardTitleText")),
+            FName(TEXT("DashboardDiplomacyCardValueText")),
+            FName(TEXT("DashboardDiplomacyCardDetailText")),
+            FName(TEXT("DashboardProtectionCardTitleText")),
+            FName(TEXT("DashboardProtectionCardValueText")),
+            FName(TEXT("DashboardProtectionCardDetailText")),
+            FName(TEXT("DashboardBuildingsCardTitleText")),
+            FName(TEXT("DashboardBuildingsCardValueText")),
+            FName(TEXT("DashboardBuildingsCardDetailText"))
+        })
+        {
+            if (UTextBlock* CardText = Cast<UTextBlock>(Tree->FindWidget(CardTextName)))
+            {
+                CardText->SetJustification(ETextJustify::Center);
+                CardText->SetAutoWrapText(true);
+            }
+        }
+        SetTextFontSize(Tree, TEXT("DashboardClanCardDetailText"), 13);
+        SetTextFontSize(Tree, TEXT("DashboardDiplomacyCardValueText"), 16);
+        SetTextFontSize(Tree, TEXT("DashboardDiplomacyCardDetailText"), 13);
+        SetTextFontSize(Tree, TEXT("DashboardProtectionCardDetailText"), 12);
+        SetTextFontSize(Tree, TEXT("DashboardBuildingsCardDetailText"), 12);
         for (const FName NavigationButton : {
             FName(TEXT("ClanTabButton")),
             FName(TEXT("DiplomacyTabButton")),
