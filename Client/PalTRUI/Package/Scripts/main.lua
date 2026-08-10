@@ -92,9 +92,11 @@ PalTRUIKeybindCallbacks = PalTRUIKeybindCallbacks or {}
 local keybind_callbacks = PalTRUIKeybindCallbacks
 PalTRUIToggleGate = PalTRUIToggleGate or {
     busy = false,
-    last_toggle_at = 0
+    last_toggle_at = 0,
+    last_source = ""
 }
 local toggle_gate = PalTRUIToggleGate
+toggle_gate.last_source = tostring(toggle_gate.last_source or "")
 local TOGGLE_COOLDOWN_SECONDS = 2
 local function register_retained_keybind(name, key, callback)
     keybind_callbacks[name] = callback
@@ -157,8 +159,10 @@ local function request_panel_toggle(source, close_only)
     end
 
     local now = os.time()
+    local repeated_source = toggle_gate.last_source == tostring(source)
     if toggle_gate.busy == true
-        or now - toggle_gate.last_toggle_at < TOGGLE_COOLDOWN_SECONDS then
+        or (repeated_source
+            and now - toggle_gate.last_toggle_at < TOGGLE_COOLDOWN_SECONDS) then
         print(string.format(
             "[PalTRUI] PALTR_UI_TOGGLE_IGNORED | source=%s | busy=%s | cooldown=true\n",
             tostring(source),
@@ -169,6 +173,7 @@ local function request_panel_toggle(source, close_only)
 
     toggle_gate.busy = true
     toggle_gate.last_toggle_at = now
+    toggle_gate.last_source = tostring(source)
     local function guarded_toggle()
         local completed, toggle_error = pcall(toggle_panel)
         toggle_gate.busy = false
