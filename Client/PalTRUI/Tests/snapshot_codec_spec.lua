@@ -97,4 +97,22 @@ local server_bomb, server_bomb_error = ServerCodec.decode(count_bomb)
 equal(server_bomb, nil, "server count bomb rejected")
 equal(server_bomb_error, "count", "server count bomb error")
 
+local truncated = table.concat({
+    "schema_version\t1",
+    "generated_at\t1",
+    "player.name\tAda",
+    "player.guild_key\town",
+    "player.role\t1",
+    "player.is_master\t1",
+    "guild.key\town",
+    "guild.name\tAnka",
+    "guilds.count\t1",
+    "members.count\t0",
+    "relations.count\t0",
+    "guilds.1.key\tother"
+}, "\n")
+local truncated_snapshot, truncated_error = ClientCodec.decode(truncated)
+equal(truncated_snapshot, nil, "truncated guild rejected")
+equal(truncated_error, "guilds", "truncated guild error")
+
 print("PALTR_UI_SNAPSHOT_CODEC_TEST_OK")

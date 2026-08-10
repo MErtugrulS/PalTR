@@ -107,6 +107,17 @@ local function flag(values, key)
     return values[key] == "1"
 end
 
+local function valid_flag(values, key)
+    return values[key] == "0" or values[key] == "1"
+end
+
+local function present(values, keys)
+    for _, key in ipairs(keys) do
+        if values[key] == nil then return false end
+    end
+    return true
+end
+
 function Codec.decode(payload)
     if type(payload) ~= "string" then return nil, "payload" end
     local values = {}
@@ -136,6 +147,13 @@ function Codec.decode(payload)
         or relation_count > record_count then
         return nil, "count"
     end
+    if not present(values, {
+        "player.name", "player.guild_key", "player.role",
+        "player.is_master", "guild.key", "guild.name"
+    }) or number(values, "player.role") == nil
+        or not valid_flag(values, "player.is_master") then
+        return nil, "identity"
+    end
 
     local snapshot = {
         schema_version = number(values, "schema_version"),
@@ -157,6 +175,15 @@ function Codec.decode(payload)
 
     for index = 1, guild_count do
         local prefix = "guilds." .. index .. "."
+        if not present(values, {
+            prefix .. "key", prefix .. "name",
+            prefix .. "member_count", prefix .. "online_count",
+            prefix .. "active"
+        }) or number(values, prefix .. "member_count") == nil
+            or number(values, prefix .. "online_count") == nil
+            or not valid_flag(values, prefix .. "active") then
+            return nil, "guilds"
+        end
         table.insert(snapshot.guilds, {
             key = values[prefix .. "key"] or "",
             name = values[prefix .. "name"] or "",
@@ -167,6 +194,14 @@ function Codec.decode(payload)
     end
     for index = 1, member_count do
         local prefix = "members." .. index .. "."
+        if not present(values, {
+            prefix .. "key", prefix .. "name", prefix .. "role",
+            prefix .. "is_master", prefix .. "online"
+        }) or number(values, prefix .. "role") == nil
+            or not valid_flag(values, prefix .. "is_master")
+            or not valid_flag(values, prefix .. "online") then
+            return nil, "members"
+        end
         table.insert(snapshot.members, {
             key = values[prefix .. "key"] or "",
             name = values[prefix .. "name"] or "",
@@ -177,6 +212,19 @@ function Codec.decode(payload)
     end
     for index = 1, relation_count do
         local prefix = "relations." .. index .. "."
+        if not present(values, {
+            prefix .. "guild_key", prefix .. "guild_name",
+            prefix .. "state", prefix .. "previous_state",
+            prefix .. "requested_by", prefix .. "accepted_by",
+            prefix .. "proposal_direction", prefix .. "active_at",
+            prefix .. "expires_at", prefix .. "note",
+            prefix .. "action_reason", prefix .. "can_manage",
+            prefix .. "actions.count"
+        }) or number(values, prefix .. "active_at") == nil
+            or number(values, prefix .. "expires_at") == nil
+            or not valid_flag(values, prefix .. "can_manage") then
+            return nil, "relations"
+        end
         local relation = {
             guild_key = values[prefix .. "guild_key"] or "",
             guild_name = values[prefix .. "guild_name"] or "",
@@ -197,6 +245,11 @@ function Codec.decode(payload)
         if action_count > record_count then return nil, "count" end
         for action_index = 1, action_count do
             local action_prefix = prefix .. "actions." .. action_index .. "."
+            if not present(values, {
+                action_prefix .. "id", action_prefix .. "label"
+            }) then
+                return nil, "actions"
+            end
             table.insert(relation.actions, {
                 id = values[action_prefix .. "id"] or "",
                 label = values[action_prefix .. "label"] or ""
