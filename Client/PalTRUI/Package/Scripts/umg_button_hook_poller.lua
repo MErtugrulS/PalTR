@@ -5,6 +5,8 @@ UMGButtonHookPoller.__index = UMGButtonHookPoller
 
 UMGButtonHookPoller.HOOK_PATH = "/Script/Pal.PalHUDInGame:TickWorldHUDs"
 
+PalTRUIHookCallbacks = PalTRUIHookCallbacks or {}
+
 function UMGButtonHookPoller.new(options)
     options = type(options) == "table" and options or {}
     return setmetatable({
@@ -16,6 +18,8 @@ function UMGButtonHookPoller.new(options)
         now = options.now or os.time,
         on_result = options.on_result,
         on_resume = options.on_resume,
+        callback_registry = options.callback_registry or PalTRUIHookCallbacks,
+        callback_key = tostring(options.callback_key or "button_tick"),
         resume_after_seconds = tonumber(options.resume_after_seconds) or 2,
         active = false,
         registered = false,
@@ -83,12 +87,14 @@ function UMGButtonHookPoller:start()
         self.hook_callback = function()
             self:_tick()
         end
+        self.callback_registry[self.callback_key] = self.hook_callback
         local hooked, pre_id, post_id = pcall(
             self.register_hook,
             UMGButtonHookPoller.HOOK_PATH,
-            self.hook_callback
+            self.callback_registry[self.callback_key]
         )
         if not hooked then
+            self.callback_registry[self.callback_key] = nil
             self.hook_callback = nil
             return false, tostring(pre_id)
         end

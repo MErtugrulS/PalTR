@@ -17,6 +17,7 @@ local frame = 0
 local routed = {}
 local resumed = 0
 local now = 10
+local callback_registry = {}
 local poller = Poller.new({
     widget_provider = function() return {} end,
     control_names = { "ClanTabButton" },
@@ -44,6 +45,8 @@ local poller = Poller.new({
         return "pre", "post"
     end,
     now = function() return now end,
+    callback_registry = callback_registry,
+    callback_key = "test_button_tick",
     on_resume = function() resumed = resumed + 1 end
 })
 
@@ -59,6 +62,8 @@ equal(resumed, 1, "tick gap refreshes input")
 poller:stop()
 equal(poller.active, false, "poller stopped without unregistering hook")
 equal(poller.registered, true, "stable hook remains registered")
+equal(callback_registry.test_button_tick, hook_callback,
+    "hook callback retained outside poller instance")
 local sampled_before = frame
 hook_callback()
 equal(frame, sampled_before, "inactive hook does not touch UMG")
