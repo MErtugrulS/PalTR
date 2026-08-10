@@ -137,7 +137,7 @@ equal(panel.view_model.content, panel.view_model.views.DIPLOMACY, "active conten
 equal(panel.view_model.connection.ready, true, "snapshot connection ready")
 equal(panel.view_model.header.guild_text, "Klan: Anka",
     "header guild presentation")
-equal(panel.view_model.header.role_text, "Yetki: Lider",
+equal(panel.view_model.header.role_text, "Rol: Lider",
     "header role presentation")
 equal(panel.view_model.header.notification_text, "Bildirim: 0",
     "header notification presentation")
@@ -149,7 +149,7 @@ equal(
 equal(panel.view_model.views.CLAN.name_text, "Anka", "clan name text")
 equal(
     panel.view_model.views.CLAN.summary_text,
-    "Lider: Ada | Üye: 2 | Çevrimiçi: 1\nSavaş: 1 | İttifak: 1 | Bekleyen: 0",
+    "Rol: Lider | Üye: 2 | Çevrimiçi: 1\nSavaş: 1 | İttifak: 1 | Bekleyen: 0",
     "clan summary text"
 )
 equal(panel.view_model.views.CLAN.leader_name, "Ada", "clan leader")

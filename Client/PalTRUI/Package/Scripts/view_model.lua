@@ -392,6 +392,7 @@ end
 local function clan_view(snapshot)
     snapshot = table_or_empty(snapshot)
     local guild = table_or_empty(snapshot.guild)
+    local player = table_or_empty(snapshot.player)
     local members = {}
     local online_count = 0
     local leader_name = ""
@@ -475,8 +476,9 @@ local function clan_view(snapshot)
         title = "Klanım",
         value = guild_name ~= "" and guild_name or "-",
         detail = string.format(
-            "Lider: %s | Üye: %d | Çevrimiçi: %d",
-            leader_name ~= "" and leader_name or "-",
+            "Rol: %s | Üye: %d | Çevrimiçi: %d",
+            player.is_master == true and "Lider"
+                or (text(player.guild_key) ~= "" and "Üye" or "-"),
             #members,
             online_count
         )
@@ -842,9 +844,9 @@ function ViewModel.build(snapshot, panel)
         header = {
             guild_text = text(guild.name) ~= ""
                 and "Klan: " .. text(guild.name) or "Klan: -",
-            role_text = schema_version == 0 and "Yetki: -"
+            role_text = schema_version == 0 and "Rol: -"
                 or (player.is_master == true
-                    and "Yetki: Lider" or "Yetki: Uye"),
+                    and "Rol: Lider" or "Rol: Uye"),
             notification_text = string.format(
                 "Bildirim: %d",
                 tonumber(clan.pending_count) or 0

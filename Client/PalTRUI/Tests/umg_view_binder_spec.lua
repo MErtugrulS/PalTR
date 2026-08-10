@@ -170,7 +170,7 @@ local model = {
     },
     header = {
         guild_text = "Klan: Anka",
-        role_text = "Yetki: Lider",
+        role_text = "Rol: Lider",
         notification_text = "Bildirim: 1"
     },
     tabs = {
@@ -205,7 +205,7 @@ local model = {
             members_status_text = "1 çevrimiçi | 1 çevrimdışı",
             empty = false,
             name_text = "Anka",
-            summary_text = "Lider: Ada | Üye: 2 | Çevrimiçi: 1\nSavaş: 1 | İttifak: 0 | Bekleyen: 0",
+            summary_text = "Rol: Lider | Üye: 2 | Çevrimiçi: 1\nSavaş: 1 | İttifak: 0 | Bekleyen: 0",
             members_text = "Ada (cevrimici)\nBora",
             pending_text = "Teklifçiler | İttifak teklifi bekliyor | Gelen teklif",
             dashboard = {
@@ -218,7 +218,7 @@ local model = {
                         detail_control = "DashboardClanCardDetailText",
                         title = "Klanim",
                         value = "Anka",
-                        detail = "Lider: Ada | Uye: 2 | Cevrimici: 1"
+                        detail = "Rol: Lider | Uye: 2 | Cevrimici: 1"
                     },
                     {
                         id = "DIPLOMACY_STATUS",
@@ -352,12 +352,12 @@ equal(switch_index, 1, "diplomacy tab selected")
 equal(text_values.TitleText, "PALTR DİPLOMASİ MODU", "panel title")
 equal(text_values.ConnectionStatusText, "Sunucu snapshoti hazir", "status")
 equal(text_values.HeaderGuildText, "Klan: Anka", "header guild")
-equal(text_values.HeaderRoleText, "Yetki: Lider", "header role")
+equal(text_values.HeaderRoleText, "Rol: Lider", "header role")
 equal(text_values.HeaderNotificationText, "Bildirim: 1",
     "header notification")
 equal(text_values.ClanNameText, "Anka", "clan name")
 equal(text_values.ClanSummaryText,
-    "Lider: Ada | Üye: 2 | Çevrimiçi: 1\nSavaş: 1 | İttifak: 0 | Bekleyen: 0",
+    "Rol: Lider | Üye: 2 | Çevrimiçi: 1\nSavaş: 1 | İttifak: 0 | Bekleyen: 0",
     "clan summary")
 equal(text_values.ClanMembersText, "Ada (cevrimici)\nBora", "members")
 equal(text_values.ClanMembersHeadingText, "KLAN ÜYELERİ (2)",
@@ -380,7 +380,7 @@ equal(text_values.DashboardClanCardTitleText, "Klanim",
 equal(text_values.DashboardClanCardValueText, "Anka",
     "clan dashboard card value")
 equal(text_values.DashboardClanCardDetailText,
-    "Lider: Ada | Uye: 2 | Cevrimici: 1",
+    "Rol: Lider | Uye: 2 | Cevrimici: 1",
     "clan dashboard card detail")
 equal(text_values.DashboardDiplomacyCardTitleText, "Diplomasi",
     "diplomacy dashboard card title")
