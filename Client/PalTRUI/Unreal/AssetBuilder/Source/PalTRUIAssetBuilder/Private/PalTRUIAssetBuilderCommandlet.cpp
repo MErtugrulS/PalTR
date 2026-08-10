@@ -192,6 +192,17 @@ namespace PalTRUIAssetBuilder
         Frame->SetPadding(Padding);
     }
 
+    void StyleTransparentFrame(UWidgetTree* Tree, const FName Name, const FMargin Padding)
+    {
+        if (UBorder* Frame = Cast<UBorder>(Tree->FindWidget(Name)))
+        {
+            Frame->Modify();
+            Frame->SetBrush(FSlateNoResource());
+            Frame->SetBrushColor(FLinearColor::Transparent);
+            Frame->SetPadding(Padding);
+        }
+    }
+
     void StyleFrame(
         UWidgetTree* Tree,
         const FName Name,
@@ -3619,6 +3630,11 @@ namespace PalTRUIAssetBuilder
             TEXT("T_PalTRParchmentHeader"),
             ArtDirectory / TEXT("paltr_parchment_header.png")
         );
+        UTexture2D* DashboardChromeTexture = ImportUITexture(
+            TEXT("/Game/Mods/PalTRUI/Art/T_PalTRDashboardChrome"),
+            TEXT("T_PalTRDashboardChrome"),
+            ArtDirectory / TEXT("paltr_dashboard_chrome.png")
+        );
         UTexture2D* ClanIcon = LoadObject<UTexture2D>(
             nullptr,
             TEXT("/Game/Mods/PalTRUI/Art/T_PalTRClanIcon.T_PalTRClanIcon")
@@ -3635,7 +3651,7 @@ namespace PalTRUIAssetBuilder
             nullptr,
             TEXT("/Game/Mods/PalTRUI/Art/T_PalTRBuildingsIcon.T_PalTRBuildingsIcon")
         );
-        if (!ParchmentTexture || !ClanIcon || !DiplomacyIcon
+        if (!ParchmentTexture || !DashboardChromeTexture || !ClanIcon || !DiplomacyIcon
             || !ProtectionIcon || !BuildingsIcon)
         {
             UE_LOG(LogTemp, Error, TEXT("PalTRUI pixel match update failed: art textures incomplete."));
@@ -3655,6 +3671,7 @@ namespace PalTRUIAssetBuilder
         UWidgetTree* Tree = Panel->WidgetTree;
         UButton* InputShield = Cast<UButton>(Tree->FindWidget(TEXT("PanelInputShield")));
         UBorder* Background = Cast<UBorder>(Tree->FindWidget(TEXT("PanelBackground")));
+        UBorder* ArtContentPadding = Cast<UBorder>(Tree->FindWidget(TEXT("PanelArtContentPadding")));
         UBorder* HeaderFrame = Cast<UBorder>(Tree->FindWidget(TEXT("HeaderFrame")));
         UBorder* ContentFrame = Cast<UBorder>(Tree->FindWidget(TEXT("ContentFrame")));
         UBorder* FooterFrame = Cast<UBorder>(Tree->FindWidget(TEXT("FooterFrame")));
@@ -3671,10 +3688,14 @@ namespace PalTRUIAssetBuilder
         UBorder* RecentFrame = Cast<UBorder>(Tree->FindWidget(TEXT("DashboardRecentEventsFrame")));
         UBorder* QuickFrame = Cast<UBorder>(Tree->FindWidget(TEXT("DashboardQuickActionsFrame")));
         USizeBox* DashboardSize = Cast<USizeBox>(Tree->FindWidget(TEXT("DashboardColumnsSize")));
-        if (!Background || !HeaderFrame || !ContentFrame || !FooterFrame || !FooterHint
+        UVerticalBox* ClanPage = Cast<UVerticalBox>(Tree->FindWidget(TEXT("ClanPage")));
+        UTextBlock* ClanHeading = Cast<UTextBlock>(Tree->FindWidget(TEXT("ClanHeadingText")));
+        UTextBlock* ClanSubtitle = Cast<UTextBlock>(Tree->FindWidget(TEXT("ClanSubtitleText")));
+        if (!Background || !ArtContentPadding || !HeaderFrame || !ContentFrame || !FooterFrame || !FooterHint
             || !BodyRow || !NavigationSize || !NavigationFrame || !HeaderCrestSize
             || !StatusCards || !DashboardColumns || !MainColumn || !SidebarColumn
-            || !LowerRow || !RecentFrame || !QuickFrame || !DashboardSize)
+            || !LowerRow || !RecentFrame || !QuickFrame || !DashboardSize
+            || !ClanPage || !ClanHeading || !ClanSubtitle)
         {
             UE_LOG(LogTemp, Error, TEXT("PalTRUI pixel match update failed: presentation hierarchy incomplete."));
             return false;
@@ -3682,6 +3703,52 @@ namespace PalTRUIAssetBuilder
 
         Panel->Modify();
         Tree->Modify();
+
+        ArtContentPadding->Modify();
+        ArtContentPadding->SetBrushFromTexture(DashboardChromeTexture);
+        ArtContentPadding->SetBrushColor(FLinearColor::White);
+        ArtContentPadding->SetPadding(FMargin(16.0f, 12.0f));
+        Background->SetBrush(FSlateRoundedBoxBrush(
+            PixelTheme::Background,
+            3.0f,
+            PixelTheme::GoldMuted,
+            1.0f
+        ));
+        Background->SetBrushColor(FLinearColor::White);
+
+        auto MovePageTextIntoMain = [MainColumn](UTextBlock* Text, const int32 Index, const FMargin Padding) -> bool
+        {
+            if (!Text)
+            {
+                return false;
+            }
+            if (Text->GetParent() != MainColumn)
+            {
+                UPanelWidget* Parent = Text->GetParent();
+                if (!Parent || !Parent->RemoveChild(Text))
+                {
+                    return false;
+                }
+                UVerticalBoxSlot* Slot = Cast<UVerticalBoxSlot>(MainColumn->InsertChildAt(Index, Text));
+                if (!Slot)
+                {
+                    return false;
+                }
+                Slot->SetHorizontalAlignment(HAlign_Fill);
+                Slot->SetPadding(Padding);
+            }
+            else if (UVerticalBoxSlot* Slot = Cast<UVerticalBoxSlot>(Text->Slot))
+            {
+                Slot->SetPadding(Padding);
+            }
+            return true;
+        };
+        if (!MovePageTextIntoMain(ClanHeading, 0, FMargin(8, 4, 0, 4))
+            || !MovePageTextIntoMain(ClanSubtitle, 1, FMargin(8, 0, 0, 14)))
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI pixel match update failed: dashboard heading relocation."));
+            return false;
+        }
 
         const FAnchors PixelAnchors(0.055f, 0.040f, 0.945f, 0.955f);
         if (InputShield)
@@ -3707,14 +3774,10 @@ namespace PalTRUIAssetBuilder
         NavigationSize->SetWidthOverride(296.0f);
         DashboardSize->SetHeightOverride(650.0f);
 
-        StyleRoundedFrame(Tree, TEXT("HeaderFrame"), PixelTheme::PanelDark,
-            PixelTheme::GoldMuted, 4.0f, 1.25f, FMargin(8.0f, 6.0f));
-        StyleRoundedFrame(Tree, TEXT("ContentFrame"), PixelTheme::FromSRGB(5, 17, 26, 0.90f),
-            PixelTheme::GoldMuted, 3.0f, 1.0f, FMargin(12.0f));
-        StyleRoundedFrame(Tree, TEXT("FooterFrame"), PixelTheme::PanelDark,
-            PixelTheme::GoldMuted, 3.0f, 1.0f, FMargin(10.0f, 8.0f));
-        StyleRoundedFrame(Tree, TEXT("LeftNavigationFrame"), PixelTheme::FromSRGB(5, 21, 31, 0.97f),
-            PixelTheme::GoldMuted, 4.0f, 1.0f, FMargin(14.0f));
+        StyleTransparentFrame(Tree, TEXT("HeaderFrame"), FMargin(8.0f, 6.0f));
+        StyleTransparentFrame(Tree, TEXT("ContentFrame"), FMargin(12.0f));
+        StyleTransparentFrame(Tree, TEXT("FooterFrame"), FMargin(10.0f, 8.0f));
+        StyleTransparentFrame(Tree, TEXT("LeftNavigationFrame"), FMargin(14.0f));
 
         StyleRoundedFrame(Tree, TEXT("HeaderServerFrame"), PixelTheme::FromSRGB(9, 31, 39, 0.98f),
             PixelTheme::GoldMuted, 5.0f, 1.0f, FMargin(11.0f, 7.0f));
@@ -3796,32 +3859,35 @@ namespace PalTRUIAssetBuilder
             }
         }
 
-        StyleRoundedFrame(Tree, TEXT("DashboardClanCardFrame"), PixelTheme::FromSRGB(23, 67, 67, 0.98f),
-            PixelTheme::Cyan, 5.0f, 1.25f, FMargin(14.0f));
-        StyleRoundedFrame(Tree, TEXT("DashboardDiplomacyCardFrame"), PixelTheme::FromSRGB(24, 58, 82, 0.98f),
-            PixelTheme::FromSRGB(82, 158, 194, 0.98f), 5.0f, 1.25f, FMargin(14.0f));
-        StyleRoundedFrame(Tree, TEXT("DashboardProtectionCardFrame"), PixelTheme::FromSRGB(71, 58, 34, 0.98f),
-            PixelTheme::Gold, 5.0f, 1.25f, FMargin(14.0f));
-        StyleRoundedFrame(Tree, TEXT("DashboardBuildingsCardFrame"), PixelTheme::FromSRGB(59, 44, 32, 0.98f),
-            PixelTheme::FromSRGB(178, 102, 41, 0.98f), 5.0f, 1.25f, FMargin(14.0f));
-        StyleRoundedFrame(Tree, TEXT("DashboardRecentEventsFrame"), PixelTheme::FromSRGB(15, 43, 57, 0.97f),
-            PixelTheme::GoldMuted, 4.0f, 1.0f, FMargin(16.0f));
-        StyleRoundedFrame(Tree, TEXT("DashboardQuickActionsFrame"), PixelTheme::FromSRGB(16, 49, 62, 0.97f),
-            PixelTheme::Cyan, 4.0f, 1.0f, FMargin(14.0f));
-        StyleRoundedFrame(Tree, TEXT("DashboardRelationsFrame"), PixelTheme::RelationDark,
-            PixelTheme::GoldMuted, 4.0f, 1.0f, FMargin(14.0f));
-        StyleRoundedFrame(Tree, TEXT("PendingOffersFrame"), PixelTheme::RelationDark,
-            PixelTheme::GoldMuted, 4.0f, 1.0f, FMargin(14.0f));
+        const FLinearColor NoOutline = FLinearColor::Transparent;
+        StyleRoundedFrame(Tree, TEXT("DashboardClanCardFrame"), PixelTheme::FromSRGB(11, 88, 84, 0.54f),
+            NoOutline, 3.0f, 0.0f, FMargin(14.0f));
+        StyleRoundedFrame(Tree, TEXT("DashboardDiplomacyCardFrame"), PixelTheme::FromSRGB(21, 76, 111, 0.52f),
+            NoOutline, 3.0f, 0.0f, FMargin(14.0f));
+        StyleRoundedFrame(Tree, TEXT("DashboardProtectionCardFrame"), PixelTheme::FromSRGB(126, 91, 28, 0.48f),
+            NoOutline, 3.0f, 0.0f, FMargin(14.0f));
+        StyleRoundedFrame(Tree, TEXT("DashboardBuildingsCardFrame"), PixelTheme::FromSRGB(107, 57, 24, 0.48f),
+            NoOutline, 3.0f, 0.0f, FMargin(14.0f));
+        StyleTransparentFrame(Tree, TEXT("DashboardRecentEventsFrame"), FMargin(16.0f));
+        StyleTransparentFrame(Tree, TEXT("DashboardQuickActionsFrame"), FMargin(14.0f));
+        StyleTransparentFrame(Tree, TEXT("DashboardRelationsFrame"), FMargin(14.0f));
+        StyleTransparentFrame(Tree, TEXT("PendingOffersFrame"), FMargin(14.0f));
 
-        const FName ParchmentFrames[] = {
+        const FName DashboardChromeTitleFrames[] = {
             TEXT("DashboardSidebarTitleFrame"),
-            TEXT("PendingOffersTitleFrame"),
+            TEXT("PendingOffersTitleFrame")
+        };
+        for (const FName FrameName : DashboardChromeTitleFrames)
+        {
+            StyleTransparentFrame(Tree, FrameName, FMargin(16.0f, 9.0f));
+        }
+        const FName SecondaryParchmentFrames[] = {
             TEXT("ReferenceDiplomacyListTitleFrame"),
             TEXT("ReferenceDiplomacyDetailTitleFrame"),
             TEXT("ReferenceGuildActiveTitleFrame"),
             TEXT("ReferenceGuildRegisteredTitleFrame")
         };
-        for (const FName FrameName : ParchmentFrames)
+        for (const FName FrameName : SecondaryParchmentFrames)
         {
             StyleTextureFrame(Tree, FrameName, ParchmentTexture,
                 FMargin(0.025f, 0.075f), FMargin(16.0f, 9.0f));
@@ -4058,7 +4124,8 @@ namespace PalTRUIAssetBuilder
             TEXT("/Game/Mods/PalTRUI/Art/T_PalTRDiplomacyIcon.T_PalTRDiplomacyIcon"),
             TEXT("/Game/Mods/PalTRUI/Art/T_PalTRProtectionIcon.T_PalTRProtectionIcon"),
             TEXT("/Game/Mods/PalTRUI/Art/T_PalTRBuildingsIcon.T_PalTRBuildingsIcon"),
-            TEXT("/Game/Mods/PalTRUI/Art/T_PalTRParchmentHeader.T_PalTRParchmentHeader")
+            TEXT("/Game/Mods/PalTRUI/Art/T_PalTRParchmentHeader.T_PalTRParchmentHeader"),
+            TEXT("/Game/Mods/PalTRUI/Art/T_PalTRDashboardChrome.T_PalTRDashboardChrome")
         };
         for (const TCHAR* TexturePath : RequiredTextures)
         {
