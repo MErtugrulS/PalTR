@@ -86,6 +86,8 @@ local player = {
     player_state = {}
 }
 local publisher = Publisher.new(service, nil)
+equal(Publisher.MAX_CHUNKS, Transport.MAX_CHUNKS,
+    "server and client chunk limits match")
 local published, chunk_count = publisher:publish(player, true)
 equal(published, true, "snapshot published")
 equal(chunk_count > 1, true, "snapshot split into chunks")
@@ -125,5 +127,37 @@ local invalid, _, invalid_error = transport:receive({
 })
 equal(invalid, false, "invalid chunk rejected")
 equal(invalid_error, "chunk", "invalid chunk error")
+
+local extended, _, extended_error = transport:receive({
+    kind = "SNAPSHOT_CHUNK",
+    request_id = "extended:1:65",
+    payload = "x"
+})
+equal(extended, false, "extended transfer remains incomplete")
+equal(extended_error, nil, "extended transfer accepted")
+
+local oversized_id, _, oversized_id_error = transport:receive({
+    kind = "SNAPSHOT_CHUNK",
+    request_id = string.rep("x", Transport.MAX_TRANSFER_ID_SIZE + 1)
+        .. ":1:1",
+    payload = "x"
+})
+equal(oversized_id, false, "oversized transfer id rejected")
+equal(oversized_id_error, "chunk", "oversized transfer id error")
+
+local bounded = Transport.new()
+for index = 1, Transport.MAX_ACTIVE_TRANSFERS + 1 do
+    bounded:receive({
+        kind = "SNAPSHOT_CHUNK",
+        request_id = string.format("bounded-%d:1:2", index),
+        payload = "x"
+    })
+end
+local active_count = 0
+for _ in pairs(bounded.transfers) do active_count = active_count + 1 end
+equal(active_count, Transport.MAX_ACTIVE_TRANSFERS,
+    "incomplete transfers stay bounded")
+equal(bounded.transfers["bounded-1"], nil,
+    "oldest incomplete transfer evicted")
 
 print("PALTR_UI_SNAPSHOT_TRANSPORT_TEST_OK")

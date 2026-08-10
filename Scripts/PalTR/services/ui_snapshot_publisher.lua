@@ -6,6 +6,7 @@ local Publisher = {}
 Publisher.__index = Publisher
 
 Publisher.CHUNK_SIZE = 180
+Publisher.MAX_CHUNKS = 512
 
 local function identity(player)
     return tostring(player and (player.key or player.uid or player.name) or "")
@@ -39,6 +40,9 @@ function Publisher:publish(player, force)
     end
 
     local total = math.max(1, math.ceil(#payload / Publisher.CHUNK_SIZE))
+    if total > Publisher.MAX_CHUNKS then
+        return false, "snapshot_too_large"
+    end
     self.next_transfer_id = self.next_transfer_id + 1
     local transfer_id = table.concat({
         tostring(snapshot.generated_at),
