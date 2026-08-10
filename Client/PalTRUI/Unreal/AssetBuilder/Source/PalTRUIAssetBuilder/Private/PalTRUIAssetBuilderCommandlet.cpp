@@ -359,9 +359,9 @@ namespace PalTRUIAssetBuilder
         Background->SetBrushColor(FLinearColor(0.025f, 0.04f, 0.065f, 0.97f));
         Background->SetPadding(FMargin(28.0f));
         UCanvasPanelSlot* BackgroundSlot = Root->AddChildToCanvas(Background);
-        BackgroundSlot->SetAnchors(FAnchors(0.5f));
-        BackgroundSlot->SetAlignment(FVector2D(0.5f, 0.5f));
-        BackgroundSlot->SetSize(FVector2D(2120.0f, 1120.0f));
+        BackgroundSlot->SetAnchors(FAnchors(0.04f, 0.05f, 0.96f, 0.95f));
+        BackgroundSlot->SetAlignment(FVector2D::ZeroVector);
+        BackgroundSlot->SetOffsets(FMargin(0.0f));
 
         UVerticalBox* Layout = Tree->ConstructWidget<UVerticalBox>(UVerticalBox::StaticClass(), TEXT("PanelLayout"));
         Background->SetContent(Layout);
@@ -1993,7 +1993,9 @@ namespace PalTRUIAssetBuilder
             if (UCanvasPanelSlot* ShieldSlot = Cast<UCanvasPanelSlot>(InputShield->Slot))
             {
                 ShieldSlot->Modify();
-                ShieldSlot->SetSize(FVector2D(2120.0f, 1120.0f));
+                ShieldSlot->SetAnchors(FAnchors(0.04f, 0.05f, 0.96f, 0.95f));
+                ShieldSlot->SetAlignment(FVector2D::ZeroVector);
+                ShieldSlot->SetOffsets(FMargin(0.0f));
             }
             if (UButtonSlot* ContentSlot = Cast<UButtonSlot>(Background->Slot))
             {
@@ -2005,7 +2007,9 @@ namespace PalTRUIAssetBuilder
         else if (UCanvasPanelSlot* BackgroundSlot = Cast<UCanvasPanelSlot>(Background->Slot))
         {
             BackgroundSlot->Modify();
-            BackgroundSlot->SetSize(FVector2D(2120.0f, 1120.0f));
+            BackgroundSlot->SetAnchors(FAnchors(0.04f, 0.05f, 0.96f, 0.95f));
+            BackgroundSlot->SetAlignment(FVector2D::ZeroVector);
+            BackgroundSlot->SetOffsets(FMargin(0.0f));
         }
 
         USizeBox* HeaderCrestSpacer = Cast<USizeBox>(Tree->FindWidget(TEXT("HeaderCrestSpacer")));
@@ -2429,9 +2433,9 @@ namespace PalTRUIAssetBuilder
         ContentSlot->SetVerticalAlignment(VAlign_Fill);
 
         UCanvasPanelSlot* ShieldSlot = Root->AddChildToCanvas(Shield);
-        ShieldSlot->SetAnchors(FAnchors(0.5f));
-        ShieldSlot->SetAlignment(FVector2D(0.5f, 0.5f));
-        ShieldSlot->SetSize(FVector2D(2120.0f, 1120.0f));
+        ShieldSlot->SetAnchors(FAnchors(0.04f, 0.05f, 0.96f, 0.95f));
+        ShieldSlot->SetAlignment(FVector2D::ZeroVector);
+        ShieldSlot->SetOffsets(FMargin(0.0f));
 
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Panel);
         FKismetEditorUtilities::CompileBlueprint(Panel);
@@ -2923,20 +2927,26 @@ namespace PalTRUIAssetBuilder
         UButtonSlot* PanelContentSlot = PanelBackground
             ? Cast<UButtonSlot>(PanelBackground->Slot)
             : nullptr;
-        const FVector2D ExpectedPanelSize(2120.0f, 1120.0f);
-        if (!InputShieldSlot || !InputShieldSlot->GetSize().Equals(ExpectedPanelSize, 0.1f))
+        const FAnchors ExpectedPanelAnchors(0.04f, 0.05f, 0.96f, 0.95f);
+        const FAnchors ActualPanelAnchors = InputShieldSlot
+            ? InputShieldSlot->GetAnchors()
+            : FAnchors();
+        const FMargin ActualPanelOffsets = InputShieldSlot
+            ? InputShieldSlot->GetOffsets()
+            : FMargin();
+        if (!InputShieldSlot
+            || !ActualPanelAnchors.Minimum.Equals(ExpectedPanelAnchors.Minimum, KINDA_SMALL_NUMBER)
+            || !ActualPanelAnchors.Maximum.Equals(ExpectedPanelAnchors.Maximum, KINDA_SMALL_NUMBER)
+            || !InputShieldSlot->GetAlignment().Equals(FVector2D::ZeroVector, KINDA_SMALL_NUMBER)
+            || !FMath::IsNearlyZero(ActualPanelOffsets.Left)
+            || !FMath::IsNearlyZero(ActualPanelOffsets.Top)
+            || !FMath::IsNearlyZero(ActualPanelOffsets.Right)
+            || !FMath::IsNearlyZero(ActualPanelOffsets.Bottom))
         {
-            const FVector2D ActualPanelSize = InputShieldSlot
-                ? InputShieldSlot->GetSize()
-                : FVector2D::ZeroVector;
             UE_LOG(
                 LogTemp,
                 Error,
-                TEXT("PalTRUI asset verification failed: panel size is %.0fx%.0f, expected %.0fx%.0f."),
-                ActualPanelSize.X,
-                ActualPanelSize.Y,
-                ExpectedPanelSize.X,
-                ExpectedPanelSize.Y
+                TEXT("PalTRUI asset verification failed: responsive panel anchors or offsets are invalid.")
             );
             return false;
         }
@@ -2951,13 +2961,11 @@ namespace PalTRUIAssetBuilder
         UE_LOG(
             LogTemp,
             Display,
-            TEXT("PALTR_UI_ASSET_VERIFY_OK | mod_actor=%s | panel=%s | widgets=%d | textures=%d | size=%.0fx%.0f | content=fill"),
+            TEXT("PALTR_UI_ASSET_VERIFY_OK | mod_actor=%s | panel=%s | widgets=%d | textures=%d | viewport=92x90pct | content=fill"),
             *ModActor->GeneratedClass->GetPathName(),
             *Panel->GeneratedClass->GetPathName(),
             UE_ARRAY_COUNT(RequiredWidgets),
-            UE_ARRAY_COUNT(RequiredTextures),
-            ExpectedPanelSize.X,
-            ExpectedPanelSize.Y
+            UE_ARRAY_COUNT(RequiredTextures)
         );
         return true;
     }
