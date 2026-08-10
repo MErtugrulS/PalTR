@@ -45,15 +45,17 @@ local panel_class = { name = "WBP_PalTRPanel_C" }
 local create_calls = {}
 local input_mode_calls = {}
 local viewport_calls = {}
-local remove_calls = 0
+local visibility_calls = {}
 local close_order = {}
 local widget = {
     AddToViewport = function(_, z_order)
         table.insert(viewport_calls, z_order)
     end,
-    RemoveFromParent = function()
-        table.insert(close_order, "remove")
-        remove_calls = remove_calls + 1
+    SetVisibility = function(_, visibility)
+        if visibility == UMGWidgetPort.VISIBILITY_COLLAPSED then
+            table.insert(close_order, "visibility")
+        end
+        table.insert(visibility_calls, visibility)
     end
 }
 local library = {
@@ -164,7 +166,8 @@ equal(port:update(diplomacy), true, "open widget accepts update")
 equal(bound_models[2], diplomacy, "updated model bound")
 equal(port.last_model, diplomacy, "updated model retained")
 equal(port:close(), true, "widget closed")
-equal(remove_calls, 1, "widget removed once")
+equal(visibility_calls[2], UMGWidgetPort.VISIBILITY_COLLAPSED,
+    "widget collapsed on close")
 equal(cursor_calls[3], false, "previous mouse cursor restored on close")
 equal(controller.bShowMouseCursor, false, "mouse cursor is restored")
 equal(move_ignored, false, "movement input unlocked on close")
@@ -175,17 +178,21 @@ equal(input_mode_calls[3].player_controller, controller,
     "game input receives controller")
 equal(input_mode_calls[3].flush_input, true, "closing input is flushed")
 equal(close_order[1], "game_input", "game input restored before removal")
-equal(close_order[2], "remove", "widget removed after input restore")
+equal(close_order[2], "visibility", "widget collapsed after input restore")
 equal(port.widget, widget, "widget retained for safe reopen")
-equal(port.mounted, false, "closed widget marked outside viewport")
+equal(port.mounted, true, "closed widget remains mounted")
+equal(port.visible, false, "closed widget marked hidden")
 equal(port.last_model, nil, "model reference cleared")
 equal(port:close(), true, "closed widget is idempotent")
-equal(remove_calls, 1, "idempotent close does not remove twice")
+equal(#visibility_calls, 2, "idempotent close does not hide twice")
 
 equal(port:open(first_model), true, "retained widget reopened")
 equal(#create_calls, 1, "reopen does not create another UObject")
-equal(#viewport_calls, 2, "retained widget returned to viewport")
+equal(#viewport_calls, 1, "reopen does not touch viewport hierarchy")
 equal(port.mounted, true, "reopened widget marked in viewport")
+equal(port.visible, true, "reopened widget marked visible")
+equal(visibility_calls[3], UMGWidgetPort.VISIBILITY_VISIBLE,
+    "retained widget shown on reopen")
 
 local unavailable_context = UMGWidgetPort.new({
     context_provider = { discover = function() return { ready = false } end },

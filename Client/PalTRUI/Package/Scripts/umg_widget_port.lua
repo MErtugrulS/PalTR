@@ -9,6 +9,8 @@ UMGWidgetPort.WIDGET_LIBRARY_PATH =
     "/Script/UMG.Default__WidgetBlueprintLibrary"
 UMGWidgetPort.Z_ORDER = 50
 UMGWidgetPort.MOUSE_LOCK_DO_NOT_LOCK = 0
+UMGWidgetPort.VISIBILITY_VISIBLE = 0
+UMGWidgetPort.VISIBILITY_COLLAPSED = 1
 
 local function valid_object(object)
     if object == nil then return false end
@@ -119,6 +121,17 @@ local function report_close_stage(stage)
     end
 end
 
+local function set_widget_visibility(widget, visibility)
+    local changed, change_error = pcall(function()
+        widget:SetVisibility(visibility)
+    end)
+    if not changed then
+        return false, "PalTR panel gorunurlugu degistirilemedi: "
+            .. tostring(change_error)
+    end
+    return true
+end
+
 function UMGWidgetPort.new(dependencies)
     dependencies = type(dependencies) == "table" and dependencies or {}
     return setmetatable({
@@ -128,6 +141,7 @@ function UMGWidgetPort.new(dependencies)
         find_object = dependencies.find_object or default_find_object,
         widget = nil,
         mounted = false,
+        visible = false,
         last_model = nil,
         widget_library = nil,
         player_controller = nil,
@@ -138,7 +152,9 @@ function UMGWidgetPort.new(dependencies)
 end
 
 function UMGWidgetPort:open(model)
-    if valid_object(self.widget) and self.mounted == true then return true end
+    if valid_object(self.widget)
+        and self.mounted == true
+        and self.visible == true then return true end
 
     local context = self.context_provider.discover()
     if type(context) ~= "table" or context.ready ~= true then
@@ -199,6 +215,11 @@ function UMGWidgetPort:open(model)
         end
         return false, "PalTR paneli viewport'a eklenemedi."
     end
+    local shown, show_error = set_widget_visibility(
+        widget,
+        UMGWidgetPort.VISIBILITY_VISIBLE
+    )
+    if shown ~= true then return false, show_error end
 
     local input_ready, input_error = set_ui_input_mode(
         widget_library,
@@ -230,6 +251,7 @@ function UMGWidgetPort:open(model)
 
     self.widget = widget
     self.mounted = true
+    self.visible = true
     self.last_model = model
     self.widget_library = widget_library
     self.player_controller = context.player_controller
@@ -271,6 +293,7 @@ function UMGWidgetPort:close()
     if not valid_object(self.widget) then
         self.widget = nil
         self.mounted = false
+        self.visible = false
         self.last_model = nil
         self.widget_library = nil
         self.player_controller = nil
@@ -279,7 +302,7 @@ function UMGWidgetPort:close()
         self.locked_look_input = false
         return true
     end
-    if self.mounted ~= true then return true end
+    if self.mounted ~= true or self.visible ~= true then return true end
 
     report_close_stage("input_restore_begin")
     local input_restored, input_error = restore_game_input_mode(
@@ -316,16 +339,15 @@ function UMGWidgetPort:close()
     end
     report_close_stage("cursor_restore_end")
 
-    report_close_stage("remove_begin")
-    local removed = pcall(function()
-        self.widget:RemoveFromParent()
-    end)
-    if not removed then
-        return false, "PalTR paneli viewport'tan kaldirilamadi."
-    end
-    report_close_stage("remove_end")
+    report_close_stage("collapse_begin")
+    local hidden, hide_error = set_widget_visibility(
+        self.widget,
+        UMGWidgetPort.VISIBILITY_COLLAPSED
+    )
+    if hidden ~= true then return false, hide_error end
+    report_close_stage("collapse_end")
 
-    self.mounted = false
+    self.visible = false
     self.last_model = nil
     self.widget_library = nil
     self.player_controller = nil
