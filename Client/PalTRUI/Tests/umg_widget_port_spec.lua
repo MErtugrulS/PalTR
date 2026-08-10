@@ -176,9 +176,16 @@ equal(input_mode_calls[3].player_controller, controller,
 equal(input_mode_calls[3].flush_input, true, "closing input is flushed")
 equal(close_order[1], "game_input", "game input restored before removal")
 equal(close_order[2], "remove", "widget removed after input restore")
-equal(port.widget, nil, "widget reference cleared")
+equal(port.widget, widget, "widget retained for safe reopen")
+equal(port.mounted, false, "closed widget marked outside viewport")
 equal(port.last_model, nil, "model reference cleared")
 equal(port:close(), true, "closed widget is idempotent")
+equal(remove_calls, 1, "idempotent close does not remove twice")
+
+equal(port:open(first_model), true, "retained widget reopened")
+equal(#create_calls, 1, "reopen does not create another UObject")
+equal(#viewport_calls, 2, "retained widget returned to viewport")
+equal(port.mounted, true, "reopened widget marked in viewport")
 
 local unavailable_context = UMGWidgetPort.new({
     context_provider = { discover = function() return { ready = false } end },
