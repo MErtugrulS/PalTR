@@ -16,6 +16,8 @@ function UMGButtonHookPoller.new(options)
         sampler = options.sampler or UMGButtonStateProbe,
         register_hook = options.register_hook or RegisterHook,
         now = options.now or os.time,
+        poll_now = options.poll_now or os.clock,
+        poll_interval_seconds = tonumber(options.poll_interval_seconds) or 0.05,
         on_result = options.on_result,
         on_resume = options.on_resume,
         callback_registry = options.callback_registry or PalTRUIHookCallbacks,
@@ -27,6 +29,7 @@ function UMGButtonHookPoller.new(options)
         pre_hook_id = nil,
         post_hook_id = nil,
         last_tick_at = nil,
+        last_poll_at = nil,
         previous = {}
     }, UMGButtonHookPoller)
 end
@@ -72,6 +75,12 @@ function UMGButtonHookPoller:_tick()
     if delayed and type(self.on_resume) == "function" then
         self.on_resume(current)
     end
+    local poll_current = tonumber(self.poll_now()) or 0
+    if self.last_poll_at ~= nil
+        and poll_current - self.last_poll_at < self.poll_interval_seconds then
+        return
+    end
+    self.last_poll_at = poll_current
     self:poll_once()
 end
 
@@ -104,6 +113,7 @@ function UMGButtonHookPoller:start()
     end
     self.active = true
     self.last_tick_at = tonumber(self.now()) or 0
+    self.last_poll_at = nil
     self.previous = {}
     return true
 end
@@ -111,6 +121,7 @@ end
 function UMGButtonHookPoller:stop()
     self.active = false
     self.last_tick_at = nil
+    self.last_poll_at = nil
     self.previous = {}
 end
 

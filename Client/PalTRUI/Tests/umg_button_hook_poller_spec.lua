@@ -17,6 +17,7 @@ local frame = 0
 local routed = {}
 local resumed = 0
 local now = 10
+local poll_now = 0
 local callback_registry = {}
 local poller = Poller.new({
     widget_provider = function() return {} end,
@@ -45,6 +46,10 @@ local poller = Poller.new({
         return "pre", "post"
     end,
     now = function() return now end,
+    poll_now = function()
+        poll_now = poll_now + 0.05
+        return poll_now
+    end,
     callback_registry = callback_registry,
     callback_key = "test_button_tick",
     on_resume = function() resumed = resumed + 1 end
