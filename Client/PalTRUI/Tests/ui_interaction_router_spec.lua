@@ -37,6 +37,12 @@ local current_model = {
                     target_tab = "DIPLOMACY",
                     target_guild = "guild-pending",
                     enabled = true
+                },
+                DashboardPendingAcceptButton = {
+                    target_tab = "DIPLOMACY",
+                    target_guild = "guild-pending",
+                    action_id = "ACCEPT",
+                    enabled = true
                 }
             }
         },
@@ -158,6 +164,18 @@ equal(pending_rendered, true, "pending dashboard rendered")
 equal(pending_error, nil, "pending dashboard has no error")
 equal(calls[#calls].name, "open_relation",
     "pending relation opened atomically")
+
+local pending_accept_handled, pending_accept_model,
+    pending_accept_rendered, pending_accept_error =
+    router:handle("DashboardPendingAcceptButton")
+equal(pending_accept_handled, true, "pending accept handled")
+equal(pending_accept_model.selected_guild, "guild-pending",
+    "pending accept guild selected")
+equal(pending_accept_rendered, true, "pending accept rendered")
+equal(pending_accept_error, nil, "pending accept has no error")
+equal(calls[#calls].name, "request_action",
+    "pending accept dispatched after selection")
+equal(calls[#calls].action_id, "ACCEPT", "pending accept action id")
 
 local closed, closed_model, close_rendered =
     router:handle("CloseButton")

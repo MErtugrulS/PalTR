@@ -27,6 +27,8 @@ local interactive_controls = {
     "DashboardDiplomacyButton",
     "DashboardOffersButton",
     "DashboardGuildsButton",
+    "DashboardPendingAcceptButton",
+    "DashboardPendingRejectButton",
     "PreviousRelationButton",
     "NextRelationButton",
     "PreviousAllianceButton",

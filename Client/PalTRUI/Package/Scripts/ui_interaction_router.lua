@@ -89,6 +89,7 @@ function UIInteractionRouter:handle(control_name)
                     tostring(dashboard.reason or "Hizli islem kullanilamaz.")
             end
             local target_guild = tostring(dashboard.target_guild or "")
+            local action_id = tostring(dashboard.action_id or "")
             local accepted, target_model, rendered, render_error
             if target_guild ~= ""
                 and type(self.controller.open_relation) == "function" then
@@ -97,6 +98,21 @@ function UIInteractionRouter:handle(control_name)
                         dashboard.target_tab,
                         target_guild
                     )
+                if accepted ~= true or rendered ~= true then
+                    return false, target_model, rendered, render_error
+                end
+                if action_id ~= "" then
+                    if type(self.controller.request_action) ~= "function" then
+                        return false, target_model, false,
+                            "UI aksiyon controller'i hazir degil."
+                    end
+                    local dispatched, dispatch_result =
+                        self.controller:request_action(action_id)
+                    if dispatched ~= true then
+                        return false, target_model, false, dispatch_result
+                    end
+                    return true, target_model, true
+                end
             else
                 accepted, target_model, rendered, render_error =
                     self.controller:set_tab(dashboard.target_tab)

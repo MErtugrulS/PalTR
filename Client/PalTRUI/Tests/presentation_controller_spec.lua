@@ -143,7 +143,7 @@ equal(
 local refreshed_snapshot = snapshot()
 refreshed_snapshot.generated_at = 101
 controller:apply_snapshot(refreshed_snapshot)
-equal(controller:model().connection.status_text, "Sunucu snapshoti hazir",
+equal(controller:model().connection.status_text, "Sunucu Aktif",
     "new snapshot clears queued action status")
 equal(
     controller:model().views.DIPLOMACY.action_controls.WarRequestButton.enabled,

@@ -64,6 +64,14 @@ local names = {
     "ClanMembersStatusText",
     "ClanMembersText",
     "PendingOffersText",
+    "DashboardPendingGuildText",
+    "DashboardPendingStateText",
+    "DashboardRelationRow1NameText",
+    "DashboardRelationRow1StateText",
+    "DashboardRelationRow2NameText",
+    "DashboardRelationRow2StateText",
+    "DashboardRelationRow3NameText",
+    "DashboardRelationRow3StateText",
     "DashboardDiplomacyButtonText",
     "DashboardOffersButtonText",
     "DashboardGuildsButtonText",
@@ -106,6 +114,14 @@ for _, action in ipairs({
     {
         control = "DashboardGuildsButton",
         text_control = "DashboardGuildsButtonText"
+    },
+    {
+        control = "DashboardPendingAcceptButton",
+        text_control = "DashboardPendingAcceptButtonText"
+    },
+    {
+        control = "DashboardPendingRejectButton",
+        text_control = "DashboardPendingRejectButtonText"
     },
     {
         control = "WarRequestButton",
@@ -166,7 +182,7 @@ local model = {
     error = "",
     connection = {
         ready = true,
-        status_text = "Sunucu snapshoti hazir"
+        status_text = "Sunucu Aktif"
     },
     header = {
         guild_text = "Klan: Anka",
@@ -210,6 +226,28 @@ local model = {
             pending_text = "Teklifçiler | İttifak teklifi bekliyor | Gelen teklif",
             dashboard = {
                 relations_text = "Rakipler | Savas\nTeklifciler | Ittifak teklifi bekliyor",
+                pending_guild_text = "Teklifciler",
+                pending_state_text = "Ittifak teklifi bekliyor",
+                relation_rows = {
+                    {
+                        name_control = "DashboardRelationRow1NameText",
+                        state_control = "DashboardRelationRow1StateText",
+                        guild_name = "Rakipler",
+                        state_label = "Savas"
+                    },
+                    {
+                        name_control = "DashboardRelationRow2NameText",
+                        state_control = "DashboardRelationRow2StateText",
+                        guild_name = "Teklifciler",
+                        state_label = "Ittifak teklifi bekliyor"
+                    },
+                    {
+                        name_control = "DashboardRelationRow3NameText",
+                        state_control = "DashboardRelationRow3StateText",
+                        guild_name = "-",
+                        state_label = ""
+                    }
+                },
                 cards = {
                     {
                         id = "CLAN_STATUS",
@@ -218,7 +256,7 @@ local model = {
                         detail_control = "DashboardClanCardDetailText",
                         title = "Klanim",
                         value = "Anka",
-                        detail = "Rol: Lider | Uye: 2 | Cevrimici: 1"
+                        detail = "Rol: Lider\nUye: 2\nCevrimici: 1"
                     },
                     {
                         id = "DIPLOMACY_STATUS",
@@ -226,7 +264,7 @@ local model = {
                         value_control = "DashboardDiplomacyCardValueText",
                         detail_control = "DashboardDiplomacyCardDetailText",
                         title = "Diplomasi",
-                        value = "Savas: 1 | Ittifak: 0 | Bekleyen: 1",
+                        value = "Savas: 1\nIttifak: 0\nBekleyen: 1",
                         detail = ""
                     }
                 }
@@ -249,6 +287,18 @@ local model = {
                     text_control = "DashboardGuildsButtonText",
                     label = "Klanlari Listele",
                     enabled = false
+                },
+                DashboardPendingAcceptButton = {
+                    control = "DashboardPendingAcceptButton",
+                    text_control = "DashboardPendingAcceptButtonText",
+                    label = "Kabul",
+                    enabled = true
+                },
+                DashboardPendingRejectButton = {
+                    control = "DashboardPendingRejectButton",
+                    text_control = "DashboardPendingRejectButtonText",
+                    label = "Reddet",
+                    enabled = true
                 }
             },
             members = {
@@ -350,7 +400,7 @@ equal(bound, true, "view model bound")
 equal(bind_error, nil, "successful bind has no error")
 equal(switch_index, 1, "diplomacy tab selected")
 equal(text_values.TitleText, "PALTR DİPLOMASİ MODU", "panel title")
-equal(text_values.ConnectionStatusText, "Sunucu snapshoti hazir", "status")
+equal(text_values.ConnectionStatusText, "Sunucu Aktif", "status")
 equal(text_values.HeaderGuildText, "Klan: Anka", "header guild")
 equal(text_values.HeaderRoleText, "Rol: Lider", "header role")
 equal(text_values.HeaderNotificationText, "Bildirim: 1",
@@ -380,16 +430,28 @@ equal(text_values.DashboardClanCardTitleText, "Klanim",
 equal(text_values.DashboardClanCardValueText, "Anka",
     "clan dashboard card value")
 equal(text_values.DashboardClanCardDetailText,
-    "Rol: Lider | Uye: 2 | Cevrimici: 1",
+    "Rol: Lider\nUye: 2\nCevrimici: 1",
     "clan dashboard card detail")
 equal(text_values.DashboardDiplomacyCardTitleText, "Diplomasi",
     "diplomacy dashboard card title")
 equal(text_values.DashboardDiplomacyCardValueText,
-    "Savas: 1 | Ittifak: 0 | Bekleyen: 1",
+    "Savas: 1\nIttifak: 0\nBekleyen: 1",
     "diplomacy dashboard card value")
 equal(text_values.DashboardRelationsText,
     "Rakipler | Savas\nTeklifciler | Ittifak teklifi bekliyor",
     "dashboard relation preview")
+equal(text_values.DashboardRelationRow1NameText, "Rakipler",
+    "dashboard relation row name")
+equal(text_values.DashboardRelationRow1StateText, "Savas",
+    "dashboard relation row state")
+equal(text_values.DashboardPendingGuildText, "Teklifciler",
+    "dashboard pending guild")
+equal(text_values.DashboardPendingStateText, "Ittifak teklifi bekliyor",
+    "dashboard pending state")
+equal(text_values.DashboardPendingAcceptButtonText, "Kabul",
+    "dashboard pending accept label")
+equal(enabled_values.DashboardPendingRejectButton, true,
+    "dashboard pending reject enabled")
 equal(text_values.RelationListEmptyText, "Rakipler | Savas", "relations")
 equal(text_values.RelationTitleText, "Rakipler", "selected guild")
 equal(text_values.RelationStateText, "Savas", "relation state")

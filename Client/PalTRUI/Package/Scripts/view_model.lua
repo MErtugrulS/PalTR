@@ -125,6 +125,24 @@ local dashboard_action_definitions = {
         label = "Klanlari Listele",
         target_tab = "GUILDS",
         requires_guilds = true
+    },
+    {
+        control = "DashboardPendingAcceptButton",
+        text_control = "DashboardPendingAcceptButtonText",
+        label = "Kabul",
+        target_tab = "DIPLOMACY",
+        action_id = "ACCEPT",
+        requires_pending = true,
+        requires_transport = true
+    },
+    {
+        control = "DashboardPendingRejectButton",
+        text_control = "DashboardPendingRejectButtonText",
+        label = "Reddet",
+        target_tab = "DIPLOMACY",
+        action_id = "REJECT",
+        requires_pending = true,
+        requires_transport = true
     }
 }
 
@@ -389,7 +407,7 @@ local function append_status(description, status)
     return description .. " | " .. status
 end
 
-local function clan_view(snapshot)
+local function clan_view(snapshot, action_transport_ready, action_pending)
     snapshot = table_or_empty(snapshot)
     local guild = table_or_empty(snapshot.guild)
     local player = table_or_empty(snapshot.player)
@@ -412,6 +430,7 @@ local function clan_view(snapshot)
     local pending_count = 0
     local pending_offers = {}
     local relation_preview_lines = {}
+    local relation_cards = {}
     local relation_preview_count = 0
     for _, relation in ipairs(table_or_empty(snapshot.relations)) do
         relation = table_or_empty(relation)
@@ -441,6 +460,12 @@ local function clan_view(snapshot)
                     relation_name,
                     label_for(state_labels, state)
                 ))
+            end
+            if #relation_cards < 3 then
+                table.insert(relation_cards, {
+                    guild_name = relation_name,
+                    state_label = label_for(state_labels, state)
+                })
             end
         end
     end
@@ -476,7 +501,7 @@ local function clan_view(snapshot)
         title = "Klanım",
         value = guild_name ~= "" and guild_name or "-",
         detail = string.format(
-            "Rol: %s | Üye: %d | Çevrimiçi: %d",
+            "Rol: %s\nÜye: %d\nÇevrimiçi: %d",
             player.is_master == true and "Lider"
                 or (text(player.guild_key) ~= "" and "Üye" or "-"),
             #members,
@@ -490,7 +515,7 @@ local function clan_view(snapshot)
         detail_control = "DashboardDiplomacyCardDetailText",
         title = "Diplomasi",
         value = string.format(
-            "Savaş: %d | İttifak: %d | Bekleyen: %d",
+            "Savaş: %d\nİttifak: %d\nBekleyen: %d",
             war_count,
             alliance_count,
             pending_count
@@ -508,18 +533,47 @@ local function clan_view(snapshot)
         elseif definition.requires_guilds and guild_count == 0 then
             enabled = false
             reason = "Listelenecek klan yok."
+        elseif definition.requires_transport
+            and action_transport_ready ~= true then
+            enabled = false
+            reason = "Client-server UI transportu hazir degil."
+        elseif definition.requires_transport and action_pending == true then
+            enabled = false
+            reason = "Sunucu sonucu bekleniyor."
+        elseif definition.requires_transport
+            and player.is_master ~= true then
+            enabled = false
+            reason = "Yalnizca klan lideri yonetebilir."
         end
         quick_actions[definition.control] = {
             control = definition.control,
             text_control = definition.text_control,
             label = definition.label,
             target_tab = definition.target_tab,
+            action_id = definition.action_id or "",
             target_guild = definition.requires_pending
                 and text(table_or_empty(pending_offers[1]).guild_key) or "",
             enabled = enabled,
             reason = reason
         }
     end
+
+    local relation_row_models = {}
+    for index = 1, 3 do
+        local relation_card = table_or_empty(relation_cards[index])
+        relation_row_models[index] = {
+            name_control = string.format(
+                "DashboardRelationRow%dNameText", index
+            ),
+            state_control = string.format(
+                "DashboardRelationRow%dStateText", index
+            ),
+            guild_name = text(relation_card.guild_name) ~= ""
+                and text(relation_card.guild_name) or "-",
+            state_label = text(relation_card.state_label)
+        }
+    end
+    local primary_offer = table_or_empty(pending_offers[1])
 
     return {
         guild = {
@@ -546,9 +600,14 @@ local function clan_view(snapshot)
             alliance_count = alliance_count,
             pending_count = pending_count,
             relations_empty = #relation_preview_lines == 0,
+            relation_rows = relation_row_models,
             relations_text = #relation_preview_lines == 0
                 and "Iliski kaydi yok."
-                or table.concat(relation_preview_lines, "\n")
+                or table.concat(relation_preview_lines, "\n"),
+            pending_guild_text = text(primary_offer.guild_name) ~= ""
+                and text(primary_offer.guild_name)
+                or "Bekleyen teklif yok.",
+            pending_state_text = text(primary_offer.state_label)
         },
         pending_offers = pending_offers,
         pending_count = pending_count,
@@ -808,8 +867,12 @@ function ViewModel.build(snapshot, panel)
     local schema_version = tonumber(snapshot.schema_version) or 0
     local panel_error = text(panel.error)
     local action_status = text(panel.action_status)
-    local clan = clan_view(snapshot)
     local action_transport_ready = panel.action_transport_ready == true
+    local clan = clan_view(
+        snapshot,
+        action_transport_ready,
+        action_status ~= ""
+    )
     local relation_data = relation_views(
         snapshot,
         selected_guild,
@@ -838,7 +901,7 @@ function ViewModel.build(snapshot, panel)
             status_text = panel_error ~= "" and panel_error
                 or (action_status ~= "" and action_status)
                 or (schema_version > 0
-                    and "Sunucu snapshoti hazir"
+                    and "Sunucu Aktif"
                     or "Sunucu baglantisi bekleniyor")
         },
         header = {

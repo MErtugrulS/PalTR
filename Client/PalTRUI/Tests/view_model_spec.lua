@@ -143,13 +143,13 @@ equal(panel.view_model.header.notification_text, "Bildirim: 0",
     "header notification presentation")
 equal(
     panel.view_model.connection.status_text,
-    "Sunucu snapshoti hazir",
+    "Sunucu Aktif",
     "snapshot connection text"
 )
 equal(panel.view_model.views.CLAN.name_text, "Anka", "clan name text")
 equal(
     panel.view_model.views.CLAN.summary_text,
-    "Rol: Lider | Üye: 2 | Çevrimiçi: 1\nSavaş: 1 | İttifak: 1 | Bekleyen: 0",
+    "Rol: Lider\nÜye: 2\nÇevrimiçi: 1\nSavaş: 1\nİttifak: 1\nBekleyen: 0",
     "clan summary text"
 )
 equal(panel.view_model.views.CLAN.leader_name, "Ada", "clan leader")
@@ -161,6 +161,10 @@ equal(panel.view_model.views.CLAN.dashboard.pending_count, 0,
     "dashboard pending count")
 equal(panel.view_model.views.CLAN.dashboard.relations_empty, false,
     "dashboard relations available")
+equal(panel.view_model.views.CLAN.dashboard.relation_rows[1].guild_name,
+    "Rakipler", "dashboard first relation card")
+equal(panel.view_model.views.CLAN.dashboard.relation_rows[1].state_label,
+    "Savaş", "dashboard first relation state")
 equal(string.find(
     panel.view_model.views.CLAN.dashboard.relations_text,
     "Rakipler",
@@ -249,6 +253,12 @@ equal(pending_panel.view_model.views.CLAN.quick_actions.DashboardOffersButton.en
     true, "pending quick action enabled")
 equal(pending_panel.view_model.views.CLAN.quick_actions.DashboardOffersButton.target_guild,
     "guild-offer", "pending quick action target guild")
+equal(pending_panel.view_model.views.CLAN.dashboard.pending_guild_text,
+    "Teklifçiler", "pending dashboard guild")
+equal(pending_panel.view_model.views.CLAN.dashboard.pending_state_text,
+    "İttifak teklifi bekliyor", "pending dashboard state")
+equal(pending_panel.view_model.views.CLAN.quick_actions.DashboardPendingAcceptButton.enabled,
+    false, "pending accept requires transport")
 equal(
     panel.view_model.views.CLAN.members_text,
     "Ada | Lider | Çevrimiçi\nBora | Üye | Çevrimdışı",

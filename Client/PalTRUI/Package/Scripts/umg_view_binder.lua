@@ -180,6 +180,7 @@ function UMGViewBinder:bind(panel, model)
     local guilds = table_or_empty(views.GUILDS)
     local connection = table_or_empty(model.connection)
     local header = table_or_empty(model.header)
+    local dashboard = table_or_empty(clan.dashboard)
 
     local bindings = {
         { "TitleText", "PALTR PANEL" },
@@ -193,6 +194,8 @@ function UMGViewBinder:bind(panel, model)
         { "ClanMembersStatusText", clan.members_status_text },
         { "ClanMembersText", clan.members_text },
         { "PendingOffersText", clan.pending_text },
+        { "DashboardPendingGuildText", dashboard.pending_guild_text },
+        { "DashboardPendingStateText", dashboard.pending_state_text },
         { "RelationListEmptyText", diplomacy.list_text },
         { "RelationTitleText", diplomacy.title_text },
         { "RelationStateText", diplomacy.state_text },
@@ -217,6 +220,29 @@ function UMGViewBinder:bind(panel, model)
             binding[2]
         )
         if not updated then return false, update_error end
+    end
+
+    for _, relation_row in ipairs(
+        table_or_empty(dashboard.relation_rows)
+    ) do
+        relation_row = table_or_empty(relation_row)
+        for _, field in ipairs({
+            {
+                control = relation_row.name_control,
+                value = relation_row.guild_name
+            },
+            {
+                control = relation_row.state_control,
+                value = relation_row.state_label
+            }
+        }) do
+            local updated, update_error = self:_set_text(
+                controls,
+                text(field.control),
+                field.value
+            )
+            if not updated then return false, update_error end
+        end
     end
 
     for _, tab in ipairs(table_or_empty(model.tabs)) do
@@ -253,7 +279,6 @@ function UMGViewBinder:bind(panel, model)
         if not state_updated then return false, state_error end
     end
 
-    local dashboard = table_or_empty(clan.dashboard)
     local relations_updated, relations_error = self:_set_text(
         controls,
         "DashboardRelationsText",

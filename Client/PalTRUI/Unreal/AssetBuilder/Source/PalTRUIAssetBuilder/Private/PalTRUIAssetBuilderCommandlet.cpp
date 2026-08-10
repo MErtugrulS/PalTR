@@ -81,7 +81,7 @@ namespace PalTRUIAssetBuilder
         }
 
         Button->Modify();
-        const FLinearColor Outline(0.32f, 0.68f, 0.72f, 0.95f);
+        const FLinearColor Outline(0.72f, 0.54f, 0.24f, 0.98f);
         const FLinearColor Hover(
             FMath::Min(Color.R * 1.20f, 1.0f),
             FMath::Min(Color.G * 1.20f, 1.0f),
@@ -90,9 +90,9 @@ namespace PalTRUIAssetBuilder
         );
         const FLinearColor Pressed(Color.R * 0.82f, Color.G * 0.82f, Color.B * 0.82f, Color.A);
         FButtonStyle Style = Button->WidgetStyle;
-        Style.SetNormal(FSlateRoundedBoxBrush(Color, 6.0f, Outline, 1.0f));
-        Style.SetHovered(FSlateRoundedBoxBrush(Hover, 6.0f, FLinearColor(0.42f, 0.88f, 0.90f, 1.0f), 1.5f));
-        Style.SetPressed(FSlateRoundedBoxBrush(Pressed, 6.0f, FLinearColor(0.85f, 0.66f, 0.30f, 1.0f), 1.5f));
+        Style.SetNormal(FSlateRoundedBoxBrush(Color, 6.0f, Outline, 1.5f));
+        Style.SetHovered(FSlateRoundedBoxBrush(Hover, 6.0f, FLinearColor(0.42f, 0.88f, 0.90f, 1.0f), 2.0f));
+        Style.SetPressed(FSlateRoundedBoxBrush(Pressed, 5.0f, FLinearColor(0.85f, 0.66f, 0.30f, 1.0f), 2.0f));
         Style.SetDisabled(FSlateRoundedBoxBrush(FLinearColor(0.06f, 0.08f, 0.09f, 0.72f), 6.0f, FLinearColor(0.22f, 0.25f, 0.25f, 0.7f), 1.0f));
         Style.SetNormalPadding(FMargin(7.0f, 5.0f));
         Style.SetPressedPadding(FMargin(7.0f, 6.0f, 7.0f, 4.0f));
@@ -102,6 +102,23 @@ namespace PalTRUIAssetBuilder
         {
             Label->Modify();
             Label->SetColorAndOpacity(FSlateColor(FLinearColor(0.95f, 0.88f, 0.70f, 1.0f)));
+            Label->SetShadowOffset(FVector2D(1.0f, 2.0f));
+            Label->SetShadowColorAndOpacity(FLinearColor(0, 0, 0, 0.85f));
+        }
+    }
+
+    void StyleTextShadow(
+        UWidgetTree* Tree,
+        const FName Name,
+        const FVector2D Offset = FVector2D(1.0f, 2.0f),
+        const FLinearColor Color = FLinearColor(0, 0, 0, 0.86f)
+    )
+    {
+        if (UTextBlock* Text = Cast<UTextBlock>(Tree->FindWidget(Name)))
+        {
+            Text->Modify();
+            Text->SetShadowOffset(Offset);
+            Text->SetShadowColorAndOpacity(Color);
         }
     }
 
@@ -2570,6 +2587,228 @@ namespace PalTRUIAssetBuilder
         {
             RelationsHeading->SetVisibility(ESlateVisibility::Collapsed);
         }
+
+        UTextBlock* ConnectionStatus = Cast<UTextBlock>(Tree->FindWidget(TEXT("ConnectionStatusText")));
+        UBorder* HeaderServerFrame = Cast<UBorder>(Tree->FindWidget(TEXT("HeaderServerFrame")));
+        UHorizontalBox* HeaderServerContent = Cast<UHorizontalBox>(Tree->FindWidget(TEXT("HeaderServerContent")));
+        UTextBlock* HeaderServerDot = Cast<UTextBlock>(Tree->FindWidget(TEXT("HeaderServerDotText")));
+        UBorder* HeaderGuildFrame = Cast<UBorder>(Tree->FindWidget(TEXT("HeaderGuildFrame")));
+        if (!HeaderServerFrame && !HeaderServerContent && !HeaderServerDot)
+        {
+            if (!ConnectionStatus || ConnectionStatus->GetParent() != HeaderRow || !HeaderGuildFrame)
+            {
+                UE_LOG(LogTemp, Error, TEXT("PalTRUI art dashboard update failed: server badge source hierarchy."));
+                return false;
+            }
+            const int32 GuildIndex = HeaderRow->GetChildIndex(HeaderGuildFrame);
+            HeaderRow->RemoveChild(ConnectionStatus);
+            HeaderServerFrame = Tree->ConstructWidget<UBorder>(UBorder::StaticClass(), TEXT("HeaderServerFrame"));
+            HeaderServerContent = Tree->ConstructWidget<UHorizontalBox>(UHorizontalBox::StaticClass(), TEXT("HeaderServerContent"));
+            HeaderServerFrame->SetContent(HeaderServerContent);
+            HeaderServerDot = MakeText(Tree, TEXT("HeaderServerDotText"), TEXT("●"), 14);
+            HeaderServerDot->SetColorAndOpacity(FSlateColor(FLinearColor(0.28f, 0.92f, 0.42f, 1.0f)));
+            AddHorizontal(HeaderServerContent, HeaderServerDot, FMargin(0, 0, 7, 0));
+            AddHorizontal(HeaderServerContent, ConnectionStatus);
+            UHorizontalBoxSlot* ServerSlot = Cast<UHorizontalBoxSlot>(HeaderRow->InsertChildAt(GuildIndex, HeaderServerFrame));
+            if (!ServerSlot)
+            {
+                UE_LOG(LogTemp, Error, TEXT("PalTRUI art dashboard update failed: server badge slot."));
+                return false;
+            }
+            ServerSlot->SetPadding(FMargin(0, 0, 8, 0));
+            ServerSlot->SetVerticalAlignment(VAlign_Center);
+        }
+        else if (!HeaderServerFrame || !HeaderServerContent || !HeaderServerDot || !ConnectionStatus
+            || HeaderServerFrame->GetContent() != HeaderServerContent
+            || HeaderServerFrame->GetParent() != HeaderRow
+            || ConnectionStatus->GetParent() != HeaderServerContent)
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI art dashboard update refused: partial server badge."));
+            return false;
+        }
+        StyleRoundedFrame(Tree, TEXT("HeaderServerFrame"), FLinearColor(0.012f, 0.045f, 0.055f, 0.96f), FLinearColor(0.44f, 0.34f, 0.16f, 0.96f), 6.0f, 1.25f, FMargin(11.0f, 7.0f));
+
+        struct FQuickVisualSpec
+        {
+            const TCHAR* ButtonName;
+            const TCHAR* TextName;
+            const TCHAR* ContentName;
+            const TCHAR* IconSizeName;
+            const TCHAR* IconName;
+            const TCHAR* ArrowName;
+            UTexture2D* Texture;
+        };
+        const FQuickVisualSpec QuickVisualSpecs[] = {
+            { TEXT("DashboardDiplomacyButton"), TEXT("DashboardDiplomacyButtonText"), TEXT("DashboardDiplomacyButtonContent"), TEXT("DashboardDiplomacyButtonIconSize"), TEXT("DashboardDiplomacyButtonIcon"), TEXT("DashboardDiplomacyButtonArrowText"), DiplomacyIcon },
+            { TEXT("DashboardOffersButton"), TEXT("DashboardOffersButtonText"), TEXT("DashboardOffersButtonContent"), TEXT("DashboardOffersButtonIconSize"), TEXT("DashboardOffersButtonIcon"), TEXT("DashboardOffersButtonArrowText"), DiplomacyIcon },
+            { TEXT("DashboardGuildsButton"), TEXT("DashboardGuildsButtonText"), TEXT("DashboardGuildsButtonContent"), TEXT("DashboardGuildsButtonIconSize"), TEXT("DashboardGuildsButtonIcon"), TEXT("DashboardGuildsButtonArrowText"), ClanIcon },
+            { TEXT("DashboardProtectionButton"), TEXT("DashboardProtectionButtonText"), TEXT("DashboardProtectionButtonContent"), TEXT("DashboardProtectionButtonIconSize"), TEXT("DashboardProtectionButtonIcon"), TEXT("DashboardProtectionButtonArrowText"), ProtectionIcon }
+        };
+        for (const FQuickVisualSpec& Spec : QuickVisualSpecs)
+        {
+            UButton* Button = Cast<UButton>(Tree->FindWidget(FName(Spec.ButtonName)));
+            UTextBlock* Label = Cast<UTextBlock>(Tree->FindWidget(FName(Spec.TextName)));
+            UHorizontalBox* ButtonContent = Cast<UHorizontalBox>(Tree->FindWidget(FName(Spec.ContentName)));
+            USizeBox* IconSize = Cast<USizeBox>(Tree->FindWidget(FName(Spec.IconSizeName)));
+            UImage* Icon = Cast<UImage>(Tree->FindWidget(FName(Spec.IconName)));
+            UTextBlock* Arrow = Cast<UTextBlock>(Tree->FindWidget(FName(Spec.ArrowName)));
+            if (!ButtonContent && !IconSize && !Icon && !Arrow)
+            {
+                if (!Button || !Label || Button->GetContent() != Label)
+                {
+                    UE_LOG(LogTemp, Error, TEXT("PalTRUI art dashboard update failed: quick action source: %s"), Spec.ButtonName);
+                    return false;
+                }
+                Button->RemoveChild(Label);
+                ButtonContent = Tree->ConstructWidget<UHorizontalBox>(UHorizontalBox::StaticClass(), FName(Spec.ContentName));
+                IconSize = Tree->ConstructWidget<USizeBox>(USizeBox::StaticClass(), FName(Spec.IconSizeName));
+                IconSize->SetWidthOverride(30.0f);
+                IconSize->SetHeightOverride(30.0f);
+                Icon = Tree->ConstructWidget<UImage>(UImage::StaticClass(), FName(Spec.IconName));
+                IconSize->SetContent(Icon);
+                AddHorizontal(ButtonContent, IconSize, FMargin(2, 0, 10, 0));
+                UHorizontalBoxSlot* LabelSlot = AddHorizontal(ButtonContent, Label);
+                LabelSlot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
+                LabelSlot->SetVerticalAlignment(VAlign_Center);
+                Label->SetJustification(ETextJustify::Left);
+                Arrow = MakeText(Tree, FName(Spec.ArrowName), TEXT(">"), 19);
+                Arrow->SetColorAndOpacity(FSlateColor(FLinearColor(0.92f, 0.72f, 0.34f, 1.0f)));
+                AddHorizontal(ButtonContent, Arrow, FMargin(10, 0, 3, 0));
+                Button->SetContent(ButtonContent);
+            }
+            else if (!Button || !Label || !ButtonContent || !IconSize || !Icon || !Arrow
+                || Button->GetContent() != ButtonContent
+                || IconSize->GetContent() != Icon
+                || Label->GetParent() != ButtonContent)
+            {
+                UE_LOG(LogTemp, Error, TEXT("PalTRUI art dashboard update refused: partial quick action visual: %s"), Spec.ButtonName);
+                return false;
+            }
+            Icon->SetBrushFromTexture(Spec.Texture, true);
+            StyleTextShadow(Tree, FName(Spec.TextName));
+            StyleTextShadow(Tree, FName(Spec.ArrowName));
+        }
+
+        UVerticalBox* RelationsContent = Cast<UVerticalBox>(Tree->FindWidget(TEXT("DashboardRelationsContent")));
+        UTextBlock* LegacyRelationsText = Cast<UTextBlock>(Tree->FindWidget(TEXT("DashboardRelationsText")));
+        if (!RelationsContent || !LegacyRelationsText)
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI art dashboard update failed: relation card source."));
+            return false;
+        }
+        LegacyRelationsText->SetVisibility(ESlateVisibility::Collapsed);
+        for (int32 RelationIndex = 1; RelationIndex <= 3; ++RelationIndex)
+        {
+            const FName FrameName(*FString::Printf(TEXT("DashboardRelationRow%dFrame"), RelationIndex));
+            const FName ContentName(*FString::Printf(TEXT("DashboardRelationRow%dContent"), RelationIndex));
+            const FName IconSizeName(*FString::Printf(TEXT("DashboardRelationRow%dIconSize"), RelationIndex));
+            const FName IconName(*FString::Printf(TEXT("DashboardRelationRow%dIcon"), RelationIndex));
+            const FName NameTextName(*FString::Printf(TEXT("DashboardRelationRow%dNameText"), RelationIndex));
+            const FName BadgeFrameName(*FString::Printf(TEXT("DashboardRelationRow%dBadgeFrame"), RelationIndex));
+            const FName StateTextName(*FString::Printf(TEXT("DashboardRelationRow%dStateText"), RelationIndex));
+            UBorder* RowFrame = Cast<UBorder>(Tree->FindWidget(FrameName));
+            UHorizontalBox* RowContent = Cast<UHorizontalBox>(Tree->FindWidget(ContentName));
+            if (!RowFrame && !RowContent)
+            {
+                RowFrame = Tree->ConstructWidget<UBorder>(UBorder::StaticClass(), FrameName);
+                RowContent = Tree->ConstructWidget<UHorizontalBox>(UHorizontalBox::StaticClass(), ContentName);
+                RowFrame->SetContent(RowContent);
+                USizeBox* RelationIconSize = Tree->ConstructWidget<USizeBox>(USizeBox::StaticClass(), IconSizeName);
+                RelationIconSize->SetWidthOverride(52.0f);
+                RelationIconSize->SetHeightOverride(52.0f);
+                UImage* RelationIcon = Tree->ConstructWidget<UImage>(UImage::StaticClass(), IconName);
+                RelationIcon->SetBrushFromTexture(ClanIcon, true);
+                RelationIconSize->SetContent(RelationIcon);
+                AddHorizontal(RowContent, RelationIconSize, FMargin(0, 0, 10, 0));
+                UTextBlock* RelationName = MakeText(Tree, NameTextName, TEXT("-"), 16);
+                UHorizontalBoxSlot* RelationNameSlot = AddHorizontal(RowContent, RelationName);
+                RelationNameSlot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
+                UBorder* BadgeFrame = Tree->ConstructWidget<UBorder>(UBorder::StaticClass(), BadgeFrameName);
+                UTextBlock* StateText = MakeText(Tree, StateTextName, TEXT(""), 12);
+                StateText->SetJustification(ETextJustify::Center);
+                BadgeFrame->SetContent(StateText);
+                AddHorizontal(RowContent, BadgeFrame, FMargin(8, 0, 0, 0));
+                AddVertical(RelationsContent, RowFrame, FMargin(0, 0, 0, RelationIndex < 3 ? 7.0f : 0.0f));
+            }
+            else if (!RowFrame || !RowContent || RowFrame->GetContent() != RowContent
+                || RowFrame->GetParent() != RelationsContent)
+            {
+                UE_LOG(LogTemp, Error, TEXT("PalTRUI art dashboard update refused: partial relation row: %d"), RelationIndex);
+                return false;
+            }
+            StyleRoundedFrame(Tree, FrameName, FLinearColor(0.018f, 0.024f, 0.026f, 0.92f), FLinearColor(0.28f, 0.24f, 0.16f, 0.92f), 6.0f, 1.0f, FMargin(10.0f, 8.0f));
+            StyleRoundedFrame(Tree, BadgeFrameName, RelationIndex == 1 ? FLinearColor(0.10f, 0.22f, 0.13f, 0.96f) : FLinearColor(0.20f, 0.075f, 0.05f, 0.96f), RelationIndex == 1 ? FLinearColor(0.24f, 0.62f, 0.36f, 0.96f) : FLinearColor(0.66f, 0.22f, 0.16f, 0.96f), 5.0f, 1.0f, FMargin(12.0f, 5.0f));
+            StyleTextShadow(Tree, NameTextName);
+            StyleTextShadow(Tree, StateTextName);
+        }
+
+        UVerticalBox* PendingContent = Cast<UVerticalBox>(Tree->FindWidget(TEXT("PendingOffersContent")));
+        UTextBlock* PendingHeading = Cast<UTextBlock>(Tree->FindWidget(TEXT("PendingOffersHeadingText")));
+        UTextBlock* LegacyPendingText = Cast<UTextBlock>(Tree->FindWidget(TEXT("PendingOffersText")));
+        UBorder* PendingTitleFrame = Cast<UBorder>(Tree->FindWidget(TEXT("PendingOffersTitleFrame")));
+        UBorder* PendingCardFrame = Cast<UBorder>(Tree->FindWidget(TEXT("DashboardPendingCardFrame")));
+        UVerticalBox* PendingCardContent = Cast<UVerticalBox>(Tree->FindWidget(TEXT("DashboardPendingCardContent")));
+        if (!PendingContent || !PendingHeading || !LegacyPendingText)
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI art dashboard update failed: pending card source."));
+            return false;
+        }
+        if (!PendingTitleFrame)
+        {
+            if (PendingHeading->GetParent() != PendingContent)
+            {
+                UE_LOG(LogTemp, Error, TEXT("PalTRUI art dashboard update failed: pending heading parent."));
+                return false;
+            }
+            PendingContent->RemoveChild(PendingHeading);
+            PendingTitleFrame = Tree->ConstructWidget<UBorder>(UBorder::StaticClass(), TEXT("PendingOffersTitleFrame"));
+            PendingTitleFrame->SetContent(PendingHeading);
+            PendingContent->InsertChildAt(0, PendingTitleFrame);
+        }
+        LegacyPendingText->SetVisibility(ESlateVisibility::Collapsed);
+        if (!PendingCardFrame && !PendingCardContent)
+        {
+            PendingCardFrame = Tree->ConstructWidget<UBorder>(UBorder::StaticClass(), TEXT("DashboardPendingCardFrame"));
+            PendingCardContent = Tree->ConstructWidget<UVerticalBox>(UVerticalBox::StaticClass(), TEXT("DashboardPendingCardContent"));
+            PendingCardFrame->SetContent(PendingCardContent);
+            UHorizontalBox* PendingIdentity = Tree->ConstructWidget<UHorizontalBox>(UHorizontalBox::StaticClass(), TEXT("DashboardPendingIdentity"));
+            USizeBox* PendingIconSize = Tree->ConstructWidget<USizeBox>(USizeBox::StaticClass(), TEXT("DashboardPendingIconSize"));
+            PendingIconSize->SetWidthOverride(58.0f);
+            PendingIconSize->SetHeightOverride(58.0f);
+            UImage* PendingIcon = Tree->ConstructWidget<UImage>(UImage::StaticClass(), TEXT("DashboardPendingIcon"));
+            PendingIcon->SetBrushFromTexture(ClanIcon, true);
+            PendingIconSize->SetContent(PendingIcon);
+            AddHorizontal(PendingIdentity, PendingIconSize, FMargin(0, 0, 12, 0));
+            UVerticalBox* PendingCopy = Tree->ConstructWidget<UVerticalBox>(UVerticalBox::StaticClass(), TEXT("DashboardPendingCopy"));
+            AddVertical(PendingCopy, MakeText(Tree, TEXT("DashboardPendingGuildText"), TEXT("Bekleyen teklif yok."), 17), FMargin(0, 0, 0, 5));
+            AddVertical(PendingCopy, MakeText(Tree, TEXT("DashboardPendingStateText"), TEXT(""), 13));
+            UHorizontalBoxSlot* PendingCopySlot = AddHorizontal(PendingIdentity, PendingCopy);
+            PendingCopySlot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
+            AddVertical(PendingCardContent, PendingIdentity, FMargin(0, 0, 0, 12));
+            UHorizontalBox* PendingActions = Tree->ConstructWidget<UHorizontalBox>(UHorizontalBox::StaticClass(), TEXT("DashboardPendingActions"));
+            UButton* PendingAccept = MakeTabButton(Tree, TEXT("DashboardPendingAcceptButton"), TEXT("DashboardPendingAcceptButtonText"), TEXT("Kabul"));
+            UHorizontalBoxSlot* PendingAcceptSlot = AddHorizontal(PendingActions, PendingAccept, FMargin(0, 0, 6, 0));
+            PendingAcceptSlot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
+            UButton* PendingReject = MakeTabButton(Tree, TEXT("DashboardPendingRejectButton"), TEXT("DashboardPendingRejectButtonText"), TEXT("Reddet"));
+            UHorizontalBoxSlot* PendingRejectSlot = AddHorizontal(PendingActions, PendingReject, FMargin(6, 0, 0, 0));
+            PendingRejectSlot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
+            AddVertical(PendingCardContent, PendingActions);
+            AddVertical(PendingContent, PendingCardFrame, FMargin(0, 10, 0, 0));
+        }
+        else if (!PendingCardFrame || !PendingCardContent
+            || PendingCardFrame->GetContent() != PendingCardContent
+            || PendingCardFrame->GetParent() != PendingContent)
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI art dashboard update refused: partial pending card."));
+            return false;
+        }
+        StyleRoundedFrame(Tree, TEXT("PendingOffersTitleFrame"), FLinearColor(0.72f, 0.54f, 0.30f, 0.98f), FLinearColor(0.88f, 0.70f, 0.38f, 1.0f), 5.0f, 1.5f, FMargin(12.0f, 8.0f));
+        PendingHeading->SetColorAndOpacity(FSlateColor(FLinearColor(0.12f, 0.085f, 0.035f, 1.0f)));
+        StyleRoundedFrame(Tree, TEXT("DashboardPendingCardFrame"), FLinearColor(0.018f, 0.024f, 0.026f, 0.94f), FLinearColor(0.32f, 0.26f, 0.15f, 0.96f), 7.0f, 1.25f, FMargin(12.0f));
+        StyleButton(Tree, TEXT("DashboardPendingAcceptButton"), FLinearColor(0.035f, 0.26f, 0.12f, 0.98f));
+        StyleButton(Tree, TEXT("DashboardPendingRejectButton"), FLinearColor(0.34f, 0.055f, 0.04f, 0.98f));
+        StyleTextShadow(Tree, TEXT("DashboardPendingGuildText"));
+        StyleTextShadow(Tree, TEXT("DashboardPendingStateText"));
         const FLinearColor GoldEdge(0.62f, 0.43f, 0.16f, 0.96f);
         const FLinearColor SoftGoldEdge(0.48f, 0.34f, 0.14f, 0.82f);
         const FLinearColor CyanEdge(0.12f, 0.66f, 0.70f, 0.92f);
@@ -2586,7 +2825,14 @@ namespace PalTRUIAssetBuilder
         StyleRoundedFrame(Tree, TEXT("DashboardRelationsFrame"), FLinearColor(0.055f, 0.04f, 0.015f, 0.72f), GoldEdge, 8.0f, 1.25f, FMargin(14.0f));
         StyleRoundedFrame(Tree, TEXT("PendingOffersFrame"), FLinearColor(0.055f, 0.04f, 0.015f, 0.72f), GoldEdge, 8.0f, 1.25f, FMargin(14.0f));
         StyleRoundedFrame(Tree, TEXT("DashboardQuickActionsFrame"), FLinearColor(0.01f, 0.055f, 0.08f, 0.76f), CyanEdge, 8.0f, 1.25f, FMargin(14.0f));
-        StyleRoundedFrame(Tree, TEXT("DashboardSidebarTitleFrame"), FLinearColor(0.18f, 0.12f, 0.04f, 0.76f), GoldEdge, 7.0f, 1.25f, FMargin(12.0f, 8.0f));
+        StyleRoundedFrame(Tree, TEXT("DashboardSidebarTitleFrame"), FLinearColor(0.72f, 0.54f, 0.30f, 0.98f), FLinearColor(0.90f, 0.72f, 0.40f, 1.0f), 6.0f, 1.5f, FMargin(12.0f, 8.0f));
+        if (UTextBlock* SidebarTitleText = Cast<UTextBlock>(Tree->FindWidget(TEXT("DashboardSidebarTitleText"))))
+        {
+            SidebarTitleText->SetColorAndOpacity(FSlateColor(FLinearColor(0.12f, 0.085f, 0.035f, 1.0f)));
+        }
+        StyleRoundedFrame(Tree, TEXT("HeaderGuildFrame"), FLinearColor(0.015f, 0.15f, 0.17f, 0.98f), FLinearColor(0.12f, 0.48f, 0.52f, 0.96f), 6.0f, 1.25f, FMargin(10.0f, 7.0f));
+        StyleRoundedFrame(Tree, TEXT("HeaderRoleFrame"), FLinearColor(0.24f, 0.16f, 0.045f, 0.98f), GoldEdge, 6.0f, 1.25f, FMargin(10.0f, 7.0f));
+        StyleRoundedFrame(Tree, TEXT("HeaderNotificationFrame"), FLinearColor(0.32f, 0.055f, 0.04f, 0.98f), FLinearColor(0.68f, 0.22f, 0.14f, 0.98f), 6.0f, 1.25f, FMargin(10.0f, 7.0f));
         for (const FName CardTextName : {
             FName(TEXT("DashboardClanCardTitleText")),
             FName(TEXT("DashboardClanCardValueText")),
@@ -2613,6 +2859,30 @@ namespace PalTRUIAssetBuilder
         SetTextFontSize(Tree, TEXT("DashboardDiplomacyCardDetailText"), 13);
         SetTextFontSize(Tree, TEXT("DashboardProtectionCardDetailText"), 12);
         SetTextFontSize(Tree, TEXT("DashboardBuildingsCardDetailText"), 12);
+        for (const FName ShadowText : {
+            FName(TEXT("TitleText")),
+            FName(TEXT("ClanHeadingText")),
+            FName(TEXT("ClanSubtitleText")),
+            FName(TEXT("DashboardClanCardTitleText")),
+            FName(TEXT("DashboardClanCardValueText")),
+            FName(TEXT("DashboardClanCardDetailText")),
+            FName(TEXT("DashboardDiplomacyCardTitleText")),
+            FName(TEXT("DashboardDiplomacyCardValueText")),
+            FName(TEXT("DashboardProtectionCardTitleText")),
+            FName(TEXT("DashboardProtectionCardValueText")),
+            FName(TEXT("DashboardBuildingsCardTitleText")),
+            FName(TEXT("DashboardBuildingsCardValueText")),
+            FName(TEXT("DashboardRecentEventsHeadingText")),
+            FName(TEXT("DashboardQuickActionsHeadingText")),
+            FName(TEXT("HeaderGuildText")),
+            FName(TEXT("HeaderRoleText")),
+            FName(TEXT("HeaderNotificationText")),
+            FName(TEXT("ConnectionStatusText")),
+            FName(TEXT("FooterHintText"))
+        })
+        {
+            StyleTextShadow(Tree, ShadowText);
+        }
         for (const FName NavigationButton : {
             FName(TEXT("ClanTabButton")),
             FName(TEXT("DiplomacyTabButton")),
@@ -3078,6 +3348,9 @@ namespace PalTRUIAssetBuilder
             TEXT("DashboardMainColumn"),
             TEXT("DashboardSidebarColumn"),
             TEXT("HeaderFrame"),
+            TEXT("HeaderServerFrame"),
+            TEXT("HeaderServerContent"),
+            TEXT("HeaderServerDotText"),
             TEXT("ClanSubtitleText"),
             TEXT("DiplomacySubtitleText"),
             TEXT("AllianceSubtitleText"),
@@ -3160,6 +3433,36 @@ namespace PalTRUIAssetBuilder
             TEXT("DashboardGuildsButtonText"),
             TEXT("DashboardProtectionButton"),
             TEXT("DashboardProtectionButtonText"),
+            TEXT("DashboardDiplomacyButtonContent"),
+            TEXT("DashboardDiplomacyButtonIconSize"),
+            TEXT("DashboardDiplomacyButtonIcon"),
+            TEXT("DashboardDiplomacyButtonArrowText"),
+            TEXT("DashboardOffersButtonContent"),
+            TEXT("DashboardOffersButtonIconSize"),
+            TEXT("DashboardOffersButtonIcon"),
+            TEXT("DashboardOffersButtonArrowText"),
+            TEXT("DashboardGuildsButtonContent"),
+            TEXT("DashboardGuildsButtonIconSize"),
+            TEXT("DashboardGuildsButtonIcon"),
+            TEXT("DashboardGuildsButtonArrowText"),
+            TEXT("DashboardProtectionButtonContent"),
+            TEXT("DashboardProtectionButtonIconSize"),
+            TEXT("DashboardProtectionButtonIcon"),
+            TEXT("DashboardProtectionButtonArrowText"),
+            TEXT("PendingOffersTitleFrame"),
+            TEXT("DashboardPendingCardFrame"),
+            TEXT("DashboardPendingCardContent"),
+            TEXT("DashboardPendingIdentity"),
+            TEXT("DashboardPendingIconSize"),
+            TEXT("DashboardPendingIcon"),
+            TEXT("DashboardPendingCopy"),
+            TEXT("DashboardPendingGuildText"),
+            TEXT("DashboardPendingStateText"),
+            TEXT("DashboardPendingActions"),
+            TEXT("DashboardPendingAcceptButton"),
+            TEXT("DashboardPendingAcceptButtonText"),
+            TEXT("DashboardPendingRejectButton"),
+            TEXT("DashboardPendingRejectButtonText"),
             TEXT("DashboardStatusCardsFrame"),
             TEXT("DashboardClanCardFrame"),
             TEXT("DashboardClanCardContent"),
@@ -3175,6 +3478,27 @@ namespace PalTRUIAssetBuilder
             TEXT("DashboardRelationsContent"),
             TEXT("DashboardRelationsHeadingText"),
             TEXT("DashboardRelationsText"),
+            TEXT("DashboardRelationRow1Frame"),
+            TEXT("DashboardRelationRow1Content"),
+            TEXT("DashboardRelationRow1IconSize"),
+            TEXT("DashboardRelationRow1Icon"),
+            TEXT("DashboardRelationRow1NameText"),
+            TEXT("DashboardRelationRow1BadgeFrame"),
+            TEXT("DashboardRelationRow1StateText"),
+            TEXT("DashboardRelationRow2Frame"),
+            TEXT("DashboardRelationRow2Content"),
+            TEXT("DashboardRelationRow2IconSize"),
+            TEXT("DashboardRelationRow2Icon"),
+            TEXT("DashboardRelationRow2NameText"),
+            TEXT("DashboardRelationRow2BadgeFrame"),
+            TEXT("DashboardRelationRow2StateText"),
+            TEXT("DashboardRelationRow3Frame"),
+            TEXT("DashboardRelationRow3Content"),
+            TEXT("DashboardRelationRow3IconSize"),
+            TEXT("DashboardRelationRow3Icon"),
+            TEXT("DashboardRelationRow3NameText"),
+            TEXT("DashboardRelationRow3BadgeFrame"),
+            TEXT("DashboardRelationRow3StateText"),
             TEXT("AllianceDetailFrame"),
             TEXT("AllianceDetailContent"),
             TEXT("AllianceTitleText"),
