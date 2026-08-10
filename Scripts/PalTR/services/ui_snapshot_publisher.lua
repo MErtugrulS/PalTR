@@ -16,6 +16,12 @@ local function fingerprint(payload)
     return (payload:gsub("generated_at\t[^\n]*", "generated_at\t", 1))
 end
 
+local function warn(publisher, message)
+    local logger = publisher and publisher.logger
+    if logger == nil then return end
+    pcall(function() logger:warn(message) end)
+end
+
 function Publisher.new(snapshot_service, logger)
     return setmetatable({
         snapshot_service = snapshot_service,
@@ -31,7 +37,10 @@ function Publisher:publish(player, force)
     end
     local snapshot = self.snapshot_service:build(player)
     local payload, encode_error = SnapshotCodec.encode(snapshot)
-    if payload == nil then return false, encode_error end
+    if payload == nil then
+        warn(self, "UI_SNAPSHOT_ENCODE_HATA | " .. tostring(encode_error))
+        return false, encode_error
+    end
 
     local player_id = identity(player)
     local current_fingerprint = fingerprint(payload)
@@ -41,6 +50,12 @@ function Publisher:publish(player, force)
 
     local total = math.max(1, math.ceil(#payload / Publisher.CHUNK_SIZE))
     if total > Publisher.MAX_CHUNKS then
+        warn(self, string.format(
+            "UI_SNAPSHOT_KAPASITE_HATA | bytes=%d | chunks=%d | limit=%d",
+            #payload,
+            total,
+            Publisher.MAX_CHUNKS
+        ))
         return false, "snapshot_too_large"
     end
     self.next_transfer_id = self.next_transfer_id + 1
@@ -62,6 +77,12 @@ function Publisher:publish(player, force)
             frame,
             self.logger
         ) then
+            warn(self, string.format(
+                "UI_SNAPSHOT_GONDERIM_HATA | player=%s | chunk=%d/%d",
+                player_id,
+                index,
+                total
+            ))
             return false, "send"
         end
     end

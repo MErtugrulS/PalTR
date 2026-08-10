@@ -120,6 +120,26 @@ equal(unchanged, true, "unchanged snapshot accepted")
 equal(unchanged_reason, "unchanged", "unchanged snapshot deduplicated")
 equal(#captured, before_unchanged, "unchanged snapshot not resent")
 
+local warnings = {}
+local oversized_snapshot = snapshot
+local original_guild_name = oversized_snapshot.guild.name
+oversized_snapshot.guild.name = string.rep(
+    "x",
+    Publisher.CHUNK_SIZE * Publisher.MAX_CHUNKS + 1
+)
+local oversized_publisher = Publisher.new(service, {
+    warn = function(_, message) table.insert(warnings, message) end
+})
+local oversized_publish, oversized_publish_error =
+    oversized_publisher:publish(player, true)
+equal(oversized_publish, false, "oversized snapshot publish rejected")
+equal(oversized_publish_error, "snapshot_too_large",
+    "oversized snapshot publish error")
+equal(#warnings, 1, "oversized snapshot warning emitted")
+equal(warnings[1]:find("UI_SNAPSHOT_KAPASITE_HATA", 1, true) ~= nil,
+    true, "oversized snapshot warning identity")
+oversized_snapshot.guild.name = original_guild_name
+
 local invalid, _, invalid_error = transport:receive({
     kind = "SNAPSHOT_CHUNK",
     request_id = "bad:0:65",
