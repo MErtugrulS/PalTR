@@ -109,4 +109,11 @@ navy, gold, parchment-title, and rounded-card presentation into Diplomacy,
 Alliance, and Guilds. The update keeps the existing renderer and action widget
 names, and only adds named presentation containers that `-Verify` also checks.
 
+Run the commandlet with `-UpdatePixelMatchVisual` after the art-dashboard and
+secondary-page updates. It applies the measured 1920x1080 target anchors and
+column weights, imports the project-owned parchment title texture, adds icon
+presentation to navigation and recent-event rows, and tightens the shared
+header, footer, card, and typography hierarchy. It preserves all renderer,
+view-model, interaction, transport, and input control names.
+
 Run the commandlet with `-Verify` to load both generated classes and check the renderer-facing widget names without modifying the assets.

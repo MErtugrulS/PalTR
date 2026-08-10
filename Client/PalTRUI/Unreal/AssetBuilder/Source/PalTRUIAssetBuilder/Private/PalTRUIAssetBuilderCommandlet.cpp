@@ -44,6 +44,21 @@ namespace PalTRUIAssetBuilder
 {
     constexpr TCHAR AssetRoot[] = TEXT("/Game/Mods/PalTRUI");
 
+    namespace PixelTheme
+    {
+        const FLinearColor Background(0.043f, 0.090f, 0.125f, 0.995f);
+        const FLinearColor PanelDark(0.094f, 0.157f, 0.200f, 0.98f);
+        const FLinearColor PanelBlue(0.157f, 0.259f, 0.333f, 0.94f);
+        const FLinearColor Gold(0.776f, 0.604f, 0.282f, 0.98f);
+        const FLinearColor GoldMuted(0.514f, 0.420f, 0.235f, 0.94f);
+        const FLinearColor Cyan(0.157f, 0.851f, 0.929f, 0.96f);
+        const FLinearColor CyanDark(0.055f, 0.180f, 0.220f, 0.98f);
+        const FLinearColor Parchment(0.765f, 0.643f, 0.482f, 1.0f);
+        const FLinearColor TextPrimary(0.949f, 0.910f, 0.835f, 1.0f);
+        const FLinearColor TextSecondary(0.722f, 0.725f, 0.710f, 1.0f);
+        const FLinearColor RelationDark(0.035f, 0.035f, 0.030f, 0.96f);
+    }
+
     UTextBlock* MakeText(UWidgetTree* Tree, const FName Name, const TCHAR* Value, const int32 Size)
     {
         UTextBlock* Text = Tree->ConstructWidget<UTextBlock>(UTextBlock::StaticClass(), Name);
@@ -139,6 +154,33 @@ namespace PalTRUIAssetBuilder
             Frame->SetBrushColor(FLinearColor::White);
             Frame->SetPadding(Padding);
         }
+    }
+
+    void StyleTextureFrame(
+        UWidgetTree* Tree,
+        const FName Name,
+        UTexture2D* Texture,
+        const FMargin BrushMargin,
+        const FMargin Padding,
+        const FLinearColor Tint = FLinearColor::White
+    )
+    {
+        UBorder* Frame = Cast<UBorder>(Tree->FindWidget(Name));
+        if (!Frame || !Texture)
+        {
+            return;
+        }
+
+        Frame->Modify();
+        FSlateBrush Brush;
+        Brush.SetResourceObject(Texture);
+        Brush.ImageSize = FVector2D(Texture->GetSizeX(), Texture->GetSizeY());
+        Brush.DrawAs = ESlateBrushDrawType::Box;
+        Brush.Margin = BrushMargin;
+        Brush.TintColor = FSlateColor(Tint);
+        Frame->SetBrush(Brush);
+        Frame->SetBrushColor(FLinearColor::White);
+        Frame->SetPadding(Padding);
     }
 
     void StyleFrame(
@@ -3558,6 +3600,373 @@ namespace PalTRUIAssetBuilder
         return true;
     }
 
+    bool UpdatePixelMatchVisual()
+    {
+        const FString ArtDirectory = FPaths::ConvertRelativePathToFull(
+            FPaths::ProjectPluginsDir() / TEXT("PalTRUIAssetBuilder/Resources")
+        );
+        UTexture2D* ParchmentTexture = ImportUITexture(
+            TEXT("/Game/Mods/PalTRUI/Art/T_PalTRParchmentHeader"),
+            TEXT("T_PalTRParchmentHeader"),
+            ArtDirectory / TEXT("paltr_parchment_header.png")
+        );
+        UTexture2D* ClanIcon = LoadObject<UTexture2D>(
+            nullptr,
+            TEXT("/Game/Mods/PalTRUI/Art/T_PalTRClanIcon.T_PalTRClanIcon")
+        );
+        UTexture2D* DiplomacyIcon = LoadObject<UTexture2D>(
+            nullptr,
+            TEXT("/Game/Mods/PalTRUI/Art/T_PalTRDiplomacyIcon.T_PalTRDiplomacyIcon")
+        );
+        UTexture2D* ProtectionIcon = LoadObject<UTexture2D>(
+            nullptr,
+            TEXT("/Game/Mods/PalTRUI/Art/T_PalTRProtectionIcon.T_PalTRProtectionIcon")
+        );
+        UTexture2D* BuildingsIcon = LoadObject<UTexture2D>(
+            nullptr,
+            TEXT("/Game/Mods/PalTRUI/Art/T_PalTRBuildingsIcon.T_PalTRBuildingsIcon")
+        );
+        if (!ParchmentTexture || !ClanIcon || !DiplomacyIcon
+            || !ProtectionIcon || !BuildingsIcon)
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI pixel match update failed: art textures incomplete."));
+            return false;
+        }
+
+        UWidgetBlueprint* Panel = LoadObject<UWidgetBlueprint>(
+            nullptr,
+            TEXT("/Game/Mods/PalTRUI/WBP_PalTRPanel.WBP_PalTRPanel")
+        );
+        if (!Panel || !Panel->WidgetTree)
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI pixel match update failed: panel asset missing."));
+            return false;
+        }
+
+        UWidgetTree* Tree = Panel->WidgetTree;
+        UButton* InputShield = Cast<UButton>(Tree->FindWidget(TEXT("PanelInputShield")));
+        UBorder* Background = Cast<UBorder>(Tree->FindWidget(TEXT("PanelBackground")));
+        UBorder* HeaderFrame = Cast<UBorder>(Tree->FindWidget(TEXT("HeaderFrame")));
+        UBorder* ContentFrame = Cast<UBorder>(Tree->FindWidget(TEXT("ContentFrame")));
+        UBorder* FooterFrame = Cast<UBorder>(Tree->FindWidget(TEXT("FooterFrame")));
+        UTextBlock* FooterHint = Cast<UTextBlock>(Tree->FindWidget(TEXT("FooterHintText")));
+        UHorizontalBox* BodyRow = Cast<UHorizontalBox>(Tree->FindWidget(TEXT("PanelBodyRow")));
+        USizeBox* NavigationSize = Cast<USizeBox>(Tree->FindWidget(TEXT("LeftNavigationSize")));
+        UBorder* NavigationFrame = Cast<UBorder>(Tree->FindWidget(TEXT("LeftNavigationFrame")));
+        USizeBox* HeaderCrestSize = Cast<USizeBox>(Tree->FindWidget(TEXT("HeaderCrestImageSize")));
+        UHorizontalBox* StatusCards = Cast<UHorizontalBox>(Tree->FindWidget(TEXT("DashboardStatusCardsFrame")));
+        UHorizontalBox* DashboardColumns = Cast<UHorizontalBox>(Tree->FindWidget(TEXT("DashboardColumns")));
+        UVerticalBox* MainColumn = Cast<UVerticalBox>(Tree->FindWidget(TEXT("DashboardMainColumn")));
+        UVerticalBox* SidebarColumn = Cast<UVerticalBox>(Tree->FindWidget(TEXT("DashboardSidebarColumn")));
+        UHorizontalBox* LowerRow = Cast<UHorizontalBox>(Tree->FindWidget(TEXT("DashboardLowerRow")));
+        UBorder* RecentFrame = Cast<UBorder>(Tree->FindWidget(TEXT("DashboardRecentEventsFrame")));
+        UBorder* QuickFrame = Cast<UBorder>(Tree->FindWidget(TEXT("DashboardQuickActionsFrame")));
+        USizeBox* DashboardSize = Cast<USizeBox>(Tree->FindWidget(TEXT("DashboardColumnsSize")));
+        if (!Background || !HeaderFrame || !ContentFrame || !FooterFrame || !FooterHint
+            || !BodyRow || !NavigationSize || !NavigationFrame || !HeaderCrestSize
+            || !StatusCards || !DashboardColumns || !MainColumn || !SidebarColumn
+            || !LowerRow || !RecentFrame || !QuickFrame || !DashboardSize)
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI pixel match update failed: presentation hierarchy incomplete."));
+            return false;
+        }
+
+        Panel->Modify();
+        Tree->Modify();
+
+        const FAnchors PixelAnchors(0.055f, 0.040f, 0.945f, 0.955f);
+        if (InputShield)
+        {
+            if (UCanvasPanelSlot* Slot = Cast<UCanvasPanelSlot>(InputShield->Slot))
+            {
+                Slot->Modify();
+                Slot->SetAnchors(PixelAnchors);
+                Slot->SetAlignment(FVector2D::ZeroVector);
+                Slot->SetOffsets(FMargin(0.0f));
+            }
+        }
+        else if (UCanvasPanelSlot* Slot = Cast<UCanvasPanelSlot>(Background->Slot))
+        {
+            Slot->Modify();
+            Slot->SetAnchors(PixelAnchors);
+            Slot->SetAlignment(FVector2D::ZeroVector);
+            Slot->SetOffsets(FMargin(0.0f));
+        }
+
+        HeaderCrestSize->SetWidthOverride(72.0f);
+        HeaderCrestSize->SetHeightOverride(64.0f);
+        NavigationSize->SetWidthOverride(296.0f);
+        DashboardSize->SetHeightOverride(650.0f);
+
+        StyleRoundedFrame(Tree, TEXT("HeaderFrame"), PixelTheme::PanelDark,
+            PixelTheme::GoldMuted, 4.0f, 1.25f, FMargin(8.0f, 6.0f));
+        StyleRoundedFrame(Tree, TEXT("ContentFrame"), FLinearColor(0.015f, 0.055f, 0.085f, 0.28f),
+            PixelTheme::GoldMuted, 3.0f, 1.0f, FMargin(12.0f));
+        StyleRoundedFrame(Tree, TEXT("FooterFrame"), PixelTheme::PanelDark,
+            PixelTheme::GoldMuted, 3.0f, 1.0f, FMargin(10.0f, 8.0f));
+        StyleRoundedFrame(Tree, TEXT("LeftNavigationFrame"), FLinearColor(0.01f, 0.04f, 0.06f, 0.94f),
+            PixelTheme::GoldMuted, 4.0f, 1.0f, FMargin(14.0f));
+
+        if (UVerticalBoxSlot* HeaderSlot = Cast<UVerticalBoxSlot>(HeaderFrame->Slot))
+        {
+            HeaderSlot->SetPadding(FMargin(0, 0, 0, 10));
+        }
+        if (UVerticalBoxSlot* FooterSlot = Cast<UVerticalBoxSlot>(FooterFrame->Slot))
+        {
+            FooterSlot->SetPadding(FMargin(0, 10, 0, 0));
+        }
+        if (UHorizontalBoxSlot* NavigationSlot = Cast<UHorizontalBoxSlot>(NavigationSize->Slot))
+        {
+            NavigationSlot->SetPadding(FMargin(0, 0, 32, 0));
+            NavigationSlot->SetVerticalAlignment(VAlign_Fill);
+        }
+        FooterHint->SetText(FText::FromString(TEXT("F6  Panel     |     Esc  Kapat")));
+        FooterHint->SetJustification(ETextJustify::Center);
+        FooterHint->SetColorAndOpacity(FSlateColor(PixelTheme::TextPrimary));
+        SetTextFontSize(Tree, TEXT("FooterHintText"), 16);
+
+        if (UHorizontalBoxSlot* MainSlot = Cast<UHorizontalBoxSlot>(MainColumn->Slot))
+        {
+            FSlateChildSize Size(ESlateSizeRule::Fill);
+            Size.Value = 2.25f;
+            MainSlot->SetSize(Size);
+            MainSlot->SetPadding(FMargin(0, 0, 16, 0));
+            MainSlot->SetVerticalAlignment(VAlign_Fill);
+        }
+        if (UHorizontalBoxSlot* SidebarSlot = Cast<UHorizontalBoxSlot>(SidebarColumn->Slot))
+        {
+            FSlateChildSize Size(ESlateSizeRule::Fill);
+            Size.Value = 1.0f;
+            SidebarSlot->SetSize(Size);
+            SidebarSlot->SetPadding(FMargin(16, 0, 0, 0));
+            SidebarSlot->SetVerticalAlignment(VAlign_Fill);
+        }
+        if (UHorizontalBoxSlot* RecentSlot = Cast<UHorizontalBoxSlot>(RecentFrame->Slot))
+        {
+            FSlateChildSize Size(ESlateSizeRule::Fill);
+            Size.Value = 1.18f;
+            RecentSlot->SetSize(Size);
+            RecentSlot->SetPadding(FMargin(0, 0, 8, 0));
+            RecentSlot->SetVerticalAlignment(VAlign_Fill);
+        }
+        if (UHorizontalBoxSlot* QuickSlot = Cast<UHorizontalBoxSlot>(QuickFrame->Slot))
+        {
+            FSlateChildSize Size(ESlateSizeRule::Fill);
+            Size.Value = 1.0f;
+            QuickSlot->SetSize(Size);
+            QuickSlot->SetPadding(FMargin(8, 0, 0, 0));
+            QuickSlot->SetVerticalAlignment(VAlign_Fill);
+        }
+
+        const FName CardFrames[] = {
+            TEXT("DashboardClanCardFrame"),
+            TEXT("DashboardDiplomacyCardFrame"),
+            TEXT("DashboardProtectionCardFrame"),
+            TEXT("DashboardBuildingsCardFrame")
+        };
+        for (int32 Index = 0; Index < UE_ARRAY_COUNT(CardFrames); ++Index)
+        {
+            if (UBorder* Card = Cast<UBorder>(Tree->FindWidget(CardFrames[Index])))
+            {
+                if (UHorizontalBoxSlot* Slot = Cast<UHorizontalBoxSlot>(Card->Slot))
+                {
+                    Slot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
+                    Slot->SetPadding(FMargin(Index == 0 ? 0.0f : 8.0f, 0,
+                        Index + 1 == UE_ARRAY_COUNT(CardFrames) ? 0.0f : 8.0f, 0));
+                    Slot->SetVerticalAlignment(VAlign_Fill);
+                }
+            }
+        }
+
+        StyleRoundedFrame(Tree, TEXT("DashboardClanCardFrame"), FLinearColor(0.06f, 0.25f, 0.24f, 0.96f),
+            PixelTheme::Cyan, 5.0f, 1.25f, FMargin(14.0f));
+        StyleRoundedFrame(Tree, TEXT("DashboardDiplomacyCardFrame"), FLinearColor(0.07f, 0.20f, 0.29f, 0.96f),
+            FLinearColor(0.32f, 0.62f, 0.76f, 0.96f), 5.0f, 1.25f, FMargin(14.0f));
+        StyleRoundedFrame(Tree, TEXT("DashboardProtectionCardFrame"), FLinearColor(0.29f, 0.24f, 0.12f, 0.96f),
+            PixelTheme::Gold, 5.0f, 1.25f, FMargin(14.0f));
+        StyleRoundedFrame(Tree, TEXT("DashboardBuildingsCardFrame"), FLinearColor(0.26f, 0.16f, 0.075f, 0.96f),
+            FLinearColor(0.70f, 0.40f, 0.16f, 0.96f), 5.0f, 1.25f, FMargin(14.0f));
+        StyleRoundedFrame(Tree, TEXT("DashboardRecentEventsFrame"), FLinearColor(0.025f, 0.10f, 0.14f, 0.94f),
+            PixelTheme::GoldMuted, 4.0f, 1.0f, FMargin(16.0f));
+        StyleRoundedFrame(Tree, TEXT("DashboardQuickActionsFrame"), FLinearColor(0.025f, 0.11f, 0.15f, 0.94f),
+            PixelTheme::Cyan, 4.0f, 1.0f, FMargin(14.0f));
+        StyleRoundedFrame(Tree, TEXT("DashboardRelationsFrame"), PixelTheme::RelationDark,
+            PixelTheme::GoldMuted, 4.0f, 1.0f, FMargin(14.0f));
+        StyleRoundedFrame(Tree, TEXT("PendingOffersFrame"), PixelTheme::RelationDark,
+            PixelTheme::GoldMuted, 4.0f, 1.0f, FMargin(14.0f));
+
+        const FName ParchmentFrames[] = {
+            TEXT("DashboardSidebarTitleFrame"),
+            TEXT("PendingOffersTitleFrame"),
+            TEXT("ReferenceDiplomacyListTitleFrame"),
+            TEXT("ReferenceDiplomacyDetailTitleFrame"),
+            TEXT("ReferenceGuildActiveTitleFrame"),
+            TEXT("ReferenceGuildRegisteredTitleFrame")
+        };
+        for (const FName FrameName : ParchmentFrames)
+        {
+            StyleTextureFrame(Tree, FrameName, ParchmentTexture,
+                FMargin(0.06f, 0.16f), FMargin(14.0f, 9.0f));
+        }
+        for (const FName ParchmentText : {
+            FName(TEXT("DashboardSidebarTitleText")),
+            FName(TEXT("PendingOffersHeadingText")),
+            FName(TEXT("ReferenceDiplomacyListTitleText")),
+            FName(TEXT("ReferenceDiplomacyDetailTitleText")),
+            FName(TEXT("GuildCatalogActiveHeadingText")),
+            FName(TEXT("GuildCatalogRegisteredHeadingText"))
+        })
+        {
+            if (UTextBlock* Text = Cast<UTextBlock>(Tree->FindWidget(ParchmentText)))
+            {
+                Text->SetColorAndOpacity(FSlateColor(FLinearColor(0.16f, 0.11f, 0.045f, 1.0f)));
+                StyleTextShadow(Tree, ParchmentText, FVector2D(0, 1), FLinearColor(1, 1, 1, 0.28f));
+            }
+        }
+
+        struct FNavigationVisual
+        {
+            const TCHAR* Button;
+            const TCHAR* Label;
+            const TCHAR* Content;
+            const TCHAR* IconSize;
+            const TCHAR* Icon;
+            const TCHAR* Arrow;
+            UTexture2D* Texture;
+            bool bLive;
+        };
+        const FNavigationVisual NavigationVisuals[] = {
+            { TEXT("ClanTabButton"), TEXT("ClanTabText"), TEXT("ClanNavContent"), TEXT("ClanNavIconSize"), TEXT("ClanNavIcon"), TEXT("ClanNavArrowText"), ClanIcon, true },
+            { TEXT("DiplomacyTabButton"), TEXT("DiplomacyTabText"), TEXT("DiplomacyNavContent"), TEXT("DiplomacyNavIconSize"), TEXT("DiplomacyNavIcon"), TEXT("DiplomacyNavArrowText"), DiplomacyIcon, true },
+            { TEXT("AllianceTabButton"), TEXT("AllianceTabText"), TEXT("AllianceNavContent"), TEXT("AllianceNavIconSize"), TEXT("AllianceNavIcon"), TEXT("AllianceNavArrowText"), DiplomacyIcon, true },
+            { TEXT("ChatTabButton"), TEXT("ChatTabText"), TEXT("GuildsNavContent"), TEXT("GuildsNavIconSize"), TEXT("GuildsNavIcon"), TEXT("GuildsNavArrowText"), ClanIcon, true },
+            { TEXT("FutureProtectionButton"), TEXT("FutureProtectionButtonText"), TEXT("ProtectionNavContent"), TEXT("ProtectionNavIconSize"), TEXT("ProtectionNavIcon"), TEXT("ProtectionNavArrowText"), ProtectionIcon, false },
+            { TEXT("FutureStructuresButton"), TEXT("FutureStructuresButtonText"), TEXT("StructuresNavContent"), TEXT("StructuresNavIconSize"), TEXT("StructuresNavIcon"), TEXT("StructuresNavArrowText"), BuildingsIcon, false }
+        };
+        for (const FNavigationVisual& Spec : NavigationVisuals)
+        {
+            UButton* Button = Cast<UButton>(Tree->FindWidget(FName(Spec.Button)));
+            UTextBlock* Label = Cast<UTextBlock>(Tree->FindWidget(FName(Spec.Label)));
+            UHorizontalBox* Content = Cast<UHorizontalBox>(Tree->FindWidget(FName(Spec.Content)));
+            USizeBox* IconSize = Cast<USizeBox>(Tree->FindWidget(FName(Spec.IconSize)));
+            UImage* Icon = Cast<UImage>(Tree->FindWidget(FName(Spec.Icon)));
+            UTextBlock* Arrow = Cast<UTextBlock>(Tree->FindWidget(FName(Spec.Arrow)));
+            if (!Content && !IconSize && !Icon && !Arrow)
+            {
+                if (!Button || !Label || Button->GetContent() != Label)
+                {
+                    UE_LOG(LogTemp, Error, TEXT("PalTRUI pixel match update failed: navigation source: %s"), Spec.Button);
+                    return false;
+                }
+                Button->RemoveChild(Label);
+                Content = Tree->ConstructWidget<UHorizontalBox>(UHorizontalBox::StaticClass(), FName(Spec.Content));
+                IconSize = Tree->ConstructWidget<USizeBox>(USizeBox::StaticClass(), FName(Spec.IconSize));
+                IconSize->SetWidthOverride(36.0f);
+                IconSize->SetHeightOverride(36.0f);
+                Icon = Tree->ConstructWidget<UImage>(UImage::StaticClass(), FName(Spec.Icon));
+                IconSize->SetContent(Icon);
+                AddHorizontal(Content, IconSize, FMargin(0, 0, 14, 0));
+                UHorizontalBoxSlot* LabelSlot = AddHorizontal(Content, Label);
+                LabelSlot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
+                LabelSlot->SetVerticalAlignment(VAlign_Center);
+                Label->SetJustification(ETextJustify::Left);
+                Arrow = MakeText(Tree, FName(Spec.Arrow), Spec.bLive ? TEXT(">") : TEXT(""), 18);
+                Arrow->SetColorAndOpacity(FSlateColor(PixelTheme::Cyan));
+                AddHorizontal(Content, Arrow, FMargin(10, 0, 0, 0));
+                Button->SetContent(Content);
+            }
+            else if (!Button || !Label || !Content || !IconSize || !Icon || !Arrow
+                || Button->GetContent() != Content || IconSize->GetContent() != Icon)
+            {
+                UE_LOG(LogTemp, Error, TEXT("PalTRUI pixel match update refused: partial navigation visual: %s"), Spec.Button);
+                return false;
+            }
+            Icon->SetBrushFromTexture(Spec.Texture, true);
+            FButtonStyle Style = Button->WidgetStyle;
+            Style.SetNormal(FSlateRoundedBoxBrush(FLinearColor(0.015f, 0.09f, 0.12f, 0.96f), 3.0f, PixelTheme::GoldMuted, 1.0f));
+            Style.SetHovered(FSlateRoundedBoxBrush(PixelTheme::CyanDark, 3.0f, PixelTheme::Cyan, 1.5f));
+            Style.SetPressed(FSlateRoundedBoxBrush(FLinearColor(0.02f, 0.20f, 0.24f, 0.98f), 3.0f, PixelTheme::Cyan, 2.0f));
+            Style.SetDisabled(FSlateRoundedBoxBrush(FLinearColor(0.07f, 0.08f, 0.08f, 0.90f), 3.0f, FLinearColor(0.20f, 0.21f, 0.20f, 0.90f), 1.0f));
+            Style.SetNormalPadding(FMargin(12.0f, 9.0f));
+            Style.SetPressedPadding(FMargin(12.0f, 10.0f, 12.0f, 8.0f));
+            Button->SetStyle(Style);
+            SetTextFontSize(Tree, FName(Spec.Label), Spec.bLive ? 17 : 12);
+        }
+
+        UTexture2D* EventTextures[] = {
+            DiplomacyIcon, DiplomacyIcon, ProtectionIcon, ClanIcon, BuildingsIcon
+        };
+        for (int32 Index = 1; Index <= 5; ++Index)
+        {
+            const FName RowName(*FString::Printf(TEXT("DashboardRecentEvent%dRow"), Index));
+            const FName SizeName(*FString::Printf(TEXT("DashboardRecentEvent%dIconSize"), Index));
+            const FName IconName(*FString::Printf(TEXT("DashboardRecentEvent%dIcon"), Index));
+            UHorizontalBox* Row = Cast<UHorizontalBox>(Tree->FindWidget(RowName));
+            USizeBox* IconSize = Cast<USizeBox>(Tree->FindWidget(SizeName));
+            UImage* Icon = Cast<UImage>(Tree->FindWidget(IconName));
+            if (!IconSize && !Icon)
+            {
+                if (!Row)
+                {
+                    UE_LOG(LogTemp, Error, TEXT("PalTRUI pixel match update failed: event row missing: %d"), Index);
+                    return false;
+                }
+                IconSize = Tree->ConstructWidget<USizeBox>(USizeBox::StaticClass(), SizeName);
+                IconSize->SetWidthOverride(28.0f);
+                IconSize->SetHeightOverride(28.0f);
+                Icon = Tree->ConstructWidget<UImage>(UImage::StaticClass(), IconName);
+                IconSize->SetContent(Icon);
+                UHorizontalBoxSlot* Slot = Cast<UHorizontalBoxSlot>(Row->InsertChildAt(0, IconSize));
+                if (!Slot)
+                {
+                    return false;
+                }
+                Slot->SetPadding(FMargin(0, 0, 10, 0));
+                Slot->SetVerticalAlignment(VAlign_Center);
+            }
+            else if (!IconSize || !Icon || IconSize->GetContent() != Icon || IconSize->GetParent() != Row)
+            {
+                UE_LOG(LogTemp, Error, TEXT("PalTRUI pixel match update refused: partial event icon: %d"), Index);
+                return false;
+            }
+            Icon->SetBrushFromTexture(EventTextures[Index - 1], true);
+        }
+
+        for (const FName HeadingName : {
+            FName(TEXT("ClanHeadingText")),
+            FName(TEXT("DiplomacyHeadingText")),
+            FName(TEXT("AllianceHeadingText")),
+            FName(TEXT("ChatHeadingText"))
+        })
+        {
+            SetTextFontSize(Tree, HeadingName, 26);
+            SetTextColor(Tree, HeadingName, PixelTheme::TextPrimary);
+            StyleTextShadow(Tree, HeadingName, FVector2D(1, 2), FLinearColor(0, 0, 0, 0.92f));
+        }
+        SetTextFontSize(Tree, TEXT("TitleText"), 32);
+        SetTextColor(Tree, TEXT("TitleText"), PixelTheme::TextPrimary);
+        for (const FName SubtitleName : {
+            FName(TEXT("ClanSubtitleText")),
+            FName(TEXT("DiplomacySubtitleText")),
+            FName(TEXT("AllianceSubtitleText")),
+            FName(TEXT("GuildSubtitleText"))
+        })
+        {
+            SetTextFontSize(Tree, SubtitleName, 14);
+            SetTextColor(Tree, SubtitleName, PixelTheme::TextSecondary);
+        }
+
+        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Panel);
+        FKismetEditorUtilities::CompileBlueprint(Panel);
+        if (!SaveAsset(Panel))
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI pixel match update failed while saving panel."));
+            return false;
+        }
+        UE_LOG(LogTemp, Display, TEXT("PALTR_UI_PIXEL_MATCH_OK | layout=1920x1080 | parchment=texture | navigation=icons | events=icons"));
+        return true;
+    }
+
     bool VerifyAssets()
     {
         UBlueprint* ModActor = LoadObject<UBlueprint>(
@@ -3579,7 +3988,8 @@ namespace PalTRUIAssetBuilder
             TEXT("/Game/Mods/PalTRUI/Art/T_PalTRClanIcon.T_PalTRClanIcon"),
             TEXT("/Game/Mods/PalTRUI/Art/T_PalTRDiplomacyIcon.T_PalTRDiplomacyIcon"),
             TEXT("/Game/Mods/PalTRUI/Art/T_PalTRProtectionIcon.T_PalTRProtectionIcon"),
-            TEXT("/Game/Mods/PalTRUI/Art/T_PalTRBuildingsIcon.T_PalTRBuildingsIcon")
+            TEXT("/Game/Mods/PalTRUI/Art/T_PalTRBuildingsIcon.T_PalTRBuildingsIcon"),
+            TEXT("/Game/Mods/PalTRUI/Art/T_PalTRParchmentHeader.T_PalTRParchmentHeader")
         };
         for (const TCHAR* TexturePath : RequiredTextures)
         {
@@ -3682,6 +4092,19 @@ namespace PalTRUIAssetBuilder
             TEXT("DashboardRecentEvent5Row"),
             TEXT("DashboardRecentEvent5MessageText"),
             TEXT("DashboardRecentEvent5TimeText"),
+            TEXT("DashboardRecentEvent1Icon"),
+            TEXT("DashboardRecentEvent2Icon"),
+            TEXT("DashboardRecentEvent3Icon"),
+            TEXT("DashboardRecentEvent4Icon"),
+            TEXT("DashboardRecentEvent5Icon"),
+            TEXT("ClanNavContent"),
+            TEXT("ClanNavIcon"),
+            TEXT("DiplomacyNavContent"),
+            TEXT("DiplomacyNavIcon"),
+            TEXT("AllianceNavContent"),
+            TEXT("AllianceNavIcon"),
+            TEXT("GuildsNavContent"),
+            TEXT("GuildsNavIcon"),
             TEXT("ClanNameText"),
             TEXT("ClanSummaryText"),
             TEXT("ClanMembersFrame"),
@@ -3856,7 +4279,7 @@ namespace PalTRUIAssetBuilder
         UOverlaySlot* PanelContentPaddingSlot = PanelContentPadding
             ? Cast<UOverlaySlot>(PanelContentPadding->Slot)
             : nullptr;
-        const FAnchors ExpectedPanelAnchors(0.04f, 0.05f, 0.96f, 0.95f);
+        const FAnchors ExpectedPanelAnchors(0.055f, 0.040f, 0.945f, 0.955f);
         const FAnchors ActualPanelAnchors = InputShieldSlot
             ? InputShieldSlot->GetAnchors()
             : FAnchors();
@@ -4084,6 +4507,11 @@ int32 UPalTRUIAssetBuilderCommandlet::Main(const FString& Params)
     if (FParse::Param(*Params, TEXT("UpdateReferenceSecondaryPages")))
     {
         return UpdateReferenceSecondaryPages() ? 0 : 25;
+    }
+
+    if (FParse::Param(*Params, TEXT("UpdatePixelMatchVisual")))
+    {
+        return UpdatePixelMatchVisual() ? 0 : 26;
     }
 
     const FString ModActorPackage = FString(AssetRoot) / TEXT("ModActor");
