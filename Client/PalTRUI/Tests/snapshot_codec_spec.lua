@@ -83,4 +83,18 @@ local invalid, invalid_error = ClientCodec.decode(
 equal(invalid, nil, "invalid count rejected")
 equal(invalid_error, "header", "invalid count error")
 
+local count_bomb = table.concat({
+    "schema_version\t1",
+    "generated_at\t1",
+    "guilds.count\t999999999",
+    "members.count\t0",
+    "relations.count\t0"
+}, "\n")
+local client_bomb, client_bomb_error = ClientCodec.decode(count_bomb)
+equal(client_bomb, nil, "client count bomb rejected")
+equal(client_bomb_error, "count", "client count bomb error")
+local server_bomb, server_bomb_error = ServerCodec.decode(count_bomb)
+equal(server_bomb, nil, "server count bomb rejected")
+equal(server_bomb_error, "count", "server count bomb error")
+
 print("PALTR_UI_SNAPSHOT_CODEC_TEST_OK")

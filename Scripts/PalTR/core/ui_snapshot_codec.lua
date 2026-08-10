@@ -110,6 +110,7 @@ end
 function Codec.decode(payload)
     if type(payload) ~= "string" then return nil, "payload" end
     local values = {}
+    local record_count = 0
     for line in (payload .. "\n"):gmatch("(.-)\n") do
         if line ~= "" then
             local key, encoded = line:match("^([^	]+)	(.*)$")
@@ -117,6 +118,7 @@ function Codec.decode(payload)
             local value = unescape(encoded)
             if value == nil then return nil, "escape" end
             values[key] = value
+            record_count = record_count + 1
         end
     end
 
@@ -128,6 +130,11 @@ function Codec.decode(payload)
         or guild_count == nil or member_count == nil
         or relation_count == nil then
         return nil, "header"
+    end
+    if guild_count > record_count
+        or member_count > record_count
+        or relation_count > record_count then
+        return nil, "count"
     end
 
     local snapshot = {
@@ -187,6 +194,7 @@ function Codec.decode(payload)
         }
         local action_count = count(values, prefix .. "actions.count")
         if action_count == nil then return nil, "actions" end
+        if action_count > record_count then return nil, "count" end
         for action_index = 1, action_count do
             local action_prefix = prefix .. "actions." .. action_index .. "."
             table.insert(relation.actions, {
