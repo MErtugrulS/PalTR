@@ -360,7 +360,7 @@ namespace PalTRUIAssetBuilder
         UCanvasPanelSlot* BackgroundSlot = Root->AddChildToCanvas(Background);
         BackgroundSlot->SetAnchors(FAnchors(0.5f));
         BackgroundSlot->SetAlignment(FVector2D(0.5f, 0.5f));
-        BackgroundSlot->SetSize(FVector2D(1180.0f, 720.0f));
+        BackgroundSlot->SetSize(FVector2D(1880.0f, 1000.0f));
 
         UVerticalBox* Layout = Tree->ConstructWidget<UVerticalBox>(UVerticalBox::StaticClass(), TEXT("PanelLayout"));
         Background->SetContent(Layout);
@@ -1992,13 +1992,13 @@ namespace PalTRUIAssetBuilder
             if (UCanvasPanelSlot* ShieldSlot = Cast<UCanvasPanelSlot>(InputShield->Slot))
             {
                 ShieldSlot->Modify();
-                ShieldSlot->SetSize(FVector2D(1500.0f, 840.0f));
+                ShieldSlot->SetSize(FVector2D(1880.0f, 1000.0f));
             }
         }
         else if (UCanvasPanelSlot* BackgroundSlot = Cast<UCanvasPanelSlot>(Background->Slot))
         {
             BackgroundSlot->Modify();
-            BackgroundSlot->SetSize(FVector2D(1500.0f, 840.0f));
+            BackgroundSlot->SetSize(FVector2D(1880.0f, 1000.0f));
         }
 
         USizeBox* HeaderCrestSpacer = Cast<USizeBox>(Tree->FindWidget(TEXT("HeaderCrestSpacer")));
@@ -2416,7 +2416,7 @@ namespace PalTRUIAssetBuilder
         UCanvasPanelSlot* ShieldSlot = Root->AddChildToCanvas(Shield);
         ShieldSlot->SetAnchors(FAnchors(0.5f));
         ShieldSlot->SetAlignment(FVector2D(0.5f, 0.5f));
-        ShieldSlot->SetSize(FVector2D(1180.0f, 720.0f));
+        ShieldSlot->SetSize(FVector2D(1880.0f, 1000.0f));
 
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Panel);
         FKismetEditorUtilities::CompileBlueprint(Panel);
@@ -2900,14 +2900,38 @@ namespace PalTRUIAssetBuilder
             }
         }
 
+        UButton* InputShield = Cast<UButton>(Panel->WidgetTree->FindWidget(TEXT("PanelInputShield")));
+        UCanvasPanelSlot* InputShieldSlot = InputShield
+            ? Cast<UCanvasPanelSlot>(InputShield->Slot)
+            : nullptr;
+        const FVector2D ExpectedPanelSize(1880.0f, 1000.0f);
+        if (!InputShieldSlot || !InputShieldSlot->GetSize().Equals(ExpectedPanelSize, 0.1f))
+        {
+            const FVector2D ActualPanelSize = InputShieldSlot
+                ? InputShieldSlot->GetSize()
+                : FVector2D::ZeroVector;
+            UE_LOG(
+                LogTemp,
+                Error,
+                TEXT("PalTRUI asset verification failed: panel size is %.0fx%.0f, expected %.0fx%.0f."),
+                ActualPanelSize.X,
+                ActualPanelSize.Y,
+                ExpectedPanelSize.X,
+                ExpectedPanelSize.Y
+            );
+            return false;
+        }
+
         UE_LOG(
             LogTemp,
             Display,
-            TEXT("PALTR_UI_ASSET_VERIFY_OK | mod_actor=%s | panel=%s | widgets=%d | textures=%d"),
+            TEXT("PALTR_UI_ASSET_VERIFY_OK | mod_actor=%s | panel=%s | widgets=%d | textures=%d | size=%.0fx%.0f"),
             *ModActor->GeneratedClass->GetPathName(),
             *Panel->GeneratedClass->GetPathName(),
             UE_ARRAY_COUNT(RequiredWidgets),
-            UE_ARRAY_COUNT(RequiredTextures)
+            UE_ARRAY_COUNT(RequiredTextures),
+            ExpectedPanelSize.X,
+            ExpectedPanelSize.Y
         );
         return true;
     }
