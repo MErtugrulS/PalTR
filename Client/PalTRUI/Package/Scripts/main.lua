@@ -18,6 +18,7 @@ local presentation = PresentationController.new(
 local interactions = UIInteractionRouter.new(presentation)
 local snapshots = SnapshotInbox.new(presentation)
 local snapshot_transport = SnapshotTransport.new()
+local ENABLE_NATIVE_BUTTON_POLLER = false
 local interactive_controls = {
     "CloseButton",
     "ClanTabButton",
@@ -127,7 +128,7 @@ local function toggle_panel()
         tostring(model.open),
         tostring(model.active_tab)
     ))
-    if model.open == true then
+    if model.open == true and ENABLE_NATIVE_BUTTON_POLLER then
         local started, start_error = button_poller:start()
         if started ~= true then
             print(string.format(
@@ -135,6 +136,8 @@ local function toggle_panel()
                 tostring(start_error)
             ))
         end
+    elseif model.open == true then
+        print("[PalTRUI] PALTR_UI_BUTTON_POLLER_DISABLED | keyboard_mode=true\n")
     elseif not closing then
         button_poller:stop()
     end
