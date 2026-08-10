@@ -8,6 +8,7 @@
 #include "Brushes/SlateRoundedBoxBrush.h"
 #include "Components/Border.h"
 #include "Components/Button.h"
+#include "Components/ButtonSlot.h"
 #include "Components/CanvasPanel.h"
 #include "Components/CanvasPanelSlot.h"
 #include "Components/EditableTextBox.h"
@@ -360,7 +361,7 @@ namespace PalTRUIAssetBuilder
         UCanvasPanelSlot* BackgroundSlot = Root->AddChildToCanvas(Background);
         BackgroundSlot->SetAnchors(FAnchors(0.5f));
         BackgroundSlot->SetAlignment(FVector2D(0.5f, 0.5f));
-        BackgroundSlot->SetSize(FVector2D(1880.0f, 1000.0f));
+        BackgroundSlot->SetSize(FVector2D(2120.0f, 1120.0f));
 
         UVerticalBox* Layout = Tree->ConstructWidget<UVerticalBox>(UVerticalBox::StaticClass(), TEXT("PanelLayout"));
         Background->SetContent(Layout);
@@ -1992,13 +1993,19 @@ namespace PalTRUIAssetBuilder
             if (UCanvasPanelSlot* ShieldSlot = Cast<UCanvasPanelSlot>(InputShield->Slot))
             {
                 ShieldSlot->Modify();
-                ShieldSlot->SetSize(FVector2D(1880.0f, 1000.0f));
+                ShieldSlot->SetSize(FVector2D(2120.0f, 1120.0f));
+            }
+            if (UButtonSlot* ContentSlot = Cast<UButtonSlot>(Background->Slot))
+            {
+                ContentSlot->Modify();
+                ContentSlot->SetHorizontalAlignment(HAlign_Fill);
+                ContentSlot->SetVerticalAlignment(VAlign_Fill);
             }
         }
         else if (UCanvasPanelSlot* BackgroundSlot = Cast<UCanvasPanelSlot>(Background->Slot))
         {
             BackgroundSlot->Modify();
-            BackgroundSlot->SetSize(FVector2D(1880.0f, 1000.0f));
+            BackgroundSlot->SetSize(FVector2D(2120.0f, 1120.0f));
         }
 
         USizeBox* HeaderCrestSpacer = Cast<USizeBox>(Tree->FindWidget(TEXT("HeaderCrestSpacer")));
@@ -2412,11 +2419,19 @@ namespace PalTRUIAssetBuilder
         Shield->SetColorAndOpacity(FLinearColor::White);
         Shield->IsFocusable = false;
         Shield->SetContent(Background);
+        UButtonSlot* ContentSlot = Cast<UButtonSlot>(Background->Slot);
+        if (!ContentSlot)
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI input shield update failed: button content slot missing."));
+            return false;
+        }
+        ContentSlot->SetHorizontalAlignment(HAlign_Fill);
+        ContentSlot->SetVerticalAlignment(VAlign_Fill);
 
         UCanvasPanelSlot* ShieldSlot = Root->AddChildToCanvas(Shield);
         ShieldSlot->SetAnchors(FAnchors(0.5f));
         ShieldSlot->SetAlignment(FVector2D(0.5f, 0.5f));
-        ShieldSlot->SetSize(FVector2D(1880.0f, 1000.0f));
+        ShieldSlot->SetSize(FVector2D(2120.0f, 1120.0f));
 
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Panel);
         FKismetEditorUtilities::CompileBlueprint(Panel);
@@ -2904,7 +2919,11 @@ namespace PalTRUIAssetBuilder
         UCanvasPanelSlot* InputShieldSlot = InputShield
             ? Cast<UCanvasPanelSlot>(InputShield->Slot)
             : nullptr;
-        const FVector2D ExpectedPanelSize(1880.0f, 1000.0f);
+        UBorder* PanelBackground = Cast<UBorder>(Panel->WidgetTree->FindWidget(TEXT("PanelBackground")));
+        UButtonSlot* PanelContentSlot = PanelBackground
+            ? Cast<UButtonSlot>(PanelBackground->Slot)
+            : nullptr;
+        const FVector2D ExpectedPanelSize(2120.0f, 1120.0f);
         if (!InputShieldSlot || !InputShieldSlot->GetSize().Equals(ExpectedPanelSize, 0.1f))
         {
             const FVector2D ActualPanelSize = InputShieldSlot
@@ -2921,11 +2940,18 @@ namespace PalTRUIAssetBuilder
             );
             return false;
         }
+        if (!PanelContentSlot
+            || PanelContentSlot->GetHorizontalAlignment() != HAlign_Fill
+            || PanelContentSlot->GetVerticalAlignment() != VAlign_Fill)
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI asset verification failed: panel content does not fill input shield."));
+            return false;
+        }
 
         UE_LOG(
             LogTemp,
             Display,
-            TEXT("PALTR_UI_ASSET_VERIFY_OK | mod_actor=%s | panel=%s | widgets=%d | textures=%d | size=%.0fx%.0f"),
+            TEXT("PALTR_UI_ASSET_VERIFY_OK | mod_actor=%s | panel=%s | widgets=%d | textures=%d | size=%.0fx%.0f | content=fill"),
             *ModActor->GeneratedClass->GetPathName(),
             *Panel->GeneratedClass->GetPathName(),
             UE_ARRAY_COUNT(RequiredWidgets),
