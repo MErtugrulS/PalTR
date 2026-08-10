@@ -1,0 +1,63 @@
+PALTR UI — CODEX PIXEL MATCH HANDOFF
+
+ANA KURAL
+Bu dosyalardaki görseller tasarım ilhamı değil, birebir görsel hedeftir.
+Yeni estetik üretme. Her parçayı, verilen crop PNG ile mümkün olduğunca aynı
+geometri, spacing, oran, renk, font hiyerarşisi, border, ikon ölçeği ve hizayla kur.
+Mevcut logic/binder/event isimlerini bozma. Server/native/networking tarafına dokunma.
+Generator, manuel UMG assetlerini overwrite etmemeli.
+Her parçada source/build doğrulaması yap; runtime testleri en sona biriktir.
+
+Referansın gerçek boyutu: 1672x941.
+layout_coordinates.json içindeki box değerleri source görseldeki gerçek piksel
+koordinatlarıdır. Önce bu çözünürlükte eşleştir; sonra UMG scaling ile ölçekle.
+
+ADIM 1 — 01_header.png
+Sadece header'ı düzenle. Logo/arma, PALTR PANEL başlığı ve sağdaki dört durum chip'i
+referansla aynı oran, yükseklik, padding, hizalama ve görsel dilde olsun.
+Diğer bölgelere dokunma.
+
+ADIM 2 — 02_sidebar.png
+Sadece sol navigasyonu düzenle. Genişlik, satır yükseklikleri, ikon/metin hizaları,
+divider'lar, Ana Sayfa cyan seçili glow'u ve Bildirimler badge'i crop ile eşleşsin.
+Diğer bölgelere dokunma.
+
+ADIM 3 — 03_main_heading.png
+Sadece Klan Durumu başlık/subtitle/dekoratif divider alanını crop ile eşleştir.
+Başlık boyutu, başlangıç x/y, satır aralığı ve alt boşluk aynı hissi versin.
+
+ADIM 4 — 04_status_cards.png
+Dört kartı crop ile pixel-match yaklaşımıyla düzenle:
+Klanım, Diplomasi, Koruma, Yapılar.
+Kart genişlik/yükseklikleri, gap, ikon boyları, başlık konumları, değer satırları,
+renk temaları ve çerçeveler aynı olsun. Veri bindinglerini bozma.
+
+ADIM 5 — 05_recent_events.png
+Son Olaylar panelini crop ile eşleştir. Başlık, panel ölçüsü, 5 satırın yüksekliği,
+ikon kutuları, metin-zaman kolonları, divider'lar ve Tümünü Gör butonu aynı olsun.
+
+ADIM 6 — 06_quick_actions.png
+Hızlı İşlemler panelini crop ile eşleştir. Panel ölçüsü, başlık, dört butonun
+yüksekliği/gap'i, soldaki ikon ve sağdaki chevron konumları aynı olsun.
+Event/binding davranışına dokunma.
+
+ADIM 7 — 07_relations.png
+İlişkiler panelini crop ile eşleştir. Parchment header, üç clan satırı, crest,
+isim ve sağdaki state badge ölçü/hizaları crop'a mümkün olduğunca aynı olsun.
+
+ADIM 8 — 08_pending_offers.png
+Bekleyen Teklifler panelini crop ile eşleştir. Header, teklif kartı, crest, metin,
+Kabul/Reddet buton ölçüsü ve hizaları birebir yaklaştır. Action bindingleri korunacak.
+
+ADIM 9 — 09_footer.png
+Footer'ı crop ile eşleştir. Yükseklik, dış trim ve ortadaki
+F6 Panel | Esc Kapat keycap düzeni aynı olsun.
+
+ADIM 10 — 10_center_column_full.png + 11_right_column_full.png + 00_full_reference.png
+Sadece final polish yap. Tek tek parçalar doğru olsa bile kolon hizaları, dikey çizgiler,
+gap'ler, toplam panel dengesi ve outer frame birleşimleri bu üç referansla kontrol edilsin.
+Yeni özellik ekleme. Tasarım kararı uydurma.
+
+FINAL
+Source/build/cook/pak doğrulamalarını yap. Runtime testini tek oyun açılışında topluca
+planla. Runtime kanıtı olmadan "çalışıyor" deme.

@@ -1,0 +1,131 @@
+{
+  "source": "2ad01c13-a2e6-4596-81d1-6e344b59ae98(1).png",
+  "source_size": {
+    "width": 1672,
+    "height": 941
+  },
+  "coordinate_system": "left, top, right, bottom; pixels; source origin=(0,0)",
+  "parts": {
+    "00_full_reference.png": {
+      "box": [
+        0,
+        0,
+        1672,
+        941
+      ],
+      "width": 1672,
+      "height": 941
+    },
+    "01_header.png": {
+      "box": [
+        62,
+        31,
+        1573,
+        108
+      ],
+      "width": 1511,
+      "height": 77
+    },
+    "02_sidebar.png": {
+      "box": [
+        62,
+        105,
+        366,
+        837
+      ],
+      "width": 304,
+      "height": 732
+    },
+    "03_main_heading.png": {
+      "box": [
+        365,
+        105,
+        1186,
+        216
+      ],
+      "width": 821,
+      "height": 111
+    },
+    "04_status_cards.png": {
+      "box": [
+        382,
+        210,
+        1185,
+        482
+      ],
+      "width": 803,
+      "height": 272
+    },
+    "05_recent_events.png": {
+      "box": [
+        382,
+        476,
+        807,
+        835
+      ],
+      "width": 425,
+      "height": 359
+    },
+    "06_quick_actions.png": {
+      "box": [
+        806,
+        476,
+        1186,
+        835
+      ],
+      "width": 380,
+      "height": 359
+    },
+    "07_relations.png": {
+      "box": [
+        1182,
+        105,
+        1573,
+        463
+      ],
+      "width": 391,
+      "height": 358
+    },
+    "08_pending_offers.png": {
+      "box": [
+        1182,
+        459,
+        1573,
+        835
+      ],
+      "width": 391,
+      "height": 376
+    },
+    "09_footer.png": {
+      "box": [
+        62,
+        833,
+        1573,
+        910
+      ],
+      "width": 1511,
+      "height": 77
+    },
+    "10_center_column_full.png": {
+      "box": [
+        365,
+        105,
+        1186,
+        837
+      ],
+      "width": 821,
+      "height": 732
+    },
+    "11_right_column_full.png": {
+      "box": [
+        1182,
+        105,
+        1573,
+        837
+      ],
+      "width": 391,
+      "height": 732
+    }
+  },
+  "note": "These are literal crops from the supplied target image. Do not redesign them; use them as visual pixel-match references."
+}
