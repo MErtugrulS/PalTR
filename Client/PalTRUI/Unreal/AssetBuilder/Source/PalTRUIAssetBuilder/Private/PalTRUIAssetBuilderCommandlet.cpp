@@ -2915,6 +2915,270 @@ namespace PalTRUIAssetBuilder
         return true;
     }
 
+    bool UpdateReferenceSecondaryPages()
+    {
+        UWidgetBlueprint* Panel = LoadObject<UWidgetBlueprint>(
+            nullptr,
+            TEXT("/Game/Mods/PalTRUI/WBP_PalTRPanel.WBP_PalTRPanel")
+        );
+        if (!Panel || !Panel->WidgetTree)
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI secondary reference update failed: panel asset missing."));
+            return false;
+        }
+
+        UWidgetTree* Tree = Panel->WidgetTree;
+        UVerticalBox* DiplomacyPage = Cast<UVerticalBox>(Tree->FindWidget(TEXT("DiplomacyPage")));
+        UHorizontalBox* DiplomacyColumns = Cast<UHorizontalBox>(Tree->FindWidget(TEXT("DiplomacyColumns")));
+        UBorder* DiplomacyListFrame = Cast<UBorder>(Tree->FindWidget(TEXT("DiplomacyListFrame")));
+        UBorder* DiplomacyDetailFrame = Cast<UBorder>(Tree->FindWidget(TEXT("DiplomacyDetailFrame")));
+        USizeBox* RelationListSize = Cast<USizeBox>(Tree->FindWidget(TEXT("RelationListSize")));
+        UVerticalBox* RelationDetail = Cast<UVerticalBox>(Tree->FindWidget(TEXT("RelationDetail")));
+        UHorizontalBox* RelationActions = Cast<UHorizontalBox>(Tree->FindWidget(TEXT("RelationActions")));
+        UVerticalBox* AlliancePage = Cast<UVerticalBox>(Tree->FindWidget(TEXT("AlliancePage")));
+        UTextBlock* AllianceSummary = Cast<UTextBlock>(Tree->FindWidget(TEXT("AllianceSummaryText")));
+        UBorder* AllianceDetailFrame = Cast<UBorder>(Tree->FindWidget(TEXT("AllianceDetailFrame")));
+        UTextBlock* AllianceMembers = Cast<UTextBlock>(Tree->FindWidget(TEXT("AllianceMembersText")));
+        UVerticalBox* GuildPage = Cast<UVerticalBox>(Tree->FindWidget(TEXT("ChatPage")));
+        UHorizontalBox* GuildColumns = Cast<UHorizontalBox>(Tree->FindWidget(TEXT("GuildCatalogColumns")));
+        UBorder* GuildActiveFrame = Cast<UBorder>(Tree->FindWidget(TEXT("GuildCatalogActiveFrame")));
+        UVerticalBox* GuildActiveContent = Cast<UVerticalBox>(Tree->FindWidget(TEXT("GuildCatalogActiveContent")));
+        UTextBlock* GuildActiveHeading = Cast<UTextBlock>(Tree->FindWidget(TEXT("GuildCatalogActiveHeadingText")));
+        UBorder* GuildRegisteredFrame = Cast<UBorder>(Tree->FindWidget(TEXT("GuildCatalogRegisteredFrame")));
+        UVerticalBox* GuildRegisteredContent = Cast<UVerticalBox>(Tree->FindWidget(TEXT("GuildCatalogRegisteredContent")));
+        UTextBlock* GuildRegisteredHeading = Cast<UTextBlock>(Tree->FindWidget(TEXT("GuildCatalogRegisteredHeadingText")));
+        if (!DiplomacyPage || !DiplomacyColumns || !DiplomacyListFrame || !DiplomacyDetailFrame
+            || !RelationListSize || !RelationDetail || !RelationActions || !AlliancePage
+            || !AllianceSummary || !AllianceDetailFrame || !AllianceMembers || !GuildPage
+            || !GuildColumns || !GuildActiveFrame || !GuildActiveContent || !GuildActiveHeading
+            || !GuildRegisteredFrame || !GuildRegisteredContent || !GuildRegisteredHeading)
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI secondary reference update failed: required hierarchy missing."));
+            return false;
+        }
+
+        Panel->Modify();
+        Tree->Modify();
+
+        UVerticalBox* DiplomacyListContent = Cast<UVerticalBox>(Tree->FindWidget(TEXT("ReferenceDiplomacyListContent")));
+        UBorder* DiplomacyListTitleFrame = Cast<UBorder>(Tree->FindWidget(TEXT("ReferenceDiplomacyListTitleFrame")));
+        UTextBlock* DiplomacyListTitleText = Cast<UTextBlock>(Tree->FindWidget(TEXT("ReferenceDiplomacyListTitleText")));
+        UVerticalBox* DiplomacyDetailContent = Cast<UVerticalBox>(Tree->FindWidget(TEXT("ReferenceDiplomacyDetailContent")));
+        UBorder* DiplomacyDetailTitleFrame = Cast<UBorder>(Tree->FindWidget(TEXT("ReferenceDiplomacyDetailTitleFrame")));
+        UTextBlock* DiplomacyDetailTitleText = Cast<UTextBlock>(Tree->FindWidget(TEXT("ReferenceDiplomacyDetailTitleText")));
+        if (!DiplomacyListContent && !DiplomacyListTitleFrame && !DiplomacyListTitleText
+            && !DiplomacyDetailContent && !DiplomacyDetailTitleFrame && !DiplomacyDetailTitleText)
+        {
+            if (DiplomacyListFrame->GetContent() != RelationListSize
+                || DiplomacyDetailFrame->GetContent() != RelationDetail)
+            {
+                UE_LOG(LogTemp, Error, TEXT("PalTRUI secondary reference update refused: diplomacy source changed."));
+                return false;
+            }
+            DiplomacyListFrame->RemoveChild(RelationListSize);
+            DiplomacyListContent = Tree->ConstructWidget<UVerticalBox>(UVerticalBox::StaticClass(), TEXT("ReferenceDiplomacyListContent"));
+            DiplomacyListTitleFrame = Tree->ConstructWidget<UBorder>(UBorder::StaticClass(), TEXT("ReferenceDiplomacyListTitleFrame"));
+            DiplomacyListTitleText = MakeText(Tree, TEXT("ReferenceDiplomacyListTitleText"), TEXT("KLANLAR"), 18);
+            DiplomacyListTitleFrame->SetContent(DiplomacyListTitleText);
+            AddVertical(DiplomacyListContent, DiplomacyListTitleFrame, FMargin(0, 0, 0, 10));
+            UVerticalBoxSlot* RelationListSlot = AddVertical(DiplomacyListContent, RelationListSize);
+            RelationListSlot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
+            DiplomacyListFrame->SetContent(DiplomacyListContent);
+
+            DiplomacyDetailFrame->RemoveChild(RelationDetail);
+            DiplomacyDetailContent = Tree->ConstructWidget<UVerticalBox>(UVerticalBox::StaticClass(), TEXT("ReferenceDiplomacyDetailContent"));
+            DiplomacyDetailTitleFrame = Tree->ConstructWidget<UBorder>(UBorder::StaticClass(), TEXT("ReferenceDiplomacyDetailTitleFrame"));
+            DiplomacyDetailTitleText = MakeText(Tree, TEXT("ReferenceDiplomacyDetailTitleText"), TEXT("ILISKI DETAYI"), 18);
+            DiplomacyDetailTitleFrame->SetContent(DiplomacyDetailTitleText);
+            AddVertical(DiplomacyDetailContent, DiplomacyDetailTitleFrame, FMargin(0, 0, 0, 12));
+            UVerticalBoxSlot* RelationDetailSlot = AddVertical(DiplomacyDetailContent, RelationDetail);
+            RelationDetailSlot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
+            DiplomacyDetailFrame->SetContent(DiplomacyDetailContent);
+        }
+        else if (!DiplomacyListContent || !DiplomacyListTitleFrame || !DiplomacyListTitleText
+            || !DiplomacyDetailContent || !DiplomacyDetailTitleFrame || !DiplomacyDetailTitleText
+            || DiplomacyListFrame->GetContent() != DiplomacyListContent
+            || DiplomacyDetailFrame->GetContent() != DiplomacyDetailContent
+            || RelationListSize->GetParent() != DiplomacyListContent
+            || RelationDetail->GetParent() != DiplomacyDetailContent)
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI secondary reference update refused: partial diplomacy layout."));
+            return false;
+        }
+        RelationListSize->SetWidthOverride(380.0f);
+        StyleRoundedFrame(Tree, TEXT("DiplomacyListFrame"), FLinearColor(0.008f, 0.035f, 0.050f, 0.96f), FLinearColor(0.62f, 0.45f, 0.18f, 0.96f), 9.0f, 1.5f, FMargin(14.0f));
+        StyleRoundedFrame(Tree, TEXT("DiplomacyDetailFrame"), FLinearColor(0.012f, 0.055f, 0.075f, 0.96f), FLinearColor(0.62f, 0.45f, 0.18f, 0.96f), 9.0f, 1.5f, FMargin(14.0f));
+        StyleRoundedFrame(Tree, TEXT("ReferenceDiplomacyListTitleFrame"), FLinearColor(0.70f, 0.52f, 0.29f, 0.98f), FLinearColor(0.91f, 0.74f, 0.42f, 1.0f), 5.0f, 1.5f, FMargin(12.0f, 8.0f));
+        StyleRoundedFrame(Tree, TEXT("ReferenceDiplomacyDetailTitleFrame"), FLinearColor(0.70f, 0.52f, 0.29f, 0.98f), FLinearColor(0.91f, 0.74f, 0.42f, 1.0f), 5.0f, 1.5f, FMargin(12.0f, 8.0f));
+        DiplomacyListTitleText->SetColorAndOpacity(FSlateColor(FLinearColor(0.11f, 0.075f, 0.025f, 1.0f)));
+        DiplomacyDetailTitleText->SetColorAndOpacity(FSlateColor(FLinearColor(0.11f, 0.075f, 0.025f, 1.0f)));
+        for (int32 ActionIndex = 0; ActionIndex < RelationActions->GetChildrenCount(); ++ActionIndex)
+        {
+            if (UHorizontalBoxSlot* ActionSlot = Cast<UHorizontalBoxSlot>(RelationActions->GetChildAt(ActionIndex)->Slot))
+            {
+                ActionSlot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
+                ActionSlot->SetPadding(FMargin(ActionIndex == 0 ? 0.0f : 4.0f, 0, ActionIndex + 1 == RelationActions->GetChildrenCount() ? 0.0f : 4.0f, 0));
+            }
+        }
+        StyleButton(Tree, TEXT("AllianceRequestButton"), FLinearColor(0.025f, 0.28f, 0.32f, 0.98f));
+        StyleButton(Tree, TEXT("WarRequestButton"), FLinearColor(0.36f, 0.055f, 0.04f, 0.98f));
+        StyleButton(Tree, TEXT("AcceptButton"), FLinearColor(0.035f, 0.26f, 0.12f, 0.98f));
+        StyleButton(Tree, TEXT("RejectButton"), FLinearColor(0.34f, 0.055f, 0.04f, 0.98f));
+        StyleButton(Tree, TEXT("CancelButton"), FLinearColor(0.28f, 0.21f, 0.08f, 0.98f));
+
+        USizeBox* AllianceColumnsSize = Cast<USizeBox>(Tree->FindWidget(TEXT("ReferenceAllianceColumnsSize")));
+        UHorizontalBox* AllianceColumns = Cast<UHorizontalBox>(Tree->FindWidget(TEXT("ReferenceAllianceColumns")));
+        UBorder* AllianceSummaryFrame = Cast<UBorder>(Tree->FindWidget(TEXT("ReferenceAllianceSummaryFrame")));
+        UVerticalBox* AllianceSummaryContent = Cast<UVerticalBox>(Tree->FindWidget(TEXT("ReferenceAllianceSummaryContent")));
+        UBorder* AllianceMembersFrame = Cast<UBorder>(Tree->FindWidget(TEXT("ReferenceAllianceMembersFrame")));
+        UVerticalBox* AllianceMembersContent = Cast<UVerticalBox>(Tree->FindWidget(TEXT("ReferenceAllianceMembersContent")));
+        if (!AllianceColumnsSize && !AllianceColumns && !AllianceSummaryFrame && !AllianceSummaryContent
+            && !AllianceMembersFrame && !AllianceMembersContent)
+        {
+            if (AllianceSummary->GetParent() != AlliancePage || AllianceDetailFrame->GetParent() != AlliancePage
+                || AllianceMembers->GetParent() != AlliancePage)
+            {
+                UE_LOG(LogTemp, Error, TEXT("PalTRUI secondary reference update refused: alliance source changed."));
+                return false;
+            }
+            const int32 AllianceInsertIndex = FMath::Min(
+                AlliancePage->GetChildIndex(AllianceSummary),
+                AlliancePage->GetChildIndex(AllianceDetailFrame)
+            );
+            AlliancePage->RemoveChild(AllianceSummary);
+            AlliancePage->RemoveChild(AllianceDetailFrame);
+            AlliancePage->RemoveChild(AllianceMembers);
+            AllianceColumnsSize = Tree->ConstructWidget<USizeBox>(USizeBox::StaticClass(), TEXT("ReferenceAllianceColumnsSize"));
+            AllianceColumnsSize->SetHeightOverride(620.0f);
+            AllianceColumns = Tree->ConstructWidget<UHorizontalBox>(UHorizontalBox::StaticClass(), TEXT("ReferenceAllianceColumns"));
+            AllianceColumnsSize->SetContent(AllianceColumns);
+            AllianceSummaryFrame = Tree->ConstructWidget<UBorder>(UBorder::StaticClass(), TEXT("ReferenceAllianceSummaryFrame"));
+            AllianceSummaryContent = Tree->ConstructWidget<UVerticalBox>(UVerticalBox::StaticClass(), TEXT("ReferenceAllianceSummaryContent"));
+            AllianceSummaryFrame->SetContent(AllianceSummaryContent);
+            AddVertical(AllianceSummaryContent, MakeText(Tree, TEXT("ReferenceAllianceSummaryTitleText"), TEXT("ITTIFAK OZETI"), 18), FMargin(0, 0, 0, 14));
+            AddVertical(AllianceSummaryContent, AllianceSummary);
+            UHorizontalBoxSlot* SummarySlot = AddHorizontal(AllianceColumns, AllianceSummaryFrame, FMargin(0, 0, 8, 0));
+            SummarySlot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
+            SummarySlot->SetVerticalAlignment(VAlign_Fill);
+            UHorizontalBoxSlot* DetailSlot = AddHorizontal(AllianceColumns, AllianceDetailFrame, FMargin(8, 0, 8, 0));
+            DetailSlot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
+            DetailSlot->SetVerticalAlignment(VAlign_Fill);
+            AllianceMembersFrame = Tree->ConstructWidget<UBorder>(UBorder::StaticClass(), TEXT("ReferenceAllianceMembersFrame"));
+            AllianceMembersContent = Tree->ConstructWidget<UVerticalBox>(UVerticalBox::StaticClass(), TEXT("ReferenceAllianceMembersContent"));
+            AllianceMembersFrame->SetContent(AllianceMembersContent);
+            AddVertical(AllianceMembersContent, MakeText(Tree, TEXT("ReferenceAllianceMembersTitleText"), TEXT("UYE KLANLAR"), 18), FMargin(0, 0, 0, 14));
+            AddVertical(AllianceMembersContent, AllianceMembers);
+            UHorizontalBoxSlot* MembersSlot = AddHorizontal(AllianceColumns, AllianceMembersFrame, FMargin(8, 0, 0, 0));
+            MembersSlot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
+            MembersSlot->SetVerticalAlignment(VAlign_Fill);
+            UVerticalBoxSlot* AllianceColumnsSlot = Cast<UVerticalBoxSlot>(AlliancePage->InsertChildAt(AllianceInsertIndex, AllianceColumnsSize));
+            if (!AllianceColumnsSlot)
+            {
+                UE_LOG(LogTemp, Error, TEXT("PalTRUI secondary reference update failed: alliance columns slot."));
+                return false;
+            }
+            AllianceColumnsSlot->SetHorizontalAlignment(HAlign_Fill);
+        }
+        else if (!AllianceColumnsSize || !AllianceColumns || !AllianceSummaryFrame || !AllianceSummaryContent
+            || !AllianceMembersFrame || !AllianceMembersContent
+            || AllianceColumnsSize->GetContent() != AllianceColumns
+            || AllianceColumnsSize->GetParent() != AlliancePage
+            || AllianceSummaryFrame->GetParent() != AllianceColumns
+            || AllianceDetailFrame->GetParent() != AllianceColumns
+            || AllianceMembersFrame->GetParent() != AllianceColumns)
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI secondary reference update refused: partial alliance layout."));
+            return false;
+        }
+        StyleRoundedFrame(Tree, TEXT("ReferenceAllianceSummaryFrame"), FLinearColor(0.02f, 0.16f, 0.17f, 0.94f), FLinearColor(0.15f, 0.68f, 0.70f, 0.95f), 9.0f, 1.5f, FMargin(18.0f));
+        StyleRoundedFrame(Tree, TEXT("AllianceDetailFrame"), FLinearColor(0.015f, 0.075f, 0.105f, 0.96f), FLinearColor(0.62f, 0.45f, 0.18f, 0.96f), 9.0f, 1.5f, FMargin(18.0f));
+        StyleRoundedFrame(Tree, TEXT("ReferenceAllianceMembersFrame"), FLinearColor(0.055f, 0.04f, 0.015f, 0.94f), FLinearColor(0.62f, 0.45f, 0.18f, 0.96f), 9.0f, 1.5f, FMargin(18.0f));
+
+        UBorder* GuildActiveTitleFrame = Cast<UBorder>(Tree->FindWidget(TEXT("ReferenceGuildActiveTitleFrame")));
+        UBorder* GuildRegisteredTitleFrame = Cast<UBorder>(Tree->FindWidget(TEXT("ReferenceGuildRegisteredTitleFrame")));
+        UBorder* GuildInfoFrame = Cast<UBorder>(Tree->FindWidget(TEXT("ReferenceGuildInfoFrame")));
+        UVerticalBox* GuildInfoContent = Cast<UVerticalBox>(Tree->FindWidget(TEXT("ReferenceGuildInfoContent")));
+        if (!GuildActiveTitleFrame && !GuildRegisteredTitleFrame && !GuildInfoFrame && !GuildInfoContent)
+        {
+            if (GuildActiveHeading->GetParent() != GuildActiveContent
+                || GuildRegisteredHeading->GetParent() != GuildRegisteredContent)
+            {
+                UE_LOG(LogTemp, Error, TEXT("PalTRUI secondary reference update refused: guild source changed."));
+                return false;
+            }
+            GuildActiveContent->RemoveChild(GuildActiveHeading);
+            GuildActiveTitleFrame = Tree->ConstructWidget<UBorder>(UBorder::StaticClass(), TEXT("ReferenceGuildActiveTitleFrame"));
+            GuildActiveTitleFrame->SetContent(GuildActiveHeading);
+            GuildActiveContent->InsertChildAt(0, GuildActiveTitleFrame);
+            GuildRegisteredContent->RemoveChild(GuildRegisteredHeading);
+            GuildRegisteredTitleFrame = Tree->ConstructWidget<UBorder>(UBorder::StaticClass(), TEXT("ReferenceGuildRegisteredTitleFrame"));
+            GuildRegisteredTitleFrame->SetContent(GuildRegisteredHeading);
+            GuildRegisteredContent->InsertChildAt(0, GuildRegisteredTitleFrame);
+            GuildInfoFrame = Tree->ConstructWidget<UBorder>(UBorder::StaticClass(), TEXT("ReferenceGuildInfoFrame"));
+            GuildInfoContent = Tree->ConstructWidget<UVerticalBox>(UVerticalBox::StaticClass(), TEXT("ReferenceGuildInfoContent"));
+            GuildInfoFrame->SetContent(GuildInfoContent);
+            AddVertical(GuildInfoContent, MakeText(Tree, TEXT("ReferenceGuildInfoTitleText"), TEXT("KLAN REHBERI"), 18), FMargin(0, 0, 0, 14));
+            UTextBlock* GuildInfoText = MakeText(Tree, TEXT("ReferenceGuildInfoText"), TEXT("Sunucudaki aktif ve kayitli klanlari inceleyin.\n\nDiplomasi islemi icin bir klani Diplomasi ekranindan secin."), 15);
+            GuildInfoText->SetAutoWrapText(true);
+            AddVertical(GuildInfoContent, GuildInfoText);
+            UHorizontalBoxSlot* GuildInfoSlot = AddHorizontal(GuildColumns, GuildInfoFrame, FMargin(8, 0, 0, 0));
+            GuildInfoSlot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
+            GuildInfoSlot->SetVerticalAlignment(VAlign_Fill);
+        }
+        else if (!GuildActiveTitleFrame || !GuildRegisteredTitleFrame || !GuildInfoFrame || !GuildInfoContent
+            || GuildActiveTitleFrame->GetContent() != GuildActiveHeading
+            || GuildRegisteredTitleFrame->GetContent() != GuildRegisteredHeading
+            || GuildInfoFrame->GetContent() != GuildInfoContent
+            || GuildInfoFrame->GetParent() != GuildColumns)
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI secondary reference update refused: partial guild layout."));
+            return false;
+        }
+        for (int32 GuildColumnIndex = 0; GuildColumnIndex < GuildColumns->GetChildrenCount(); ++GuildColumnIndex)
+        {
+            if (UHorizontalBoxSlot* GuildColumnSlot = Cast<UHorizontalBoxSlot>(GuildColumns->GetChildAt(GuildColumnIndex)->Slot))
+            {
+                GuildColumnSlot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
+                GuildColumnSlot->SetVerticalAlignment(VAlign_Fill);
+                GuildColumnSlot->SetPadding(FMargin(GuildColumnIndex == 0 ? 0.0f : 8.0f, 0, GuildColumnIndex + 1 == GuildColumns->GetChildrenCount() ? 0.0f : 8.0f, 0));
+            }
+        }
+        StyleRoundedFrame(Tree, TEXT("GuildCatalogActiveFrame"), FLinearColor(0.015f, 0.15f, 0.16f, 0.95f), FLinearColor(0.15f, 0.68f, 0.70f, 0.95f), 9.0f, 1.5f, FMargin(14.0f));
+        StyleRoundedFrame(Tree, TEXT("GuildCatalogRegisteredFrame"), FLinearColor(0.012f, 0.055f, 0.075f, 0.96f), FLinearColor(0.62f, 0.45f, 0.18f, 0.96f), 9.0f, 1.5f, FMargin(14.0f));
+        StyleRoundedFrame(Tree, TEXT("ReferenceGuildInfoFrame"), FLinearColor(0.055f, 0.04f, 0.015f, 0.94f), FLinearColor(0.62f, 0.45f, 0.18f, 0.96f), 9.0f, 1.5f, FMargin(16.0f));
+        StyleRoundedFrame(Tree, TEXT("ReferenceGuildActiveTitleFrame"), FLinearColor(0.70f, 0.52f, 0.29f, 0.98f), FLinearColor(0.91f, 0.74f, 0.42f, 1.0f), 5.0f, 1.5f, FMargin(12.0f, 8.0f));
+        StyleRoundedFrame(Tree, TEXT("ReferenceGuildRegisteredTitleFrame"), FLinearColor(0.70f, 0.52f, 0.29f, 0.98f), FLinearColor(0.91f, 0.74f, 0.42f, 1.0f), 5.0f, 1.5f, FMargin(12.0f, 8.0f));
+        GuildActiveHeading->SetColorAndOpacity(FSlateColor(FLinearColor(0.11f, 0.075f, 0.025f, 1.0f)));
+        GuildRegisteredHeading->SetColorAndOpacity(FSlateColor(FLinearColor(0.11f, 0.075f, 0.025f, 1.0f)));
+
+        for (const FName ShadowText : {
+            FName(TEXT("DiplomacyHeadingText")),
+            FName(TEXT("DiplomacySubtitleText")),
+            FName(TEXT("RelationTitleText")),
+            FName(TEXT("RelationStateText")),
+            FName(TEXT("AllianceHeadingText")),
+            FName(TEXT("AllianceSubtitleText")),
+            FName(TEXT("ReferenceAllianceSummaryTitleText")),
+            FName(TEXT("ReferenceAllianceMembersTitleText")),
+            FName(TEXT("ChatHeadingText")),
+            FName(TEXT("GuildSubtitleText")),
+            FName(TEXT("ReferenceGuildInfoTitleText"))
+        })
+        {
+            StyleTextShadow(Tree, ShadowText);
+        }
+
+        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Panel);
+        FKismetEditorUtilities::CompileBlueprint(Panel);
+        if (!SaveAsset(Panel))
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI secondary reference update failed while saving panel."));
+            return false;
+        }
+        UE_LOG(LogTemp, Display, TEXT("PALTR_UI_SECONDARY_REFERENCE_OK | diplomacy=2col | alliance=3col | guilds=3col"));
+        return true;
+    }
+
     bool UpdatePanelInputShield()
     {
         UWidgetBlueprint* Panel = LoadObject<UWidgetBlueprint>(
@@ -3359,6 +3623,12 @@ namespace PalTRUIAssetBuilder
             TEXT("DashboardSidebarTitleText"),
             TEXT("DiplomacyListFrame"),
             TEXT("DiplomacyDetailFrame"),
+            TEXT("ReferenceDiplomacyListContent"),
+            TEXT("ReferenceDiplomacyListTitleFrame"),
+            TEXT("ReferenceDiplomacyListTitleText"),
+            TEXT("ReferenceDiplomacyDetailContent"),
+            TEXT("ReferenceDiplomacyDetailTitleFrame"),
+            TEXT("ReferenceDiplomacyDetailTitleText"),
             TEXT("PanelArtOverlay"),
             TEXT("PanelArtImage"),
             TEXT("PanelArtContentPadding"),
@@ -3501,6 +3771,14 @@ namespace PalTRUIAssetBuilder
             TEXT("DashboardRelationRow3StateText"),
             TEXT("AllianceDetailFrame"),
             TEXT("AllianceDetailContent"),
+            TEXT("ReferenceAllianceColumnsSize"),
+            TEXT("ReferenceAllianceColumns"),
+            TEXT("ReferenceAllianceSummaryFrame"),
+            TEXT("ReferenceAllianceSummaryContent"),
+            TEXT("ReferenceAllianceSummaryTitleText"),
+            TEXT("ReferenceAllianceMembersFrame"),
+            TEXT("ReferenceAllianceMembersContent"),
+            TEXT("ReferenceAllianceMembersTitleText"),
             TEXT("AllianceTitleText"),
             TEXT("AllianceStateText"),
             TEXT("AllianceDescriptionText"),
@@ -3519,6 +3797,12 @@ namespace PalTRUIAssetBuilder
             TEXT("GuildCatalogRegisteredContent"),
             TEXT("GuildCatalogRegisteredHeadingText"),
             TEXT("GuildCatalogRegisteredText"),
+            TEXT("ReferenceGuildActiveTitleFrame"),
+            TEXT("ReferenceGuildRegisteredTitleFrame"),
+            TEXT("ReferenceGuildInfoFrame"),
+            TEXT("ReferenceGuildInfoContent"),
+            TEXT("ReferenceGuildInfoTitleText"),
+            TEXT("ReferenceGuildInfoText"),
             TEXT("HeaderGuildFrame"),
             TEXT("HeaderGuildText"),
             TEXT("HeaderRoleFrame"),
@@ -3795,6 +4079,11 @@ int32 UPalTRUIAssetBuilderCommandlet::Main(const FString& Params)
     if (FParse::Param(*Params, TEXT("UpdateArtDashboard")))
     {
         return UpdateArtDashboard() ? 0 : 24;
+    }
+
+    if (FParse::Param(*Params, TEXT("UpdateReferenceSecondaryPages")))
+    {
+        return UpdateReferenceSecondaryPages() ? 0 : 25;
     }
 
     const FString ModActorPackage = FString(AssetRoot) / TEXT("ModActor");

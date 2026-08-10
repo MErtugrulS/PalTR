@@ -104,4 +104,9 @@ and compose the Clan home page as four status cards, recent events, quick
 actions, relations, and pending offers. Protection and Buildings are explicitly
 mocked as future-phase cards; Clan and Diplomacy keep their live bindings.
 
+Run the commandlet with `-UpdateReferenceSecondaryPages` to carry the same
+navy, gold, parchment-title, and rounded-card presentation into Diplomacy,
+Alliance, and Guilds. The update keeps the existing renderer and action widget
+names, and only adds named presentation containers that `-Verify` also checks.
+
 Run the commandlet with `-Verify` to load both generated classes and check the renderer-facing widget names without modifying the assets.
