@@ -60,6 +60,7 @@ namespace
 
     bool read_rows(
         const std::filesystem::path& path,
+        const std::string& expected_header_prefix,
         std::vector<std::vector<std::string>>& rows,
         std::string& error)
     {
@@ -71,17 +72,30 @@ namespace
         }
 
         std::string line;
-        bool header = true;
+        if (!std::getline(input, line))
+        {
+            error = "empty registry snapshot " + path.string();
+            return false;
+        }
+        if (!line.empty() && line.back() == '\r')
+        {
+            line.pop_back();
+        }
+        const bool exact_header = line == expected_header_prefix;
+        const bool extended_header = line.size() > expected_header_prefix.size()
+            && line.compare(0, expected_header_prefix.size(), expected_header_prefix) == 0
+            && line[expected_header_prefix.size()] == '\t';
+        if (!exact_header && !extended_header)
+        {
+            error = "invalid registry snapshot header " + path.string();
+            return false;
+        }
+
         while (std::getline(input, line))
         {
             if (!line.empty() && line.back() == '\r')
             {
                 line.pop_back();
-            }
-            if (header)
-            {
-                header = false;
-                continue;
             }
             if (!line.empty())
             {
@@ -252,9 +266,21 @@ namespace PalTR
         std::vector<std::vector<std::string>> conquest_rows;
         std::vector<std::vector<std::string>> conquest_zone_rows;
 
-        if (!read_rows(m_data_root / "player_registry.tsv", player_rows, error)
-            || !read_rows(m_data_root / "guild_registry.tsv", guild_rows, error)
-            || !read_rows(m_data_root / "diplomacy_relations.tsv", relation_rows, error)
+        if (!read_rows(
+                m_data_root / "player_registry.tsv",
+                "player_key\tplayer_name\tplayer_id\tplayer_uid\tguild_key\trole\tis_master\tplayer_state_path\tpawn_path",
+                player_rows,
+                error)
+            || !read_rows(
+                m_data_root / "guild_registry.tsv",
+                "guild_key\tguild_name\tguild_id",
+                guild_rows,
+                error)
+            || !read_rows(
+                m_data_root / "diplomacy_relations.tsv",
+                "pair_key\tguild_a\tguild_b\tstate",
+                relation_rows,
+                error)
             || !read_protection_rows(
                 m_data_root / "guild_protection.tsv",
                 protection_rows,

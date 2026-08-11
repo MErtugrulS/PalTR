@@ -251,6 +251,17 @@ int main()
         !snapshot.is_guild_offline_protected("GUILD_A"),
         "offline protection clears after reload");
 
+    write_file(
+        root / "player_registry.tsv",
+        "wrong_header\n");
+    error.clear();
+    ok &= expect(
+        !snapshot.refresh_if_changed(error),
+        "invalid registry header is rejected");
+    ok &= expect(
+        error.find("invalid registry snapshot header") != std::string::npos,
+        "invalid registry header reports a useful error");
+
     const auto activity_path = root / "guild_combat_activity.tsv";
     PalTR::ProtectionActivityStore activity(activity_path);
     ok &= expect(
