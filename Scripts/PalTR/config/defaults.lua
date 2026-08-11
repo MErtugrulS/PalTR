@@ -10,9 +10,7 @@ return {
     },
 
     diplomacy = {
-        -- Runtime savas testi icin gecici olarak 2 dakika.
-        -- Testten sonra 30 dakikaya cikarilacak.
-        war_preparation_minutes = 2,
+        war_preparation_minutes = 30,
 
         -- Ateskes kabul edildikten sonra 12 saat surer.
         ceasefire_duration_hours = 12,
@@ -26,9 +24,6 @@ return {
         offline_grace_minutes = 5,
 
         -- Son dis saldiridan sonra offline koruma icin gereken sakin sure.
-        combat_lock_minutes = 20,
-
-        block_friendly_fire = false,
-        block_non_war_damage = false
+        combat_lock_minutes = 20
     }
 }
