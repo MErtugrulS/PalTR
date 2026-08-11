@@ -293,6 +293,22 @@ function CommandService:_conquest_status_message(player)
         "/" .. tostring(self.conquest.config.max_outposts_per_clan)
 end
 
+function CommandService:_flag_candidate_message(player)
+    local role, role_error = self:_conquest_role(player)
+    if not role then return false, role_error end
+
+    local result = self.conquest_flags:nearest_owned_candidate(
+        player,
+        self.registry,
+        self.conquest.config
+    )
+    if not result.ok then return false, result.error.message end
+
+    return true,
+        "Bayrak adayi (kayit yapilmadi): " ..
+        tostring(result.value.actor_reference)
+end
+
 function CommandService:_respond(
     controller,
     player,
@@ -548,7 +564,7 @@ function CommandService:on_chat(
             command.raw,
             true,
             "!durum | !klanlar | !iliskiler | !yardim | " ..
-            "!fetihdurum | !baskent | !karakol | " ..
+            "!fetihdurum | !bayrakaday | !baskent | !karakol | " ..
             "!fetih KLAN | !kusatmakampi KLAN | " ..
             "!savas KLAN | !ateskes KLAN | " ..
             "!ateskesboz KLAN | !baris KLAN | " ..
@@ -600,6 +616,12 @@ function CommandService:on_chat(
 
     if command.action == "CONQUEST_STATUS" then
         local ok, response = self:_conquest_status_message(player)
+        self:_respond(controller, player, command.raw, ok, response)
+        return
+    end
+
+    if command.action == "FLAG_CANDIDATE" then
+        local ok, response = self:_flag_candidate_message(player)
         self:_respond(controller, player, command.raw, ok, response)
         return
     end

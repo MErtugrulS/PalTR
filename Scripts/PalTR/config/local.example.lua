@@ -18,6 +18,9 @@ return {
         world_units_per_meter = 100,
         flag_interaction_radius_meters = 20,
         conquest_flag_actor_class_tokens = {},
+        flag_candidate_actor_class_tokens = {
+            "BP_BuildObject_Signboard"
+        },
         siege_camp_interaction_radius_meters = 20,
         siege_camp_actor_class_tokens = {
             "BP_BuildObject_WorkBench_C"

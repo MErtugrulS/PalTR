@@ -13,6 +13,7 @@ local aliases = {
     ["!karakol"] = "REGISTER_OUTPOST",
     ["!fetih"] = "START_CONQUEST",
     ["!kusatmakampi"] = "ESTABLISH_SIEGE",
+    ["!bayrakaday"] = "FLAG_CANDIDATE",
 
     ["!savas"] = "DECLARE_WAR",
     ["!ateskes"] = "CEASEFIRE",

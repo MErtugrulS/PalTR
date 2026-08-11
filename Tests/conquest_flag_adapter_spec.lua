@@ -31,6 +31,10 @@ local config = {
 local adapter = Adapter.new(ue)
 local blocked = adapter:nearest_owned_flag(player, registry, config)
 equal(blocked.error.code, "CONQUEST_FLAG_CLASS_UNVERIFIED", "unverified class blocks")
+config.flag_candidate_actor_class_tokens = { "VerifiedFlagClass_C" }
+local candidate = adapter:nearest_owned_candidate(player, registry, config)
+equal(candidate.ok, true, "candidate discovery is read only")
+equal(config.conquest_flag_actor_class_tokens[1], nil, "official config unchanged")
 config.conquest_flag_actor_class_tokens = { "VerifiedFlagClass_C" }
 local found = adapter:nearest_owned_flag(player, registry, config)
 equal(found.ok, true, "configured flag found")

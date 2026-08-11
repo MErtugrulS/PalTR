@@ -25,6 +25,7 @@ equal(
     "ESTABLISH_SIEGE",
     "siege parse"
 )
+equal(Parser.parse("!bayrakaday").value.action, "FLAG_CANDIDATE", "candidate parse")
 
 local registry = { guilds = {}, runtime_players = {} }
 local conquest = {
@@ -83,6 +84,9 @@ local nearby = {
     }
 }
 function nearby:nearest_owned_flag() return Result.ok(self.current) end
+function nearby:nearest_owned_candidate()
+    return Result.ok({ actor_reference = "VerifiedFlagClass_C Instance" })
+end
 
 local build_objects = {}
 function build_objects:nearest_owned_siege_camp()
@@ -146,6 +150,13 @@ equal(
 local status_ok, status = service:_conquest_status_message(leader)
 equal(status_ok, true, "status available")
 equal(status, "Fetih: Baskent=1 | Karakol=1/10", "status counts nodes")
+local candidate_ok, candidate_message = service:_flag_candidate_message(leader)
+equal(candidate_ok, true, "candidate command available")
+equal(
+    candidate_message,
+    "Bayrak adayi (kayit yapilmadi): VerifiedFlagClass_C Instance",
+    "candidate command is explicit"
+)
 
 ok, message = service:_start_conquest_campaign(leader, "B")
 equal(ok, true, "leader starts conquest")

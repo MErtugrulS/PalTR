@@ -33,11 +33,11 @@ end
 
 function Adapter.new(ue) return setmetatable({ ue = ue or UE }, Adapter) end
 
-function Adapter:_record(actor, registry, config)
+function Adapter:_record(actor, registry, config, tokens)
     if not self.ue.valid(actor) then return nil end
     local path = self.ue.full_name(actor)
     if path:find("Default__", 1, true)
-        or not matches(path, config.conquest_flag_actor_class_tokens) then return nil end
+        or not matches(path, tokens) then return nil end
 
     local ok_available, available = self.ue.call(actor, "IsAvailable")
     local ok_group, group_id = self.ue.call(actor, "GetGroupIdBelongTo")
@@ -63,10 +63,10 @@ function Adapter:_record(actor, registry, config)
     }
 end
 
-function Adapter:nearest_owned_flag(player, registry, config)
+function Adapter:_nearest_owned(player, registry, config, tokens)
     config = config or {}
     local scale = number(config.world_units_per_meter)
-    local tokens = config.conquest_flag_actor_class_tokens or {}
+    tokens = tokens or {}
     if scale <= 0 then
         return Result.err("WORLD_UNIT_SCALE_INVALID", "World birim/metre orani gecersiz")
     end
@@ -87,7 +87,7 @@ function Adapter:nearest_owned_flag(player, registry, config)
     local nearest, nearest_distance = nil, math.huge
 
     for _, actor in pairs(self.ue.find_all("PalBuildObject")) do
-        local record = self:_record(actor, registry, config)
+        local record = self:_record(actor, registry, config, tokens)
         if record and record.guild_key == tostring(player.guild_key or "") then
             local current = distance(player_location, record)
             if current < nearest_distance then
@@ -105,6 +105,26 @@ function Adapter:nearest_owned_flag(player, registry, config)
     end
     nearest.distance_meters = nearest_distance
     return Result.ok(nearest)
+end
+
+function Adapter:nearest_owned_flag(player, registry, config)
+    config = config or {}
+    return self:_nearest_owned(
+        player,
+        registry,
+        config,
+        config.conquest_flag_actor_class_tokens
+    )
+end
+
+function Adapter:nearest_owned_candidate(player, registry, config)
+    config = config or {}
+    return self:_nearest_owned(
+        player,
+        registry,
+        config,
+        config.flag_candidate_actor_class_tokens
+    )
 end
 
 return Adapter
