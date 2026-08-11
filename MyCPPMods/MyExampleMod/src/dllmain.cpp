@@ -805,12 +805,6 @@ namespace PalTR
                     return;
                 }
 
-                const auto build_player_uid = resolve_build_player(*instance_id);
-                if (build_player_uid.empty())
-                {
-                    return;
-                }
-
                 if (!ensure_policy_current())
                 {
                     return;
@@ -818,6 +812,36 @@ namespace PalTR
 
                 const auto attacker_guild =
                     m_policy.guild_for_pawn_path(ascii_text(pawn->GetFullName()));
+                const auto conquest = m_policy.evaluate_conquest_flag_damage(
+                    guid_text(*instance_id),
+                    attacker_guild);
+                if (conquest.handled)
+                {
+                    if (conquest.block)
+                    {
+                        hook.PreventOriginalFunctionCall();
+                        Output::send<LogLevel::Warning>(
+                            STR("[PalTRStructureGuard] Blocked conquest flag damage: attacker={} target={} reason={}\n"),
+                            unreal_text(conquest.attacker_guild_key),
+                            unreal_text(conquest.target_guild_key),
+                            unreal_text(conquest.reason));
+                    }
+                    else
+                    {
+                        record_hostile_activity(
+                            conquest.attacker_guild_key,
+                            conquest.target_guild_key,
+                            true);
+                    }
+                    return;
+                }
+
+                const auto build_player_uid = resolve_build_player(*instance_id);
+                if (build_player_uid.empty())
+                {
+                    return;
+                }
+
                 const auto target_guild =
                     m_policy.guild_for_player_uid(build_player_uid);
                 const auto decision = m_policy.evaluate_protected_guilds(

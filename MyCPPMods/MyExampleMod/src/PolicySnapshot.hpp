@@ -15,6 +15,15 @@ namespace PalTR
         std::string reason;
     };
 
+    struct ConquestFlagDecision
+    {
+        bool handled{};
+        bool block{};
+        std::string target_guild_key;
+        std::string attacker_guild_key;
+        std::string reason;
+    };
+
     class PolicySnapshot
     {
     public:
@@ -39,6 +48,9 @@ namespace PalTR
         std::string guild_for_pawn_path(const std::string& pawn_path) const;
         std::string guild_for_group_id(const std::string& group_id) const;
         bool is_guild_offline_protected(const std::string& guild_key) const;
+        ConquestFlagDecision evaluate_conquest_flag_damage(
+            const std::string& instance_id,
+            const std::string& attacker_guild_key) const;
 
     private:
         bool reload(std::string& error);
@@ -49,5 +61,7 @@ namespace PalTR
         std::unordered_map<std::string, std::string> m_guild_key_by_group_id;
         std::unordered_set<std::string> m_alliance_pairs;
         std::unordered_set<std::string> m_offline_protected_guilds;
+        std::unordered_map<std::string, std::string> m_conquest_flag_owner;
+        std::unordered_set<std::string> m_conquest_allowed_attackers;
     };
 }

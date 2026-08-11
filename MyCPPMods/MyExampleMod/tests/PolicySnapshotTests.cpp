@@ -51,6 +51,11 @@ int main()
         "guild_key\tonline_count\tlast_online_at\tlast_hostile_at\tprotected_at\tprotected\treason\n"
         "GUILD_A\t0\t1000\t2000\t3200\ttrue\tOFFLINE_PROTECTED\n"
         "GUILD_B\t1\t3200\t0\t0\tfalse\tONLINE\n");
+    write_file(
+        root / "conquest_damage_policy.tsv",
+        "flag_reference\tnode_id\towner_guild\tallowed_attacker_guild\n"
+        "11111111111111111111111111111111\tNODE_A\tGUILD_A\tGUILD_B\n"
+        "22222222222222222222222222222222\tNODE_B\tGUILD_A\t\n");
 
     PalTR::PolicySnapshot snapshot(root);
     std::string error;
@@ -96,6 +101,42 @@ int main()
     ok &= expect(
         !snapshot.is_guild_offline_protected("GUILD_B"),
         "online guild remains unprotected");
+
+    const auto active_flag = snapshot.evaluate_conquest_flag_damage(
+        "11111111-1111-1111-1111-111111111111",
+        "GUILD_B");
+    ok &= expect(active_flag.handled, "registered conquest flag handled");
+    ok &= expect(!active_flag.block, "active conquest attacker allowed");
+    ok &= expect(
+        active_flag.reason == "ACTIVE_CONQUEST_TARGET",
+        "active conquest reason preserved");
+
+    const auto wrong_flag_attacker = snapshot.evaluate_conquest_flag_damage(
+        "11111111111111111111111111111111",
+        "GUILD_C");
+    ok &= expect(wrong_flag_attacker.block, "wrong attacker blocked on target flag");
+
+    const auto unresolved_flag_attacker = snapshot.evaluate_conquest_flag_damage(
+        "11111111111111111111111111111111",
+        "");
+    ok &= expect(
+        unresolved_flag_attacker.block,
+        "unresolved player attacker fails closed on registered flag");
+
+    const auto same_guild_flag = snapshot.evaluate_conquest_flag_damage(
+        "11111111111111111111111111111111",
+        "GUILD_A");
+    ok &= expect(!same_guild_flag.block, "same guild remains game controlled");
+
+    const auto inactive_flag = snapshot.evaluate_conquest_flag_damage(
+        "22222222222222222222222222222222",
+        "GUILD_B");
+    ok &= expect(inactive_flag.block, "inactive conquest flag protected");
+
+    const auto ordinary_structure = snapshot.evaluate_conquest_flag_damage(
+        "33333333333333333333333333333333",
+        "GUILD_B");
+    ok &= expect(!ordinary_structure.handled, "ordinary structure not handled");
 
     const auto offline_external = snapshot.evaluate_protected_guilds(
         "GUILD_A",

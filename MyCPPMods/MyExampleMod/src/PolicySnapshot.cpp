@@ -132,6 +132,47 @@ namespace
 
         return true;
     }
+
+    bool read_conquest_rows(
+        const std::filesystem::path& path,
+        std::vector<std::vector<std::string>>& rows,
+        std::string& error)
+    {
+        std::ifstream input(path);
+        if (!input)
+        {
+            return true;
+        }
+
+        std::string line;
+        if (!std::getline(input, line))
+        {
+            error = "empty conquest snapshot " + path.string();
+            return false;
+        }
+        if (!line.empty() && line.back() == '\r')
+        {
+            line.pop_back();
+        }
+        if (line != "flag_reference\tnode_id\towner_guild\tallowed_attacker_guild")
+        {
+            error = "invalid conquest snapshot header " + path.string();
+            return false;
+        }
+
+        while (std::getline(input, line))
+        {
+            if (!line.empty() && line.back() == '\r')
+            {
+                line.pop_back();
+            }
+            if (!line.empty())
+            {
+                rows.emplace_back(split_tsv(line));
+            }
+        }
+        return true;
+    }
 }
 
 namespace PalTR
@@ -152,6 +193,7 @@ namespace PalTR
         std::vector<std::vector<std::string>> guild_rows;
         std::vector<std::vector<std::string>> relation_rows;
         std::vector<std::vector<std::string>> protection_rows;
+        std::vector<std::vector<std::string>> conquest_rows;
 
         if (!read_rows(m_data_root / "player_registry.tsv", player_rows, error)
             || !read_rows(m_data_root / "guild_registry.tsv", guild_rows, error)
@@ -159,6 +201,10 @@ namespace PalTR
             || !read_protection_rows(
                 m_data_root / "guild_protection.tsv",
                 protection_rows,
+                error)
+            || !read_conquest_rows(
+                m_data_root / "conquest_damage_policy.tsv",
+                conquest_rows,
                 error))
         {
             return false;
@@ -169,6 +215,8 @@ namespace PalTR
         std::unordered_map<std::string, std::string> guild_key_by_group_id;
         std::unordered_set<std::string> alliance_pairs;
         std::unordered_set<std::string> offline_protected_guilds;
+        std::unordered_map<std::string, std::string> conquest_flag_owner;
+        std::unordered_set<std::string> conquest_allowed_attackers;
 
         for (const auto& columns : player_rows)
         {
@@ -222,11 +270,34 @@ namespace PalTR
             }
         }
 
+        for (const auto& columns : conquest_rows)
+        {
+            if (columns.size() < 4 || columns[2].empty())
+            {
+                continue;
+            }
+
+            const auto instance_id = normalize_guid(columns[0]);
+            if (instance_id.empty())
+            {
+                continue;
+            }
+
+            conquest_flag_owner[instance_id] = columns[2];
+            if (!columns[3].empty())
+            {
+                conquest_allowed_attackers.emplace(
+                    instance_id + "::" + columns[3]);
+            }
+        }
+
         m_player_guild_by_uid = std::move(player_guild_by_uid);
         m_player_guild_by_pawn_path = std::move(player_guild_by_pawn_path);
         m_guild_key_by_group_id = std::move(guild_key_by_group_id);
         m_alliance_pairs = std::move(alliance_pairs);
         m_offline_protected_guilds = std::move(offline_protected_guilds);
+        m_conquest_flag_owner = std::move(conquest_flag_owner);
+        m_conquest_allowed_attackers = std::move(conquest_allowed_attackers);
         error.clear();
         return true;
     }
@@ -330,5 +401,38 @@ namespace PalTR
     {
         return !guild_key.empty()
             && m_offline_protected_guilds.contains(guild_key);
+    }
+
+    ConquestFlagDecision PolicySnapshot::evaluate_conquest_flag_damage(
+        const std::string& instance_id,
+        const std::string& attacker_guild_key) const
+    {
+        ConquestFlagDecision result{};
+        const auto normalized = normalize_guid(instance_id);
+        const auto found = m_conquest_flag_owner.find(normalized);
+        if (found == m_conquest_flag_owner.end())
+        {
+            return result;
+        }
+
+        result.handled = true;
+        result.target_guild_key = found->second;
+        result.attacker_guild_key = attacker_guild_key;
+
+        if (!attacker_guild_key.empty()
+            && attacker_guild_key == result.target_guild_key)
+        {
+            result.reason = "SAME_GUILD_NOT_HANDLED";
+            return result;
+        }
+
+        const bool allowed = !attacker_guild_key.empty()
+            && m_conquest_allowed_attackers.contains(
+                normalized + "::" + attacker_guild_key);
+        result.block = !allowed;
+        result.reason = allowed
+            ? "ACTIVE_CONQUEST_TARGET"
+            : "CONQUEST_FLAG_PROTECTED";
+        return result;
     }
 }
