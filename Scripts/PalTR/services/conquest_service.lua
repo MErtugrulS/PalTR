@@ -650,7 +650,35 @@ end
 
 function Conquest:process_runtime_events(now)
     local path = self.paths.conquest_runtime_events
-    local loaded = FileIO.read_lines(path)
+    local processing_path = path .. ".processing"
+
+    if not FileIO.exists(processing_path) then
+        if not FileIO.exists(path) then
+            local initialized = FileIO.append(
+                path,
+                "timestamp\tmarker\tflag_reference"
+            )
+            if not initialized.ok then return initialized end
+            return Result.ok(0)
+        end
+
+        local moved = FileIO.move(path, processing_path)
+        if not moved.ok then return moved end
+
+        local reopened = FileIO.append(
+            path,
+            "timestamp\tmarker\tflag_reference"
+        )
+        if not reopened.ok then return reopened end
+    elseif not FileIO.exists(path) then
+        local reopened = FileIO.append(
+            path,
+            "timestamp\tmarker\tflag_reference"
+        )
+        if not reopened.ok then return reopened end
+    end
+
+    local loaded = FileIO.read_lines(processing_path)
     if not loaded.ok then return loaded end
 
     local processed = 0
@@ -695,11 +723,8 @@ function Conquest:process_runtime_events(now)
         end
     end
 
-    local cleared = FileIO.overwrite(
-        path,
-        { "timestamp\tmarker\tflag_reference" }
-    )
-    if not cleared.ok then return cleared end
+    local removed = FileIO.remove(processing_path)
+    if not removed.ok then return removed end
 
     return Result.ok(processed)
 end

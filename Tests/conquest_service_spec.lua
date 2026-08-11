@@ -31,7 +31,10 @@ local function make_paths(prefix)
 end
 
 local function cleanup(paths)
-    for _, path in pairs(paths) do os.remove(path) end
+    for _, path in pairs(paths) do
+        os.remove(path)
+        os.remove(path .. ".processing")
+    end
 end
 
 local function make_config(maximum)
@@ -256,6 +259,37 @@ equal(service.nodes.B_OUTPOST_1.state, States.NODE.OCCUPIED, "G node occupied")
 local replay_result = service:process_runtime_events(23)
 equal(replay_result.ok, true, "G cleared queue reloads")
 equal(replay_result.value, 0, "G dispose event is not replayed")
+
+local recovery_file = assert(io.open(
+    paths.conquest_runtime_events .. ".processing",
+    "w"
+))
+recovery_file:write(
+    "timestamp\tmarker\tflag_reference\n" ..
+    "23\tFLAG_DISPOSED\tUNKNOWN_FLAG\n"
+)
+recovery_file:close()
+local pending_file = assert(io.open(paths.conquest_runtime_events, "w"))
+pending_file:write(
+    "timestamp\tmarker\tflag_reference\n" ..
+    "24\tFLAG_DISPOSED\tLATER_FLAG\n"
+)
+pending_file:close()
+
+local recovery_result = service:process_runtime_events(23)
+equal(recovery_result.ok, true, "G interrupted queue recovers")
+equal(recovery_result.value, 0, "G unknown recovered event is ignored")
+local pending_lines = assert(io.open(paths.conquest_runtime_events, "r"))
+local pending_content = pending_lines:read("*a")
+pending_lines:close()
+equal(
+    pending_content:find("LATER_FLAG", 1, true) ~= nil,
+    true,
+    "G active queue remains untouched during recovery"
+)
+local pending_result = service:process_runtime_events(24)
+equal(pending_result.ok, true, "G active queue follows recovered queue")
+equal(pending_result.value, 0, "G later unknown event is ignored")
 
 local first_manifest = service.loot_manifests[
     service.occupations.B_OUTPOST_1.loot_manifest_id
