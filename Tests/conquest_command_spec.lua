@@ -31,6 +31,7 @@ equal(
     "next target parse"
 )
 equal(Parser.parse("!bayrakaday").value.action, "FLAG_CANDIDATE", "candidate parse")
+equal(Parser.parse("!testkit").value.action, "TEST_KIT", "test kit parse")
 
 local registry = { guilds = {}, runtime_players = {} }
 local conquest = {

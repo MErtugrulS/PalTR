@@ -13,6 +13,15 @@ return {
         combat_lock_seconds = 1200
     },
 
+    test_support = {
+        enabled = false,
+        allowed_guild_names = {
+            NWO = true,
+            Exceed = true,
+            Saru = true
+        }
+    },
+
     conquest = {
         max_outposts_per_clan = 10,
         world_units_per_meter = 100,

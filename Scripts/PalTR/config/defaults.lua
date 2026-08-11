@@ -27,6 +27,20 @@ return {
         combat_lock_seconds = 1200
     },
 
+    test_support = {
+        enabled = false,
+        allowed_guild_names = {},
+        player_exp = 100000000,
+        weight_status_level = 1000,
+        pal_id = "JetDragon",
+        pal_count = 1,
+        pal_level = 60,
+        weapon_item_id = "Weapon_RocketLauncher",
+        weapon_count = 1,
+        ammo_item_id = "Ammo_Rocket",
+        ammo_count = 5000
+    },
+
     conquest = {
         max_outposts_per_clan = 10,
         world_units_per_meter = 100,

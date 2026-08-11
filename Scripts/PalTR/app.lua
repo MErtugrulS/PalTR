@@ -76,7 +76,11 @@ function App.new(config)
             diplomacy,
             status,
             Logger.new("Commands"),
-            conquest
+            conquest,
+            nil,
+            nil,
+            nil,
+            config
         ),
 
         damage = DamageObserver.new(

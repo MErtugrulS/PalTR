@@ -7,6 +7,7 @@ local UE = require("PalTR.runtime.ue")
 local Announcer = require("PalTR.runtime.announcer")
 local ConquestFlagAdapter = require("PalTR.runtime.conquest_flag_adapter")
 local BuildObjectAdapter = require("PalTR.runtime.build_object_adapter")
+local TestKitAdapter = require("PalTR.runtime.test_kit_adapter")
 local ConquestStates = require("PalTR.domain.conquest_states")
 
 local CommandService = {}
@@ -105,7 +106,9 @@ function CommandService.new(
     logger,
     conquest,
     conquest_flags,
-    build_objects
+    build_objects,
+    test_kit,
+    config
 )
     return setmetatable({
         paths = paths,
@@ -116,9 +119,35 @@ function CommandService.new(
         conquest = conquest,
         conquest_flags = conquest_flags or ConquestFlagAdapter.new(),
         build_objects = build_objects or BuildObjectAdapter.new(),
+        test_kit = test_kit or TestKitAdapter.new(),
+        config = config or {},
         last_response_key = "",
         last_response_at = 0
     }, CommandService)
+end
+
+function CommandService:_grant_test_kit(controller, player)
+    local ok, error_message = self:_require_identity(player)
+    if not ok then return false, error_message end
+
+    local config = self.config.test_support or {}
+    if config.enabled ~= true then
+        return false, "Test kiti kapali"
+    end
+
+    local guild = self.registry.guilds[player.guild_key]
+    local guild_name_value = guild and tostring(guild.name or "") or ""
+    if (config.allowed_guild_names or {})[guild_name_value] ~= true then
+        return false, "Bu klan test kiti icin yetkili degil"
+    end
+
+    local result = self.test_kit:grant(controller, config)
+    if not result.ok then return false, result.error.message end
+
+    return true,
+        "Test kiti verildi: XP, yuksek tasima kapasitesi, " ..
+        "JetDragon, roketatar ve " ..
+        tostring(config.ammo_count or 0) .. " fuze"
 end
 
 function CommandService:_start_conquest_campaign(player, defender_guild)
@@ -653,6 +682,12 @@ function CommandService:on_chat(
             ok,
             response
         )
+        return
+    end
+
+    if command.action == "TEST_KIT" then
+        local ok, response = self:_grant_test_kit(controller, player)
+        self:_respond(controller, player, command.raw, ok, response)
         return
     end
 
