@@ -3,7 +3,7 @@ local Adapter = require("PalTR.runtime.conquest_flag_adapter")
 local function equal(a, b, m) if a ~= b then error(m) end end
 local actor = {
     valid = true, path = "VerifiedFlagClass_C Instance", group = "GROUP_A",
-    model = { valid = true, id = "FLAG_A" },
+    model = { valid = true, id = "FLAG_A", builder = "PLAYER_A" },
     location = { X = 1000, Y = 0, Z = 0 }
 }
 local ue = {}
@@ -18,11 +18,16 @@ function ue.call(o, m)
     if m == "GetGroupIdBelongTo" then return true, o.group end
     if m == "GetModel" then return true, o.model end
     if m == "GetModelId" then return true, o.id end
+    if m == "GetBuildPlayerUId_BP" then return true, o.builder end
     if m == "K2_GetActorLocation" then return true, o.location end
     return false, nil
 end
 local registry = {}
 function registry:find_guild_by_id(id) return id == "GROUP_A" and { key = "A" } or nil end
+function registry:find_by_uid(id)
+    return id == "PLAYER_A" and { guild_key = "A" } or nil
+end
+registry.guilds = { A = { key = "A" } }
 local player = { guild_key = "A", pawn = { valid = true, location = { X = 1100, Y = 0, Z = 0 } } }
 local config = {
     world_units_per_meter = 100, flag_interaction_radius_meters = 20,
@@ -52,6 +57,10 @@ equal(
 
 actor.path = "VerifiedFlagClass_C Instance"
 actor.group = "UNKNOWN_GROUP"
+local builder_fallback = adapter:nearest_owned_candidate(player, registry, config)
+equal(builder_fallback.ok, true, "builder uid resolves owner")
+
+actor.model.builder = "UNKNOWN_PLAYER"
 local missing_owner = adapter:nearest_owned_candidate(player, registry, config)
 equal(missing_owner.ok, false, "unresolved owner fails")
 equal(

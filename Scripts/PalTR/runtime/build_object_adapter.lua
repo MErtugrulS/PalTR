@@ -1,5 +1,6 @@
 local Result = require("PalTR.core.result")
 local UE = require("PalTR.runtime.ue")
+local StructureIdentity = require("PalTR.runtime.structure_identity")
 
 local Adapter = {}
 Adapter.__index = Adapter
@@ -62,7 +63,12 @@ function Adapter:_record(actor, registry, config)
     local ok_id, model_id = self.ue.call(model, "GetModelId")
     if not ok_id then return nil end
 
-    local guild = registry:find_guild_by_id(self.ue.guid(group_id))
+    local guild = StructureIdentity.guild_for_model(
+        self.ue,
+        registry,
+        group_id,
+        model
+    )
     local reference = self.ue.guid(model_id)
     local position = location(
         self.ue,

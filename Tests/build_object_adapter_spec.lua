@@ -13,12 +13,12 @@ local function equal(actual, expected, message)
     end
 end
 
-local function actor(path, group, id, x)
+local function actor(path, group, id, x, builder)
     return {
         valid = true,
         path = path,
         group = group,
-        model = { valid = true, id = id },
+        model = { valid = true, id = id, builder = builder },
         location = { X = x, Y = 0, Z = 0 }
     }
 end
@@ -26,7 +26,7 @@ end
 local actors = {
     actor("BP_BuildObject_WorkBench_C A", "GROUP_B", "ENEMY", 100),
     actor("BP_BuildObject_ItemChest_C B", "GROUP_A", "CHEST", 150),
-    actor("BP_BuildObject_WorkBench_C C", "GROUP_A", "CAMP", 1000)
+    actor("BP_BuildObject_WorkBench_C C", "UNKNOWN", "CAMP", 1000, "PLAYER_A")
 }
 
 local ue = {}
@@ -44,12 +44,16 @@ function ue.call(object, method)
     if method == "GetGroupIdBelongTo" then return true, object.group end
     if method == "GetModel" then return true, object.model end
     if method == "GetModelId" then return true, object.id end
+    if method == "GetBuildPlayerUId_BP" then return true, object.builder end
     if method == "K2_GetActorLocation" then return true, object.location end
     return false, nil
 end
 
 local registry = { guilds = { GROUP_A = { key = "A" }, GROUP_B = { key = "B" } } }
 function registry:find_guild_by_id(id) return self.guilds[id] end
+function registry:find_by_uid(id)
+    return id == "PLAYER_A" and { guild_key = "A" } or nil
+end
 
 local config = {
     world_units_per_meter = 100,

@@ -1,5 +1,6 @@
 local Result = require("PalTR.core.result")
 local UE = require("PalTR.runtime.ue")
+local StructureIdentity = require("PalTR.runtime.structure_identity")
 
 local Adapter = {}
 Adapter.__index = Adapter
@@ -53,7 +54,12 @@ function Adapter:_record(actor, registry, config, tokens)
     local ok_id, model_id = self.ue.call(model, "GetModelId")
     if not ok_id then return nil, "CONTRACT_UNREADABLE" end
 
-    local guild = registry:find_guild_by_id(self.ue.guid(group_id))
+    local guild = StructureIdentity.guild_for_model(
+        self.ue,
+        registry,
+        group_id,
+        model
+    )
     local reference = self.ue.guid(model_id)
     local location = position(self.ue, actor_location, number(config.world_units_per_meter))
     if not guild then return nil, "OWNER_UNRESOLVED" end
