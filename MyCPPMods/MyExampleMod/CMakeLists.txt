@@ -3,7 +3,9 @@ cmake_minimum_required(VERSION 3.22)
 set(TARGET PalTRStructureGuard)
 project(${TARGET})
 
-add_library(PalTRPolicy STATIC "src/PolicySnapshot.cpp")
+add_library(PalTRPolicy STATIC
+    "src/PolicySnapshot.cpp"
+    "src/ProtectionActivity.cpp")
 target_include_directories(PalTRPolicy PUBLIC "src")
 target_compile_features(PalTRPolicy PUBLIC cxx_std_20)
 

@@ -1,4 +1,5 @@
 #include "PolicySnapshot.hpp"
+#include "ProtectionActivity.hpp"
 
 #include <filesystem>
 #include <fstream>
@@ -122,6 +123,32 @@ int main()
     ok &= expect(
         !snapshot.is_guild_offline_protected("GUILD_A"),
         "offline protection clears after reload");
+
+    const auto activity_path = root / "guild_combat_activity.tsv";
+    PalTR::ProtectionActivityStore activity(activity_path);
+    ok &= expect(
+        activity.record("GUILD_A", 100, error),
+        "first combat activity records");
+    ok &= expect(
+        activity.last_hostile_at("GUILD_A") == 100,
+        "first combat activity retained");
+    ok &= expect(
+        activity.record("GUILD_A", 103, error),
+        "rapid combat activity throttles cleanly");
+    ok &= expect(
+        activity.last_hostile_at("GUILD_A") == 103,
+        "throttled combat activity retained in memory");
+    ok &= expect(
+        activity.record("GUILD_A", 108, error),
+        "later combat activity persists");
+
+    PalTR::ProtectionActivityStore reloaded_activity(activity_path);
+    ok &= expect(
+        reloaded_activity.record("GUILD_B", 200, error),
+        "combat activity file reloads");
+    ok &= expect(
+        reloaded_activity.last_hostile_at("GUILD_A") == 108,
+        "persisted combat activity survives reload");
 
     std::error_code cleanup_error;
     std::filesystem::remove_all(root, cleanup_error);
