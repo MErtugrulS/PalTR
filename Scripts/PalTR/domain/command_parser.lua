@@ -4,9 +4,6 @@ local Result = require("PalTR.core.result")
 local Parser = {}
 
 local aliases = {
-    ["!test"] = "TEST",
-    ["!pmprobe"] = "PRIVATE_MESSAGE_PROBE",
-
     ["!durum"] = "STATUS",
     ["!klanlar"] = "GUILDS",
     ["!iliskiler"] = "RELATIONS",

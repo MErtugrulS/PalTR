@@ -5,7 +5,6 @@ local TSV = require("PalTR.storage.tsv")
 local Clock = require("PalTR.core.clock")
 local UE = require("PalTR.runtime.ue")
 local Announcer = require("PalTR.runtime.announcer")
-local PrivateMessenger = require("PalTR.runtime.private_messenger")
 
 local CommandService = {}
 CommandService.__index = CommandService
@@ -360,32 +359,6 @@ function CommandService:on_chat(
         self.registry:find_by_controller(controller)
 
     local command = parsed.value
-
-    if command.action == "PRIVATE_MESSAGE_PROBE" then
-        local sent = PrivateMessenger.send(
-            controller,
-            player,
-            "[FAZ-04] HEDEFLI SISTEM SOHBETI CALISIYOR",
-            self.logger
-        )
-
-        self.logger:info(
-            "OZEL_MESAJ_PROBE_KOMUTU | sent=" ..
-            tostring(sent)
-        )
-
-        return
-    end
-    if command.action == "TEST" then
-        self:_respond(
-            controller,
-            player,
-            command.raw,
-            true,
-            "[FAZ-01] SOHBET KANALI CALISIYOR"
-        )
-        return
-    end
 
     if command.action == "HELP" then
         self:_respond(
