@@ -30,7 +30,8 @@ return {
     conquest = {
         max_outposts_per_clan = 10,
         world_units_per_meter = 100,
-        registration_interaction_radius_meters = 20,
+        flag_interaction_radius_meters = 20,
+        conquest_flag_actor_class_tokens = {},
         siege_camp_interaction_radius_meters = 20,
         siege_camp_actor_class_tokens = {
             "BP_BuildObject_WorkBench_C"

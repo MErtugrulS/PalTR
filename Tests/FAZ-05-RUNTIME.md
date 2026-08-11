@@ -43,16 +43,16 @@ Saf Lua testlerinde asagidaki kurallar dogrulandi:
 
 UHT dump ve mevcut native hook sozlesmesiyle statik olarak dogrulananlar:
 
-- Normal Pal Kutusu `PalBaseCampModel` kimlik, klan, sahip map-object ve konum
-  getter'lariyla baskent/karakol olarak kaydedilir.
-- Oyuncu Pal Kutusunun yaninda `!baskent` veya `!karakol` kullanir.
+- Pal Kutusu vanilla us olarak kalir ve fetih node limitine dahil edilmez.
+- Klan Bayragi adapteri dogrulanmis `PalBuildObject` kimlik, klan ve konum
+  getter'larini kullanir; fiziksel sinif token'i config'ten gelir.
 - Varsayilan fiziksel kusatma kampi gercek runtime kaydinda gorulen
   `BP_BuildObject_WorkBench_C` yapisidir; izinli sinif listesi config'tedir.
 - `!fetih KLAN` kampanyayi, `!kusatmakampi KLAN` yakindaki klana ait tezgahi
   ve en yakin gecerli dusman karakolunu kaydeder.
 - Lua aktif hedefleri `conquest_damage_policy.tsv` snapshot'ina yazar; mevcut
   native map-object hasar hook'u bu sozlesmeyi tuketir.
-- Hedef olmayan kayitli Pal Kutusu native politikada kapali kalir; yalniz aktif
+- Hedef olmayan kayitli Klan Bayragi native politikada kapali kalir; yalniz aktif
   hedef ve dogru saldiran klan offline korumayi asabilir.
 - Oyun rol enumu `GuildMaster=1`, `SubMaster=2`, `Member=3`, `Guest=4` olarak
   dogrulandi. Lider ve yardimci lider eslemesi config'ten yapilir.
@@ -61,10 +61,10 @@ UHT dump ve mevcut native hook sozlesmesiyle statik olarak dogrulananlar:
 
 Asagidakiler oyun icinde henuz gecmis sayilmadi:
 
-- Pal Kutusu ve calisma tezgahi adapterlerinin gercek server objelerinde kimlik,
-  sahiplik ve metre donusumu.
+- Fiziksel Klan Bayragi Blueprint sinifinin runtime'da dogrulanmasi ve config'e
+  eklenmesi; bos sinif listesi fail-closed kaydi engeller.
 - Chat komutlarinin lider/yardimci lider yetkisiyle kayit olusturmasi.
-- Native hedef/ hedef-disi Pal Kutusu hasar davranisi ve restart persistence.
+- Native hedef/hedef-disi Klan Bayragi hasar davranisi ve restart persistence.
 - Oyunun bu surumunde ayri `COMMANDER` rolu bulunmadigi icin komutan yetkisi.
 - `CAPTURE_SPHERE_LEVEL:Ancient_2` secicisini fiziksel item kimligine cevirip
   sandiga/spawn noktasina koyacak dogrulanmis item adapteri.

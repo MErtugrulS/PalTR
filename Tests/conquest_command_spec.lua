@@ -82,7 +82,7 @@ local nearby = {
         x = 10, y = 20, z = 30
     }
 }
-function nearby:nearest_owned() return Result.ok(self.current) end
+function nearby:nearest_owned_flag() return Result.ok(self.current) end
 
 local build_objects = {}
 function build_objects:nearest_owned_siege_camp()
@@ -105,7 +105,7 @@ local service = CommandService.new(
 )
 
 local leader = { guild_key = "A", role = 1, is_master = true }
-local ok, message = service:_register_nearest_base_camp(
+local ok, message = service:_register_nearest_conquest_flag(
     leader,
     States.NODE_TYPE.CAPITAL
 )
@@ -122,7 +122,7 @@ nearby.current = {
     x = 100, y = 0, z = 0
 }
 local deputy = { guild_key = "A", role = 2, is_master = false }
-ok = service:_register_nearest_base_camp(
+ok = service:_register_nearest_conquest_flag(
     deputy,
     States.NODE_TYPE.OUTPOST
 )
@@ -132,7 +132,7 @@ equal(conquest.registered.parent_node_id, "CAPITAL_A", "nearest parent used")
 
 nearby.current.node_id = "BASE_C"
 local member = { guild_key = "A", role = 3, is_master = false }
-ok, message = service:_register_nearest_base_camp(
+ok, message = service:_register_nearest_conquest_flag(
     member,
     States.NODE_TYPE.OUTPOST
 )

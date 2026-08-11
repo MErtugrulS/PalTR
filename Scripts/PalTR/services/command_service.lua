@@ -5,7 +5,7 @@ local TSV = require("PalTR.storage.tsv")
 local Clock = require("PalTR.core.clock")
 local UE = require("PalTR.runtime.ue")
 local Announcer = require("PalTR.runtime.announcer")
-local BaseCampAdapter = require("PalTR.runtime.base_camp_adapter")
+local ConquestFlagAdapter = require("PalTR.runtime.conquest_flag_adapter")
 local BuildObjectAdapter = require("PalTR.runtime.build_object_adapter")
 local ConquestStates = require("PalTR.domain.conquest_states")
 
@@ -104,7 +104,7 @@ function CommandService.new(
     status,
     logger,
     conquest,
-    base_camps,
+    conquest_flags,
     build_objects
 )
     return setmetatable({
@@ -114,7 +114,7 @@ function CommandService.new(
         status = status,
         logger = logger,
         conquest = conquest,
-        base_camps = base_camps or BaseCampAdapter.new(),
+        conquest_flags = conquest_flags or ConquestFlagAdapter.new(),
         build_objects = build_objects or BuildObjectAdapter.new(),
         last_response_key = "",
         last_response_at = 0
@@ -207,11 +207,11 @@ function CommandService:_conquest_role(player)
     return role
 end
 
-function CommandService:_register_nearest_base_camp(player, node_type)
+function CommandService:_register_nearest_conquest_flag(player, node_type)
     local role, role_error = self:_conquest_role(player)
     if not role then return false, role_error end
 
-    local nearby = self.base_camps:nearest_owned(
+    local nearby = self.conquest_flags:nearest_owned_flag(
         player,
         self.registry,
         self.conquest.config
@@ -225,7 +225,7 @@ function CommandService:_register_nearest_base_camp(player, node_type)
     local existing = self.conquest:get_node(camp.node_id)
 
     if existing then
-        return false, "Bu Pal Kutusu zaten fetih sistemine kayitli"
+        return false, "Bu Klan Bayragi zaten fetih sistemine kayitli"
     end
 
     local parent_node_id = ""
@@ -610,7 +610,7 @@ function CommandService:on_chat(
         local node_type = command.action == "REGISTER_CAPITAL"
             and ConquestStates.NODE_TYPE.CAPITAL
             or ConquestStates.NODE_TYPE.OUTPOST
-        local ok, response = self:_register_nearest_base_camp(
+        local ok, response = self:_register_nearest_conquest_flag(
             player,
             node_type
         )
