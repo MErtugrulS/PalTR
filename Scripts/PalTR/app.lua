@@ -135,6 +135,9 @@ function App:_headers()
         [self.paths.conquest_damage_policy] =
             "flag_reference\tnode_id\towner_guild\tallowed_attacker_guild",
 
+        [self.paths.conquest_zone_policy] =
+            "node_id\towner_guild\tallowed_attacker_guild\tcenter_x_world\tcenter_y_world\tcenter_z_world\tradius_world",
+
         [self.paths.conquest_runtime_events] =
             "timestamp\tmarker\tflag_reference",
 

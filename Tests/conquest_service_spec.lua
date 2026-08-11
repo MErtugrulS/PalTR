@@ -27,6 +27,7 @@ local function make_paths(prefix)
         conquest_loot_items = prefix .. "_loot_items.tsv",
         conquest_events = prefix .. "_events.tsv",
         conquest_damage_policy = prefix .. "_damage_policy.tsv",
+        conquest_zone_policy = prefix .. "_zone_policy.tsv",
         conquest_runtime_events = prefix .. "_runtime_events.tsv"
     }
 end
@@ -45,6 +46,7 @@ local function make_config(maximum)
         },
         conquest = {
             max_outposts_per_clan = maximum or 10,
+            world_units_per_meter = 100,
             flag_rebind_radius_meters = 30,
             raid_timezone = "Europe/Istanbul",
             raid_utc_offset_minutes = 180,
@@ -222,6 +224,9 @@ equal(service:write_damage_policy(21).ok, true, "damage policy written")
 local policy_file = assert(io.open(paths.conquest_damage_policy, "r"))
 local policy_text = policy_file:read("*a")
 policy_file:close()
+local zone_policy_file = assert(io.open(paths.conquest_zone_policy, "r"))
+local zone_policy_text = zone_policy_file:read("*a")
+zone_policy_file:close()
 equal(
     policy_text:find("B_FLAG_1\tB_OUTPOST_1\tGUILD_B\tGUILD_A", 1, true)
         ~= nil,
@@ -233,6 +238,20 @@ equal(
         ~= nil,
     true,
     "inactive flag has no allowed attacker"
+)
+equal(
+    zone_policy_text:find(
+        "B_OUTPOST_1\tGUILD_B\tGUILD_A\t0\t0\t0\t15000",
+        1,
+        true
+    ) ~= nil,
+    true,
+    "active conquest zone exported in world units"
+)
+equal(
+    zone_policy_text:find("B_OUTPOST_2", 1, true) == nil,
+    true,
+    "inactive conquest zone is not exported"
 )
 equal(
     service:can_damage_conquest_zone(

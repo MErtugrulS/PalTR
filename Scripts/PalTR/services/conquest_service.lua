@@ -861,6 +861,15 @@ function Conquest:write_damage_policy(now)
     local lines = {
         "flag_reference\tnode_id\towner_guild\tallowed_attacker_guild"
     }
+    local zone_lines = {
+        "node_id\towner_guild\tallowed_attacker_guild\tcenter_x_world\tcenter_y_world\tcenter_z_world\tradius_world"
+    }
+    local units_per_meter = tonumber(
+        self.config.conquest.world_units_per_meter
+    ) or 100
+    local zone_radius = tonumber(
+        self.config.conquest.conquest_zone_radius_meters
+    ) or 0
 
     local nodes = {}
     for _, node in pairs(self.nodes) do table.insert(nodes, node) end
@@ -900,6 +909,17 @@ function Conquest:write_damage_policy(now)
                     node.current_controller,
                     attacker
                 }))
+                if attacker ~= "" and zone_radius > 0 then
+                    table.insert(zone_lines, TSV.encode({
+                        node.node_id,
+                        node.current_controller,
+                        attacker,
+                        node.x * units_per_meter,
+                        node.y * units_per_meter,
+                        node.z * units_per_meter,
+                        zone_radius * units_per_meter
+                    }))
+                end
             end
         end
 
@@ -933,6 +953,12 @@ function Conquest:write_damage_policy(now)
             occupation.occupying_guild
         }))
     end
+
+    local zone_result = FileIO.overwrite(
+        self.paths.conquest_zone_policy,
+        zone_lines
+    )
+    if not zone_result.ok then return zone_result end
 
     return FileIO.overwrite(self.paths.conquest_damage_policy, lines)
 end
