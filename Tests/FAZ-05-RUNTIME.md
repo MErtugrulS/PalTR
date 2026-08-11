@@ -2,20 +2,28 @@
 
 ## Dogrulanan
 
-- Offline Saru klanina ait normal yapi, NWO oyuncusundan gelen hasari almadi.
+- Online ve tarafsiz iki klan arasinda Pal Kutusu alani disindaki normal yapi
+  hasari vanilla oyun kurallarina birakildi ve hedef yapi hasar aldi.
+- Son klan uyesi ayrildiktan sonraki grace suresinde dis hasar alinabildi;
+  offline koruma aktif olduktan sonra ayni yapi hasar almadi.
 - Engellenen offline-koruma vurusu `guild_combat_activity.tsv` kaydini uzatmadi.
-- Oyuncu yeniden baglandiginda NWO snapshot durumu `ONLINE` ve `protected=false` oldu.
+- Oyuncu yeniden baglandiginda snapshot durumu `ONLINE` ve `protected=false`
+  oldu; dis yapi hasari tekrar oyun kurallarina birakildi.
+- Online ve tarafsiz durumda us Pal'i dis oyuncuyu hedefledi; Pal ile oyuncu
+  birbirlerine hasar verebildi.
+- Offline koruma aktifken dis oyuncunun us Pal'ina verdigi hasar native hook'ta
+  `OFFLINE_PROTECTION` gerekcesiyle engellendi. Runtime logunda saldiran NWO ve
+  hedef Exceed klan GUID'leri dogru cozuldu.
+- Offline korunan us Pal'inin bolge savunmasi dis oyuncuyu hedeflemeye ve ona
+  hasar vermeye devam etti. Bu tek yonlu davranis bilincli oyun kurali olarak
+  kabul edildi: Pal korunur, ancak base savunmasi pasiflestirilmez.
 
 ## Ertelenen
 
-- Offline korunan klanin base Pal'i dis oyuncudan hasar almamali.
-- Offline korunan klanin base Pal'i dis oyuncuyu hedeflememeli veya saldiri aksiyonu almamali.
-- Son klan uyesi ayrildiktan sonraki grace suresinde dis hasar alinabilmeli; sure dolunca engellenmeli.
 - Son izin verilen dis saldiridan sonra combat-lock suresi dolmadan koruma baslamamali.
-- Koruma aktifken engellenen vuruslar combat-lock suresini uzatmamali.
-- Klandan biri yeniden baglandiginda koruma aninda kalkmali ve dis hasar tekrar oyun kurallarina birakilmali.
 
-Ertelenen testler uygun ikinci oyuncu ve hedef base Pal olmadigi icin gecmis sayilmadi.
+Combat-lock testi, oyuncu cikis algilama gecikmesi ile kisa grace suresinin
+birbirine girmesi nedeniyle ayri ve kesin bir runtime sonucu uretmedi.
 
 Runtime hizli test ayarlari: offline grace 15 saniye, combat lock 30 saniye.
 Uretim ayarlari: offline grace 10 dakika, combat lock 20 dakika.
