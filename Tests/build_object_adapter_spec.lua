@@ -71,6 +71,17 @@ equal(result.ok, true, "own workbench found")
 equal(result.value.reference, "CAMP", "enemy and wrong class ignored")
 equal(result.value.distance_meters, 1, "distance converted to meters")
 
+actors[3].location.X = nil
+result = adapter:nearest_owned_siege_camp(player, registry, config)
+equal(result.ok, false, "unreadable camp coordinate fails closed")
+actors[3].location.X = 1000
+
+player.pawn.location.X = nil
+result = adapter:nearest_owned_siege_camp(player, registry, config)
+equal(result.error.code, "PLAYER_LOCATION_UNAVAILABLE",
+    "unreadable player coordinate fails closed")
+player.pawn.location.X = 1100
+
 player.pawn.location.X = 5000
 result = adapter:nearest_owned_siege_camp(player, registry, config)
 equal(result.ok, false, "interaction distance enforced")

@@ -74,6 +74,17 @@ equal(found.ok, true, "configured flag found")
 equal(found.value.flag_reference, "FLAG_A", "model id used")
 equal(found.value.distance_meters, 1, "meters used")
 
+actor.location.X = nil
+local unreadable_location = adapter:nearest_owned_flag(player, registry, config)
+equal(unreadable_location.ok, false, "unreadable flag coordinate fails closed")
+actor.location.X = 1000
+
+player.pawn.location.X = nil
+local unreadable_player = adapter:nearest_owned_flag(player, registry, config)
+equal(unreadable_player.error.code, "PLAYER_LOCATION_UNAVAILABLE",
+    "unreadable player coordinate fails closed")
+player.pawn.location.X = 1100
+
 actor.path = "OtherClass_C Instance"
 local missing_class = adapter:nearest_owned_candidate(player, registry, config)
 equal(missing_class.ok, false, "missing candidate class fails")

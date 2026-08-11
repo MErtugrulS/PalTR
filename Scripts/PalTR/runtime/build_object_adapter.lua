@@ -9,15 +9,26 @@ local function number(value)
     return tonumber(value) or 0
 end
 
+local function finite_number(value)
+    value = tonumber(value)
+    if value == nil or value ~= value
+        or value == math.huge or value == -math.huge then
+        return nil
+    end
+    return value
+end
+
 local function location(ue, vector, units_per_meter)
     vector = ue.unwrap(vector)
     if vector == nil then return nil end
 
-    return {
-        x = number(ue.unwrap(ue.read(vector, "X"))) / units_per_meter,
-        y = number(ue.unwrap(ue.read(vector, "Y"))) / units_per_meter,
-        z = number(ue.unwrap(ue.read(vector, "Z"))) / units_per_meter
-    }
+    local x = finite_number(ue.unwrap(ue.read(vector, "X")))
+    local y = finite_number(ue.unwrap(ue.read(vector, "Y")))
+    local z = finite_number(ue.unwrap(ue.read(vector, "Z")))
+    if x == nil or y == nil or z == nil then return nil end
+
+    return { x = x / units_per_meter, y = y / units_per_meter,
+        z = z / units_per_meter }
 end
 
 local function distance(first, second)
@@ -123,6 +134,12 @@ function Adapter:nearest_owned_siege_camp(player, registry, config)
         player_vector,
         units_per_meter
     )
+    if not player_location then
+        return Result.err(
+            "PLAYER_LOCATION_UNAVAILABLE",
+            "Oyuncu konumu okunamadi"
+        )
+    end
     local nearest = nil
     local nearest_distance = math.huge
 

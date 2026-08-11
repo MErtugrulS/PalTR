@@ -7,6 +7,15 @@ Adapter.__index = Adapter
 
 local function number(value) return tonumber(value) or 0 end
 
+local function finite_number(value)
+    value = tonumber(value)
+    if value == nil or value ~= value
+        or value == math.huge or value == -math.huge then
+        return nil
+    end
+    return value
+end
+
 local function matches(path, tokens)
     for _, token in ipairs(tokens or {}) do
         token = tostring(token or "")
@@ -18,11 +27,11 @@ end
 local function position(ue, vector, scale)
     vector = ue.unwrap(vector)
     if vector == nil then return nil end
-    return {
-        x = number(ue.unwrap(ue.read(vector, "X"))) / scale,
-        y = number(ue.unwrap(ue.read(vector, "Y"))) / scale,
-        z = number(ue.unwrap(ue.read(vector, "Z"))) / scale
-    }
+    local x = finite_number(ue.unwrap(ue.read(vector, "X")))
+    local y = finite_number(ue.unwrap(ue.read(vector, "Y")))
+    local z = finite_number(ue.unwrap(ue.read(vector, "Z")))
+    if x == nil or y == nil or z == nil then return nil end
+    return { x = x / scale, y = y / scale, z = z / scale }
 end
 
 local function distance(first, second)
@@ -93,6 +102,12 @@ function Adapter:_nearest_owned(player, registry, config, tokens)
         return Result.err("PLAYER_LOCATION_UNAVAILABLE", "Oyuncu konumu okunamadi")
     end
     local player_location = position(self.ue, player_vector, scale)
+    if not player_location then
+        return Result.err(
+            "PLAYER_LOCATION_UNAVAILABLE",
+            "Oyuncu konumu okunamadi"
+        )
+    end
     local nearest, nearest_distance = nil, math.huge
     local matched, readable, owned = 0, 0, 0
     local owner_unresolved = 0
