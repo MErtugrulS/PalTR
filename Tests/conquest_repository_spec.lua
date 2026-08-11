@@ -42,7 +42,9 @@ local node = {
     created_at = 100,
     updated_at = 100,
     flag_state = "BOUND",
-    legacy_flag_reference = ""
+    legacy_flag_reference = "",
+    display_name = "NWO Kuzey Karakolu",
+    territory_radius_meters = 175
 }
 
 equal(repository:save_nodes({ NODE_A = node }).ok, true, "nodes saved")
@@ -51,6 +53,8 @@ equal(loaded_node.current_controller, "GUILD_A", "node controller restored")
 equal(loaded_node.x, 10, "node location restored")
 equal(loaded_node.flag_state, "BOUND", "flag state restored")
 equal(loaded_node.legacy_flag_reference, "", "no legacy flag restored")
+equal(loaded_node.display_name, "NWO Kuzey Karakolu", "display name restored")
+equal(loaded_node.territory_radius_meters, 175, "territory radius restored")
 
 local legacy = assert(io.open(paths.conquest_nodes, "w"))
 legacy:write(
@@ -68,6 +72,8 @@ equal(
     "OLD_FLAG",
     "legacy transferred node keeps cleanup reference"
 )
+equal(repository:load_nodes().LEGACY.display_name, "", "legacy name defaults empty")
+equal(repository:load_nodes().LEGACY.territory_radius_meters, 0, "legacy radius defaults")
 
 local edge = {
     edge_id = "NODE_A::NODE_B",

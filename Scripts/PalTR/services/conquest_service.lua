@@ -438,6 +438,10 @@ function Conquest:register_node(request)
         state = States.NODE.PROTECTED,
         original_owner = guild_key,
         current_controller = guild_key,
+        display_name = text(request.display_name),
+        territory_radius_meters = number(
+            request.territory_radius_meters
+        ),
         created_at = now,
         updated_at = now
     }

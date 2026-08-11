@@ -112,7 +112,7 @@ function App:_headers()
             "guild_key\tlast_hostile_at",
 
         [self.paths.conquest_nodes] =
-            "node_id\tguild_key\tnode_type\tflag_reference\tlocation_x\tlocation_y\tlocation_z\tparent_node_id\tstate\toriginal_owner\tcurrent_controller\tcreated_at\tupdated_at\tflag_state\tlegacy_flag_reference",
+            "node_id\tguild_key\tnode_type\tflag_reference\tlocation_x\tlocation_y\tlocation_z\tparent_node_id\tstate\toriginal_owner\tcurrent_controller\tcreated_at\tupdated_at\tflag_state\tlegacy_flag_reference\tdisplay_name\tterritory_radius_meters",
 
         [self.paths.conquest_edges] =
             "edge_id\tnode_a\tnode_b\tcreated_at",
@@ -137,6 +137,9 @@ function App:_headers()
 
         [self.paths.conquest_zone_policy] =
             "node_id\towner_guild\tallowed_attacker_guild\tcenter_x_world\tcenter_y_world\tcenter_z_world\tradius_world",
+
+        [self.paths.territory_snapshot] =
+            "node_id\tdisplay_name\tnode_type\tcontroller_guild\tcontroller_name\tcenter_x_meters\tcenter_y_meters\tcenter_z_meters\tradius_meters\tstate\tflag_state",
 
         [self.paths.conquest_runtime_events] =
             "timestamp\tmarker\tflag_reference",

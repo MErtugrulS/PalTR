@@ -76,7 +76,9 @@ function Repository:load_nodes()
             created_at = number(c[12]),
             updated_at = number(c[13]),
             flag_state = flag_state,
-            legacy_flag_reference = legacy_flag_reference
+            legacy_flag_reference = legacy_flag_reference,
+            display_name = c[16] or "",
+            territory_radius_meters = number(c[17])
         }
     end)
 end
@@ -84,7 +86,7 @@ end
 function Repository:save_nodes(records)
     return save_table(
         self.paths.conquest_nodes,
-        "node_id\tguild_key\tnode_type\tflag_reference\tlocation_x\tlocation_y\tlocation_z\tparent_node_id\tstate\toriginal_owner\tcurrent_controller\tcreated_at\tupdated_at\tflag_state\tlegacy_flag_reference",
+        "node_id\tguild_key\tnode_type\tflag_reference\tlocation_x\tlocation_y\tlocation_z\tparent_node_id\tstate\toriginal_owner\tcurrent_controller\tcreated_at\tupdated_at\tflag_state\tlegacy_flag_reference\tdisplay_name\tterritory_radius_meters",
         records,
         function(r)
             return {
@@ -93,7 +95,8 @@ function Repository:save_nodes(records)
                 r.parent_node_id, r.state,
                 r.original_owner, r.current_controller,
                 r.created_at, r.updated_at, r.flag_state,
-                r.legacy_flag_reference
+                r.legacy_flag_reference, r.display_name,
+                r.territory_radius_meters
             }
         end
     )
