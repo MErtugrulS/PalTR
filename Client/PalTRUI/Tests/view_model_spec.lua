@@ -90,6 +90,18 @@ local panel = PanelState.new({ action_transport_ready = true })
 equal(panel.view_model.active_tab, "CLAN", "default tab")
 equal(panel.view_model.views.CHAT.available, false, "chat transport")
 equal(panel.view_model.views.CHAT.message_count, 0, "empty chat")
+equal(panel.view_model.connection.status_text, "Baglanti bekleniyor",
+    "waiting connection text is compact")
+equal(panel.view_model.header.guild_text, "Klan: ...",
+    "waiting guild header")
+equal(panel.view_model.header.role_text, "Rol: ...",
+    "waiting role header")
+equal(panel.view_model.views.CLAN.dashboard.cards[1].value, "",
+    "waiting clan card does not show fake data")
+equal(panel.view_model.views.CLAN.dashboard.war_count_text, "",
+    "waiting diplomacy card does not show fake counts")
+equal(panel.view_model.views.CLAN.dashboard.relation_rows[1].guild_name, "",
+    "waiting relation row stays empty")
 
 equal(panel:apply_snapshot(snapshot(relations)), true, "valid snapshot")
 equal(panel.selected_guild, "guild-alliance", "default relation selection")

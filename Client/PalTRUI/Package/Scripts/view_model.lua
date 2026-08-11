@@ -426,7 +426,12 @@ local function append_status(description, status)
     return description .. " | " .. status
 end
 
-local function clan_view(snapshot, action_transport_ready, action_pending)
+local function clan_view(
+    snapshot,
+    action_transport_ready,
+    action_pending,
+    snapshot_ready
+)
     snapshot = table_or_empty(snapshot)
     local guild = table_or_empty(snapshot.guild)
     local player = table_or_empty(snapshot.player)
@@ -521,14 +526,15 @@ local function clan_view(snapshot, action_transport_ready, action_pending)
         value_control = "DashboardClanCardValueText",
         detail_control = "DashboardClanCardDetailText",
         title = "Klanım",
-        value = guild_name ~= "" and guild_name or "-",
-        detail = string.format(
+        value = snapshot_ready and (guild_name ~= "" and guild_name or "-")
+            or "",
+        detail = snapshot_ready and string.format(
             "Rol: %s\nÜye: %d\nÇevrimiçi: %d",
             player.is_master == true and "Lider"
                 or (text(player.guild_key) ~= "" and "Üye" or "-"),
             #members,
             online_count
-        )
+        ) or ""
     }
     local diplomacy_card = {
         id = "DIPLOMACY_STATUS",
@@ -536,12 +542,12 @@ local function clan_view(snapshot, action_transport_ready, action_pending)
         value_control = "DashboardDiplomacyCardValueText",
         detail_control = "DashboardDiplomacyCardDetailText",
         title = "Diplomasi",
-        value = string.format(
+        value = snapshot_ready and string.format(
             "Savaş: %d\nİttifak: %d\nBekleyen: %d",
             war_count,
             alliance_count,
             pending_count
-        ),
+        ) or "",
         detail = ""
     }
     local quick_actions = {}
@@ -597,8 +603,7 @@ local function clan_view(snapshot, action_transport_ready, action_pending)
             state_control = string.format(
                 "DashboardRelationRow%dStateText", index
             ),
-            guild_name = text(relation_card.guild_name) ~= ""
-                and text(relation_card.guild_name) or "-",
+            guild_name = text(relation_card.guild_name),
             state_label = text(relation_card.state_label)
         }
     end
@@ -623,22 +628,24 @@ local function clan_view(snapshot, action_transport_ready, action_pending)
         ),
         dashboard = {
             cards = { clan_card, diplomacy_card },
-            clan_role_text = player.is_master == true and "Lider"
-                or (text(player.guild_key) ~= "" and "Uye" or "-"),
-            clan_member_count_text = tostring(#members),
-            clan_online_count_text = tostring(online_count),
+            clan_role_text = snapshot_ready and (player.is_master == true
+                and "Lider"
+                or (text(player.guild_key) ~= "" and "Uye" or "-")) or "",
+            clan_member_count_text = snapshot_ready and tostring(#members) or "",
+            clan_online_count_text = snapshot_ready and tostring(online_count) or "",
             war_count = war_count,
             alliance_count = alliance_count,
             pending_count = pending_count,
-            war_count_text = tostring(war_count),
-            alliance_count_text = tostring(alliance_count),
-            pending_count_text = tostring(pending_count),
+            war_count_text = snapshot_ready and tostring(war_count) or "",
+            alliance_count_text = snapshot_ready and tostring(alliance_count) or "",
+            pending_count_text = snapshot_ready and tostring(pending_count) or "",
             relations_empty = #relation_preview_lines == 0,
             relation_rows = relation_row_models,
-            relations_text = #relation_preview_lines == 0
+            relations_text = not snapshot_ready and "" or #relation_preview_lines == 0
                 and "Iliski kaydi yok."
                 or table.concat(relation_preview_lines, "\n"),
-            pending_guild_text = text(primary_offer.guild_name) ~= ""
+            pending_guild_text = not snapshot_ready and ""
+                or text(primary_offer.guild_name) ~= ""
                 and text(primary_offer.guild_name)
                 or "Bekleyen teklif yok.",
             pending_state_text = text(primary_offer.state_label)
@@ -654,7 +661,8 @@ local function clan_view(snapshot, action_transport_ready, action_pending)
         empty_message = empty_message,
         name_text = guild_name ~= ""
             and guild_name or "Klan bilgisi bekleniyor",
-        summary_text = clan_card.detail .. "\n" .. diplomacy_card.value,
+        summary_text = snapshot_ready
+            and clan_card.detail .. "\n" .. diplomacy_card.value or "",
         members_text = empty and empty_message or member_lines(members)
     }
 end
@@ -905,7 +913,8 @@ function ViewModel.build(snapshot, panel)
     local clan = clan_view(
         snapshot,
         action_transport_ready,
-        action_status ~= ""
+        action_status ~= "",
+        schema_version > 0
     )
     local relation_data = relation_views(
         snapshot,
@@ -936,12 +945,13 @@ function ViewModel.build(snapshot, panel)
                 or (action_status ~= "" and action_status)
                 or (schema_version > 0
                     and "Sunucu Aktif"
-                    or "Sunucu baglantisi bekleniyor")
+                    or "Baglanti bekleniyor")
         },
         header = {
-            guild_text = text(guild.name) ~= ""
-                and "Klan: " .. text(guild.name) or "Klan: -",
-            role_text = schema_version == 0 and "Rol: -"
+            guild_text = schema_version == 0 and "Klan: ..."
+                or (text(guild.name) ~= ""
+                    and "Klan: " .. text(guild.name) or "Klan: -"),
+            role_text = schema_version == 0 and "Rol: ..."
                 or (player.is_master == true
                     and "Rol: Lider" or "Rol: Uye"),
             notification_text = string.format(
