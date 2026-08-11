@@ -1,4 +1,5 @@
 #include "PolicySnapshot.hpp"
+#include "ProtectionActivity.hpp"
 
 #include <DynamicOutput/Output.hpp>
 #include <Mod/CppUserModBase.hpp>
@@ -32,6 +33,8 @@ namespace
     constexpr auto pal_character_class_path = STR("/Script/Pal.PalCharacter");
     constexpr auto character_parameter_component_class_path =
         STR("/Script/Pal.PalCharacterParameterComponent");
+    constexpr auto individual_parameter_class_path =
+        STR("/Script/Pal.PalIndividualCharacterParameter");
     constexpr auto player_controller_class_path = STR("/Script/Pal.PalPlayerController");
     constexpr auto network_transmitter_class_path = STR("/Script/Pal.PalNetworkTransmitter");
     constexpr auto controller_class_path = STR("/Script/Engine.Controller");
@@ -91,12 +94,13 @@ namespace PalTR
     {
     public:
         StructureGuard()
-            : m_policy(data_root)
+            : m_policy(data_root),
+              m_activity(std::filesystem::path(data_root) / "guild_combat_activity.tsv")
         {
-            ModVersion = STR("0.2.0");
+            ModVersion = STR("0.3.0");
             ModName = STR("PalTRStructureGuard");
             ModAuthors = STR("PalTR");
-            ModDescription = STR("Blocks allied guild damage and Pal targeting on the server");
+            ModDescription = STR("Blocks allied and offline-protected guild damage on the server");
         }
 
         ~StructureGuard() override
@@ -153,7 +157,7 @@ namespace PalTR
                             m_enemy_player_damage_defender_parameter);
                     }
                 },
-                {false, false, STR("PalTRStructureGuard"), STR("AlliedDamagePre")});
+                {false, false, STR("PalTRStructureGuard"), STR("ProtectedDamagePre")});
 
             if (m_pre_hook_id == Hook::ERROR_ID)
             {
@@ -172,7 +176,7 @@ namespace PalTR
                         handle_nearest_enemy_build_result(parameters);
                     }
                 },
-                {false, false, STR("PalTRStructureGuard"), STR("AlliedTargetingPost")});
+                {false, false, STR("PalTRStructureGuard"), STR("ProtectedTargetingPost")});
 
             if (m_post_hook_id == Hook::ERROR_ID)
             {
@@ -184,7 +188,7 @@ namespace PalTR
             }
 
             Output::send<LogLevel::Warning>(
-                STR("[PalTRStructureGuard] Allied damage and Pal targeting guard registered.\n"));
+                STR("[PalTRStructureGuard] Allied and offline protection guard registered.\n"));
         }
 
     private:
@@ -226,6 +230,10 @@ namespace PalTR
                 nullptr,
                 nullptr,
                 character_parameter_component_class_path);
+            m_individual_parameter_class = UObjectGlobals::StaticFindObject<UClass*>(
+                nullptr,
+                nullptr,
+                individual_parameter_class_path);
             m_player_controller_class = UObjectGlobals::StaticFindObject<UClass*>(
                 nullptr,
                 nullptr,
@@ -248,6 +256,7 @@ namespace PalTR
                 || m_map_object_class == nullptr
                 || m_pal_character_class == nullptr
                 || m_character_parameter_component_class == nullptr
+                || m_individual_parameter_class == nullptr
                 || m_player_controller_class == nullptr
                 || m_network_transmitter_class == nullptr
                 || m_controller_class == nullptr)
@@ -290,6 +299,12 @@ namespace PalTR
                 FName(STR("CharacterParameterComponent"), FNAME_Find));
             m_trainer_property = m_character_parameter_component_class->FindProperty(
                 FName(STR("Trainer"), FNAME_Find));
+            m_individual_parameter_property =
+                m_character_parameter_component_class->FindProperty(
+                    FName(STR("IndividualParameter"), FNAME_Find));
+            m_save_parameter_property = CastField<FStructProperty>(
+                m_individual_parameter_class->FindProperty(
+                    FName(STR("SaveParameter"), FNAME_Find)));
             m_controller_pawn_property = m_controller_class->FindProperty(
                 FName(STR("Pawn"), FNAME_Find));
             m_controller_transmitter_property = m_player_controller_class->FindProperty(
@@ -311,6 +326,8 @@ namespace PalTR
                 || m_map_object_model_property == nullptr
                 || m_character_parameter_component_property == nullptr
                 || m_trainer_property == nullptr
+                || m_individual_parameter_property == nullptr
+                || m_save_parameter_property == nullptr
                 || m_controller_pawn_property == nullptr
                 || m_controller_transmitter_property == nullptr)
             {
@@ -321,9 +338,12 @@ namespace PalTR
             auto* npc_info_struct = ToRawPtr(m_npc_damage_info_parameter->GetStruct());
             auto* enemy_player_info_struct =
                 ToRawPtr(m_enemy_player_damage_info_parameter->GetStruct());
+            auto* save_parameter_struct =
+                ToRawPtr(m_save_parameter_property->GetStruct());
             if (info_struct == nullptr
                 || npc_info_struct == nullptr
-                || enemy_player_info_struct == nullptr)
+                || enemy_player_info_struct == nullptr
+                || save_parameter_struct == nullptr)
             {
                 return false;
             }
@@ -340,11 +360,13 @@ namespace PalTR
                 || CastField<FObjectPropertyBase>(m_map_object_model_property) == nullptr
                 || CastField<FObjectPropertyBase>(m_character_parameter_component_property) == nullptr
                 || CastField<FObjectPropertyBase>(m_trainer_property) == nullptr
+                || CastField<FObjectPropertyBase>(m_individual_parameter_property) == nullptr
                 || CastField<FObjectPropertyBase>(m_controller_pawn_property) == nullptr
                 || CastField<FObjectPropertyBase>(m_controller_transmitter_property) == nullptr
                 || info_struct->GetName() != STR("PalDamageInfo")
                 || npc_info_struct->GetName() != STR("PalDamageInfo")
-                || enemy_player_info_struct->GetName() != STR("PalDamageInfo"))
+                || enemy_player_info_struct->GetName() != STR("PalDamageInfo")
+                || save_parameter_struct->GetName() != STR("PalIndividualCharacterSaveParameter"))
             {
                 return false;
             }
@@ -355,10 +377,13 @@ namespace PalTR
                 FName(STR("Attacker"), FNAME_Find));
             m_override_network_owner_property = info_struct->FindProperty(
                 FName(STR("OverrideNetworkOwner"), FNAME_Find));
+            m_owner_player_uid_property = save_parameter_struct->FindProperty(
+                FName(STR("OwnerPlayerUId"), FNAME_Find));
 
             return is_guid_property(m_attacker_group_property)
                 && CastField<FObjectPropertyBase>(m_attacker_property) != nullptr
-                && CastField<FObjectPropertyBase>(m_override_network_owner_property) != nullptr;
+                && CastField<FObjectPropertyBase>(m_override_network_owner_property) != nullptr
+                && is_guid_property(m_owner_player_uid_property);
         }
 
         bool ensure_policy_current(bool force = false)
@@ -439,26 +464,79 @@ namespace PalTR
             auto* const* trainer_slot =
                 m_trainer_property->ContainerPtrToValuePtr<UObject*>(component);
             UObject* trainer = trainer_slot == nullptr ? nullptr : *trainer_slot;
-            return trainer == nullptr
-                ? std::string{}
-                : m_policy.guild_for_pawn_path(ascii_text(trainer->GetFullName()));
+            if (trainer != nullptr)
+            {
+                guild = m_policy.guild_for_pawn_path(ascii_text(trainer->GetFullName()));
+                if (!guild.empty())
+                {
+                    return guild;
+                }
+            }
+
+            auto* const* individual_slot =
+                m_individual_parameter_property->ContainerPtrToValuePtr<UObject*>(component);
+            UObject* individual = individual_slot == nullptr ? nullptr : *individual_slot;
+            if (individual == nullptr || !individual->IsA(m_individual_parameter_class))
+            {
+                return {};
+            }
+
+            void* save_parameter =
+                m_save_parameter_property->ContainerPtrToValuePtr<void>(individual);
+            const auto* owner_player_uid = save_parameter == nullptr
+                ? nullptr
+                : m_owner_player_uid_property->ContainerPtrToValuePtr<FGuid>(save_parameter);
+            return owner_player_uid != nullptr && owner_player_uid->is_valid()
+                ? m_policy.guild_for_player_uid(guid_text(*owner_player_uid))
+                : std::string{};
         }
 
-        AllianceDecision evaluate_actor_alliance(UObject* actor_a, UObject* actor_b)
+        AllianceDecision evaluate_actor_interaction(
+            UObject* attacker,
+            UObject* target,
+            bool protect_either = false)
         {
             if (!ensure_policy_current())
             {
                 return {};
             }
 
-            const auto guild_a = resolve_actor_guild(actor_a);
-            const auto guild_b = resolve_actor_guild(actor_b);
-            if (guild_a.empty() || guild_b.empty())
+            const auto attacker_guild = resolve_actor_guild(attacker);
+            const auto target_guild = resolve_actor_guild(target);
+            return m_policy.evaluate_protected_guilds(
+                target_guild,
+                attacker_guild,
+                attacker != nullptr,
+                protect_either);
+        }
+
+        void record_hostile_activity(
+            const std::string& attacker_guild,
+            const std::string& target_guild,
+            bool attacker_present)
+        {
+            if (!attacker_present
+                || target_guild.empty()
+                || attacker_guild == target_guild)
             {
-                return {};
+                return;
             }
 
-            return m_policy.evaluate_alliance_guilds(guild_b, guild_a);
+            const auto now = std::chrono::duration_cast<std::chrono::seconds>(
+                std::chrono::system_clock::now().time_since_epoch()).count();
+            std::string error;
+            if (!m_activity.record(target_guild, now, error)
+                && error != m_last_activity_error)
+            {
+                m_last_activity_error = error;
+                Output::send<LogLevel::Error>(
+                    STR("[PalTRStructureGuard] Combat activity write failed: {}\n"),
+                    unreal_text(error));
+            }
+            else if (error.empty())
+            {
+                m_last_activity_error.clear();
+            }
         }
 
         void rebuild_model_index()
@@ -555,7 +633,10 @@ namespace PalTR
                     m_is_enemy_actor_b_parameter->ContainerPtrToValuePtr<UObject*>(parameters);
                 UObject* actor_a = actor_a_slot == nullptr ? nullptr : *actor_a_slot;
                 UObject* actor_b = actor_b_slot == nullptr ? nullptr : *actor_b_slot;
-                const auto decision = evaluate_actor_alliance(actor_a, actor_b);
+                const auto decision = evaluate_actor_interaction(
+                    actor_a,
+                    actor_b,
+                    true);
                 if (!decision.block)
                 {
                     return;
@@ -597,7 +678,7 @@ namespace PalTR
                 UObject* character = character_slot == nullptr ? nullptr : *character_slot;
                 UObject* build_object = return_slot == nullptr ? nullptr : *return_slot;
                 if (return_slot != nullptr
-                    && evaluate_actor_alliance(character, build_object).block)
+                    && evaluate_actor_interaction(character, build_object).block)
                 {
                     *return_slot = nullptr;
                 }
@@ -636,20 +717,43 @@ namespace PalTR
                 auto* const* owner_slot =
                     m_override_network_owner_property->ContainerPtrToValuePtr<UObject*>(info);
                 UObject* attacker = attacker_slot == nullptr ? nullptr : *attacker_slot;
-                if (attacker == nullptr && owner_slot != nullptr)
+                UObject* network_owner = owner_slot == nullptr ? nullptr : *owner_slot;
+                if (attacker == nullptr)
                 {
-                    attacker = *owner_slot;
+                    attacker = network_owner;
                 }
 
-                const auto decision = evaluate_actor_alliance(attacker, *defender_slot);
+                if (!ensure_policy_current())
+                {
+                    return;
+                }
+
+                auto attacker_guild = resolve_actor_guild(attacker);
+                if (attacker_guild.empty()
+                    && network_owner != nullptr
+                    && network_owner != attacker)
+                {
+                    attacker_guild = resolve_actor_guild(network_owner);
+                }
+                const auto target_guild = resolve_actor_guild(*defender_slot);
+                const bool attacker_present = attacker != nullptr || network_owner != nullptr;
+                const auto decision = m_policy.evaluate_protected_guilds(
+                    target_guild,
+                    attacker_guild,
+                    attacker_present,
+                    false);
                 if (!decision.block)
                 {
+                    record_hostile_activity(
+                        attacker_guild,
+                        target_guild,
+                        attacker_present);
                     return;
                 }
 
                 hook.PreventOriginalFunctionCall();
                 Output::send<LogLevel::Warning>(
-                    STR("[PalTRStructureGuard] Blocked allied Pal damage: attacker={} target={} reason={}\n"),
+                    STR("[PalTRStructureGuard] Blocked protected character damage: attacker={} target={} reason={}\n"),
                     unreal_text(decision.attacker_guild_key),
                     unreal_text(decision.target_guild_key),
                     unreal_text(decision.reason));
@@ -712,18 +816,27 @@ namespace PalTR
                     return;
                 }
 
-                const auto pawn_name = pawn->GetFullName();
-                const auto decision = m_policy.evaluate_alliance_structure_damage_by_pawn(
-                    build_player_uid,
-                    ascii_text(pawn_name));
+                const auto attacker_guild =
+                    m_policy.guild_for_pawn_path(ascii_text(pawn->GetFullName()));
+                const auto target_guild =
+                    m_policy.guild_for_player_uid(build_player_uid);
+                const auto decision = m_policy.evaluate_protected_guilds(
+                    target_guild,
+                    attacker_guild,
+                    true,
+                    false);
                 if (!decision.block)
                 {
+                    record_hostile_activity(
+                        attacker_guild,
+                        target_guild,
+                        true);
                     return;
                 }
 
                 hook.PreventOriginalFunctionCall();
                 Output::send<LogLevel::Warning>(
-                    STR("[PalTRStructureGuard] Blocked allied structure damage: attacker={} target={} reason={}\n"),
+                    STR("[PalTRStructureGuard] Blocked protected structure damage: attacker={} target={} reason={}\n"),
                     unreal_text(decision.attacker_guild_key),
                     unreal_text(decision.target_guild_key),
                     unreal_text(decision.reason));
@@ -737,6 +850,7 @@ namespace PalTR
         }
 
         PolicySnapshot m_policy;
+        ProtectionActivityStore m_activity;
         Hook::GlobalCallbackId m_pre_hook_id{Hook::ERROR_ID};
         Hook::GlobalCallbackId m_post_hook_id{Hook::ERROR_ID};
         UFunction* m_damage_function{};
@@ -748,6 +862,7 @@ namespace PalTR
         UClass* m_map_object_class{};
         UClass* m_pal_character_class{};
         UClass* m_character_parameter_component_class{};
+        UClass* m_individual_parameter_class{};
         UClass* m_player_controller_class{};
         UClass* m_network_transmitter_class{};
         UClass* m_controller_class{};
@@ -770,12 +885,16 @@ namespace PalTR
         FProperty* m_map_object_model_property{};
         FProperty* m_character_parameter_component_property{};
         FProperty* m_trainer_property{};
+        FProperty* m_individual_parameter_property{};
+        FStructProperty* m_save_parameter_property{};
+        FProperty* m_owner_player_uid_property{};
         FProperty* m_controller_pawn_property{};
         FProperty* m_controller_transmitter_property{};
         bool m_policy_refresh_attempted{};
         bool m_policy_loaded{};
         std::chrono::steady_clock::time_point m_last_policy_refresh{};
         std::string m_last_policy_error;
+        std::string m_last_activity_error;
         std::unordered_map<std::string, std::string> m_build_player_by_instance;
     };
 }

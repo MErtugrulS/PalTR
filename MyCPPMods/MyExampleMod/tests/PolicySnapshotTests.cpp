@@ -97,6 +97,50 @@ int main()
         !snapshot.is_guild_offline_protected("GUILD_B"),
         "online guild remains unprotected");
 
+    const auto offline_external = snapshot.evaluate_protected_guilds(
+        "GUILD_A",
+        "GUILD_C",
+        true,
+        false);
+    ok &= expect(offline_external.block, "offline guild blocks external damage");
+    ok &= expect(
+        offline_external.reason == "OFFLINE_PROTECTION",
+        "offline protection reason preserved");
+
+    const auto offline_wild = snapshot.evaluate_protected_guilds(
+        "GUILD_A",
+        "",
+        true,
+        false);
+    ok &= expect(offline_wild.block, "offline guild blocks wild attacker damage");
+
+    const auto offline_environment = snapshot.evaluate_protected_guilds(
+        "GUILD_A",
+        "",
+        false,
+        false);
+    ok &= expect(
+        !offline_environment.block,
+        "environmental damage remains game controlled");
+
+    const auto offline_same_guild = snapshot.evaluate_protected_guilds(
+        "GUILD_A",
+        "GUILD_A",
+        true,
+        false);
+    ok &= expect(
+        !offline_same_guild.block,
+        "same guild damage remains game controlled");
+
+    const auto protected_ai_actor = snapshot.evaluate_protected_guilds(
+        "GUILD_C",
+        "GUILD_A",
+        true,
+        true);
+    ok &= expect(
+        protected_ai_actor.block,
+        "protected Pal does not acquire external AI target");
+
     const auto neutral = snapshot.evaluate_alliance_structure_damage(
         "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
         "CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC");

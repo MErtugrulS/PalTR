@@ -275,6 +275,39 @@ namespace PalTR
         return result;
     }
 
+    AllianceDecision PolicySnapshot::evaluate_protected_guilds(
+        const std::string& target_guild_key,
+        const std::string& attacker_guild_key,
+        bool attacker_present,
+        bool protect_either) const
+    {
+        AllianceDecision result{};
+        result.target_guild_key = target_guild_key;
+        result.attacker_guild_key = attacker_guild_key;
+
+        if (!attacker_guild_key.empty()
+            && attacker_guild_key == target_guild_key)
+        {
+            result.reason = "SAME_GUILD_NOT_HANDLED";
+            return result;
+        }
+
+        const bool target_protected =
+            is_guild_offline_protected(target_guild_key);
+        const bool attacker_protected = protect_either
+            && is_guild_offline_protected(attacker_guild_key);
+        if ((attacker_present && target_protected) || attacker_protected)
+        {
+            result.block = true;
+            result.reason = "OFFLINE_PROTECTION";
+            return result;
+        }
+
+        return evaluate_alliance_guilds(
+            target_guild_key,
+            attacker_guild_key);
+    }
+
     std::string PolicySnapshot::guild_for_player_uid(const std::string& player_uid) const
     {
         const auto found = m_player_guild_by_uid.find(normalize_guid(player_uid));

@@ -30,6 +30,11 @@ namespace PalTR
         AllianceDecision evaluate_alliance_guilds(
             const std::string& target_guild_key,
             const std::string& attacker_guild_key) const;
+        AllianceDecision evaluate_protected_guilds(
+            const std::string& target_guild_key,
+            const std::string& attacker_guild_key,
+            bool attacker_present,
+            bool protect_either) const;
         std::string guild_for_player_uid(const std::string& player_uid) const;
         std::string guild_for_pawn_path(const std::string& pawn_path) const;
         std::string guild_for_group_id(const std::string& group_id) const;
