@@ -56,6 +56,11 @@ int main()
         "flag_reference\tnode_id\towner_guild\tallowed_attacker_guild\n"
         "11111111111111111111111111111111\tNODE_A\tGUILD_A\tGUILD_B\n"
         "22222222222222222222222222222222\tNODE_B\tGUILD_A\t\n");
+    write_file(
+        root / "conquest_zone_policy.tsv",
+        "node_id\towner_guild\tallowed_attacker_guild\tcenter_x_world\tcenter_y_world\tcenter_z_world\tradius_world\n"
+        "NODE_A\tGUILD_A\tGUILD_B\t1000\t2000\t3000\t15000\n"
+        "INVALID\tGUILD_A\tGUILD_C\t0\t0\t0\tnot-a-radius\n");
 
     PalTR::PolicySnapshot snapshot(root);
     std::string error;
@@ -143,6 +148,32 @@ int main()
     ok &= expect(
         !snapshot.is_conquest_flag("33333333333333333333333333333333"),
         "ordinary structure ignored by dispose hook");
+
+    const auto active_zone = snapshot.evaluate_conquest_zone_damage(
+        "GUILD_A",
+        "GUILD_B",
+        16000,
+        2000,
+        3000);
+    ok &= expect(active_zone.allow, "active conquest zone boundary allows");
+    ok &= expect(
+        active_zone.reason == "ACTIVE_CONQUEST_ZONE",
+        "active conquest zone reason preserved");
+    ok &= expect(
+        active_zone.node_id == "NODE_A",
+        "active conquest node preserved");
+    ok &= expect(
+        !snapshot.evaluate_conquest_zone_damage(
+            "GUILD_A", "GUILD_B", 16001, 2000, 3000).allow,
+        "outside conquest zone does not allow");
+    ok &= expect(
+        !snapshot.evaluate_conquest_zone_damage(
+            "GUILD_A", "GUILD_C", 1000, 2000, 3000).allow,
+        "wrong attacker does not get conquest exception");
+    ok &= expect(
+        !snapshot.evaluate_conquest_zone_damage(
+            "GUILD_C", "GUILD_B", 1000, 2000, 3000).allow,
+        "wrong target does not get conquest exception");
 
     const auto offline_external = snapshot.evaluate_protected_guilds(
         "GUILD_A",

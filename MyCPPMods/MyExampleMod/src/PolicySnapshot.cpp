@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cctype>
+#include <cmath>
 #include <fstream>
 #include <sstream>
 #include <utility>
@@ -173,6 +174,61 @@ namespace
         }
         return true;
     }
+
+    bool read_conquest_zone_rows(
+        const std::filesystem::path& path,
+        std::vector<std::vector<std::string>>& rows,
+        std::string& error)
+    {
+        std::ifstream input(path);
+        if (!input)
+        {
+            return true;
+        }
+
+        std::string line;
+        if (!std::getline(input, line))
+        {
+            error = "empty conquest zone snapshot " + path.string();
+            return false;
+        }
+        if (!line.empty() && line.back() == '\r')
+        {
+            line.pop_back();
+        }
+        if (line != "node_id\towner_guild\tallowed_attacker_guild\tcenter_x_world\tcenter_y_world\tcenter_z_world\tradius_world")
+        {
+            error = "invalid conquest zone snapshot header " + path.string();
+            return false;
+        }
+
+        while (std::getline(input, line))
+        {
+            if (!line.empty() && line.back() == '\r')
+            {
+                line.pop_back();
+            }
+            if (!line.empty())
+            {
+                rows.emplace_back(split_tsv(line));
+            }
+        }
+        return true;
+    }
+
+    bool parse_finite_double(const std::string& value, double& parsed)
+    {
+        try
+        {
+            std::size_t consumed = 0;
+            parsed = std::stod(value, &consumed);
+            return consumed == value.size() && std::isfinite(parsed);
+        }
+        catch (...)
+        {
+            return false;
+        }
+    }
 }
 
 namespace PalTR
@@ -194,6 +250,7 @@ namespace PalTR
         std::vector<std::vector<std::string>> relation_rows;
         std::vector<std::vector<std::string>> protection_rows;
         std::vector<std::vector<std::string>> conquest_rows;
+        std::vector<std::vector<std::string>> conquest_zone_rows;
 
         if (!read_rows(m_data_root / "player_registry.tsv", player_rows, error)
             || !read_rows(m_data_root / "guild_registry.tsv", guild_rows, error)
@@ -205,6 +262,10 @@ namespace PalTR
             || !read_conquest_rows(
                 m_data_root / "conquest_damage_policy.tsv",
                 conquest_rows,
+                error)
+            || !read_conquest_zone_rows(
+                m_data_root / "conquest_zone_policy.tsv",
+                conquest_zone_rows,
                 error))
         {
             return false;
@@ -217,6 +278,7 @@ namespace PalTR
         std::unordered_set<std::string> offline_protected_guilds;
         std::unordered_map<std::string, std::string> conquest_flag_owner;
         std::unordered_set<std::string> conquest_allowed_attackers;
+        std::vector<ConquestZone> conquest_zones;
 
         for (const auto& columns : player_rows)
         {
@@ -291,6 +353,39 @@ namespace PalTR
             }
         }
 
+        for (const auto& columns : conquest_zone_rows)
+        {
+            if (columns.size() < 7
+                || columns[0].empty()
+                || columns[1].empty()
+                || columns[2].empty())
+            {
+                continue;
+            }
+
+            double center_x = 0;
+            double center_y = 0;
+            double center_z = 0;
+            double radius = 0;
+            if (!parse_finite_double(columns[3], center_x)
+                || !parse_finite_double(columns[4], center_y)
+                || !parse_finite_double(columns[5], center_z)
+                || !parse_finite_double(columns[6], radius)
+                || radius <= 0)
+            {
+                continue;
+            }
+
+            conquest_zones.push_back(ConquestZone{
+                columns[0],
+                columns[1],
+                columns[2],
+                center_x,
+                center_y,
+                center_z,
+                radius * radius});
+        }
+
         m_player_guild_by_uid = std::move(player_guild_by_uid);
         m_player_guild_by_pawn_path = std::move(player_guild_by_pawn_path);
         m_guild_key_by_group_id = std::move(guild_key_by_group_id);
@@ -298,6 +393,7 @@ namespace PalTR
         m_offline_protected_guilds = std::move(offline_protected_guilds);
         m_conquest_flag_owner = std::move(conquest_flag_owner);
         m_conquest_allowed_attackers = std::move(conquest_allowed_attackers);
+        m_conquest_zones = std::move(conquest_zones);
         error.clear();
         return true;
     }
@@ -439,5 +535,49 @@ namespace PalTR
     bool PolicySnapshot::is_conquest_flag(const std::string& instance_id) const
     {
         return m_conquest_flag_owner.contains(normalize_guid(instance_id));
+    }
+
+    ConquestZoneDecision PolicySnapshot::evaluate_conquest_zone_damage(
+        const std::string& target_guild_key,
+        const std::string& attacker_guild_key,
+        const double target_x,
+        const double target_y,
+        const double target_z) const
+    {
+        ConquestZoneDecision result{};
+        result.target_guild_key = target_guild_key;
+        result.attacker_guild_key = attacker_guild_key;
+        if (target_guild_key.empty()
+            || attacker_guild_key.empty()
+            || !std::isfinite(target_x)
+            || !std::isfinite(target_y)
+            || !std::isfinite(target_z))
+        {
+            return result;
+        }
+
+        for (const auto& zone : m_conquest_zones)
+        {
+            if (zone.owner_guild_key != target_guild_key
+                || zone.allowed_attacker_guild_key != attacker_guild_key)
+            {
+                continue;
+            }
+
+            const auto delta_x = target_x - zone.center_x;
+            const auto delta_y = target_y - zone.center_y;
+            const auto delta_z = target_z - zone.center_z;
+            if ((delta_x * delta_x)
+                + (delta_y * delta_y)
+                + (delta_z * delta_z) <= zone.radius_squared)
+            {
+                result.allow = true;
+                result.node_id = zone.node_id;
+                result.reason = "ACTIVE_CONQUEST_ZONE";
+                return result;
+            }
+        }
+
+        return result;
     }
 }

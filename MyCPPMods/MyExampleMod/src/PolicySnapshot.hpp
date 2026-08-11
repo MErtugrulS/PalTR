@@ -4,6 +4,7 @@
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
+#include <vector>
 
 namespace PalTR
 {
@@ -19,6 +20,15 @@ namespace PalTR
     {
         bool handled{};
         bool block{};
+        std::string target_guild_key;
+        std::string attacker_guild_key;
+        std::string reason;
+    };
+
+    struct ConquestZoneDecision
+    {
+        bool allow{};
+        std::string node_id;
         std::string target_guild_key;
         std::string attacker_guild_key;
         std::string reason;
@@ -51,9 +61,26 @@ namespace PalTR
         ConquestFlagDecision evaluate_conquest_flag_damage(
             const std::string& instance_id,
             const std::string& attacker_guild_key) const;
+        ConquestZoneDecision evaluate_conquest_zone_damage(
+            const std::string& target_guild_key,
+            const std::string& attacker_guild_key,
+            double target_x,
+            double target_y,
+            double target_z) const;
         bool is_conquest_flag(const std::string& instance_id) const;
 
     private:
+        struct ConquestZone
+        {
+            std::string node_id;
+            std::string owner_guild_key;
+            std::string allowed_attacker_guild_key;
+            double center_x{};
+            double center_y{};
+            double center_z{};
+            double radius_squared{};
+        };
+
         bool reload(std::string& error);
 
         std::filesystem::path m_data_root;
@@ -64,5 +91,6 @@ namespace PalTR
         std::unordered_set<std::string> m_offline_protected_guilds;
         std::unordered_map<std::string, std::string> m_conquest_flag_owner;
         std::unordered_set<std::string> m_conquest_allowed_attackers;
+        std::vector<ConquestZone> m_conquest_zones;
     };
 }
