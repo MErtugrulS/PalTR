@@ -24,7 +24,8 @@ local function make_paths(prefix)
         conquest_occupations = prefix .. "_occupations.tsv",
         conquest_loot = prefix .. "_loot.tsv",
         conquest_loot_items = prefix .. "_loot_items.tsv",
-        conquest_events = prefix .. "_events.tsv"
+        conquest_events = prefix .. "_events.tsv",
+        conquest_damage_policy = prefix .. "_damage_policy.tsv"
     }
 end
 
@@ -124,18 +125,21 @@ local service = Conquest.new(
 
 register(service, {
     node_id = "A_CAPITAL",
+    flag_reference = "A_FLAG_CAPITAL",
     guild_key = "GUILD_A",
     node_type = States.NODE_TYPE.CAPITAL,
     x = -2000, y = 0, z = 0, now = 1
 })
 register(service, {
     node_id = "B_CAPITAL",
+    flag_reference = "B_FLAG_CAPITAL",
     guild_key = "GUILD_B",
     node_type = States.NODE_TYPE.CAPITAL,
     x = 1200, y = 0, z = 0, now = 1
 })
 register(service, {
     node_id = "B_OUTPOST_1",
+    flag_reference = "B_FLAG_1",
     guild_key = "GUILD_B",
     node_type = States.NODE_TYPE.OUTPOST,
     parent_node_id = "B_CAPITAL",
@@ -143,6 +147,7 @@ register(service, {
 })
 register(service, {
     node_id = "B_OUTPOST_2",
+    flag_reference = "B_FLAG_2",
     guild_key = "GUILD_B",
     node_type = States.NODE_TYPE.OUTPOST,
     parent_node_id = "B_CAPITAL",
@@ -179,6 +184,22 @@ local siege = service:establish_siege(
     20
 )
 equal(siege.ok, true, "siege and first target established")
+equal(service:write_damage_policy(21).ok, true, "damage policy written")
+local policy_file = assert(io.open(paths.conquest_damage_policy, "r"))
+local policy_text = policy_file:read("*a")
+policy_file:close()
+equal(
+    policy_text:find("B_FLAG_1\tB_OUTPOST_1\tGUILD_B\tGUILD_A", 1, true)
+        ~= nil,
+    true,
+    "active flag attacker exported"
+)
+equal(
+    policy_text:find("B_FLAG_2\tB_OUTPOST_2\tGUILD_B\t\n", 1, true)
+        ~= nil,
+    true,
+    "inactive flag has no allowed attacker"
+)
 equal(
     service:can_damage_conquest_zone(
         campaign.campaign_id,

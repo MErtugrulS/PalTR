@@ -132,6 +132,9 @@ function App:_headers()
         [self.paths.conquest_events] =
             "timestamp\tmarker\tdetail",
 
+        [self.paths.conquest_damage_policy] =
+            "flag_reference\tnode_id\towner_guild\tallowed_attacker_guild",
+
         [self.paths.relations] =
             "pair_key\tguild_a\tguild_b\tstate\tprevious_state\trequested_by\taccepted_by\tcreated_at\tupdated_at\tactive_at\texpires_at\tnote",
 
@@ -355,6 +358,15 @@ function App:_tick()
             tostring(conquest_result.error)
         )
     end
+
+    local policy_result = self.conquest:write_damage_policy(now)
+
+    if not policy_result.ok then
+        self.logger:error(
+            "FAZ05_DAMAGE_POLICY_WRITE_FAILED | " ..
+            tostring(policy_result.error)
+        )
+    end
 end
 
 function App:start()
@@ -362,6 +374,16 @@ function App:start()
     self.registry:scan_guilds()
     self.last_guild_scan = Clock.now()
     self.protection:refresh(self.last_guild_scan)
+    local initial_policy = self.conquest:write_damage_policy(
+        self.last_guild_scan
+    )
+
+    if not initial_policy.ok then
+        self.logger:error(
+            "FAZ05_DAMAGE_POLICY_INITIAL_WRITE_FAILED | " ..
+            tostring(initial_policy.error)
+        )
+    end
     self:_register_hooks()
 
     self.scheduler:start(

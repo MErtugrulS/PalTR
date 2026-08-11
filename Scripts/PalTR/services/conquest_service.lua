@@ -597,6 +597,57 @@ function Conquest:can_damage_flag(campaign_id, target_node_id, attacker, now)
     })
 end
 
+function Conquest:write_damage_policy(now)
+    now = self:_now(now)
+    local lines = {
+        "flag_reference\tnode_id\towner_guild\tallowed_attacker_guild"
+    }
+
+    local nodes = {}
+    for _, node in pairs(self.nodes) do table.insert(nodes, node) end
+    table.sort(nodes, function(first, second)
+        return first.node_id < second.node_id
+    end)
+
+    for _, node in ipairs(nodes) do
+        if node.flag_reference ~= "" then
+            local allowed = {}
+
+            for _, campaign in pairs(self.campaigns) do
+                if campaign.active_target_node_id == node.node_id then
+                    local decision = self:can_damage_flag(
+                        campaign.campaign_id,
+                        node.node_id,
+                        campaign.attacker_guild,
+                        now
+                    )
+
+                    if decision.allow then
+                        allowed[campaign.attacker_guild] = true
+                    end
+                end
+            end
+
+            local attackers = {}
+            for attacker in pairs(allowed) do table.insert(attackers, attacker) end
+            table.sort(attackers)
+
+            if #attackers == 0 then attackers = { "" } end
+
+            for _, attacker in ipairs(attackers) do
+                table.insert(lines, TSV.encode({
+                    node.flag_reference,
+                    node.node_id,
+                    node.current_controller,
+                    attacker
+                }))
+            end
+        end
+    end
+
+    return FileIO.overwrite(self.paths.conquest_damage_policy, lines)
+end
+
 function Conquest:can_damage_conquest_zone(
     campaign_id,
     attacker,
