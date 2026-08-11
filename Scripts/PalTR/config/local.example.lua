@@ -1,7 +1,7 @@
 return {
     diplomacy = {
         war_preparation_minutes = 30,
-        war_duration_hours = 24
+        ceasefire_rearm_seconds = 1800
     },
 
     runtime = {
@@ -15,6 +15,8 @@ return {
 
     conquest = {
         max_outposts_per_clan = 10,
+        world_units_per_meter = 100,
+        registration_interaction_radius_meters = 20,
         raid_timezone = "Europe/Istanbul",
         raid_utc_offset_minutes = 180,
         raid_window_start = "20:00",
@@ -26,6 +28,15 @@ return {
         siege_max_distance_from_target_meters = 600,
         siege_min_distance_from_other_enemy_node_meters = 300,
         peace_occupation_resolution = "OCCUPIER_WINS",
-        capital_defeat_resolution = "TRANSFER_ALL_NODES"
+        capital_defeat_resolution = "TRANSFER_ALL_NODES",
+        operator_roles = {
+            LEADER = true,
+            DEPUTY_LEADER = true,
+            COMMANDER = true
+        },
+        game_role_map = {
+            [1] = "LEADER",
+            [2] = "DEPUTY_LEADER"
+        }
     }
 }
