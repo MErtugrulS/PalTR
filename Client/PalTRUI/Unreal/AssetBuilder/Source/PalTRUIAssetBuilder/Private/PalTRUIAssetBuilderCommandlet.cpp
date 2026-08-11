@@ -3939,23 +3939,64 @@ namespace PalTRUIAssetBuilder
             QuickSlot->SetVerticalAlignment(VAlign_Fill);
         }
 
-        const FName CardFrames[] = {
-            TEXT("DashboardClanCardFrame"),
-            TEXT("DashboardDiplomacyCardFrame"),
-            TEXT("DashboardProtectionCardFrame"),
-            TEXT("DashboardBuildingsCardFrame")
+        struct FStatusCardGeometry
+        {
+            const TCHAR* FrameName;
+            const TCHAR* SizeName;
+        };
+        const FStatusCardGeometry CardFrames[] = {
+            { TEXT("DashboardClanCardFrame"), TEXT("DashboardClanCardSize") },
+            { TEXT("DashboardDiplomacyCardFrame"), TEXT("DashboardDiplomacyCardSize") },
+            { TEXT("DashboardProtectionCardFrame"), TEXT("DashboardProtectionCardSize") },
+            { TEXT("DashboardBuildingsCardFrame"), TEXT("DashboardBuildingsCardSize") }
         };
         for (int32 Index = 0; Index < UE_ARRAY_COUNT(CardFrames); ++Index)
         {
-            if (UBorder* Card = Cast<UBorder>(Tree->FindWidget(CardFrames[Index])))
+            UBorder* Card = Cast<UBorder>(Tree->FindWidget(FName(CardFrames[Index].FrameName)));
+            USizeBox* CardSize = Cast<USizeBox>(Tree->FindWidget(FName(CardFrames[Index].SizeName)));
+            if (!Card)
             {
-                if (UHorizontalBoxSlot* Slot = Cast<UHorizontalBoxSlot>(Card->Slot))
+                UE_LOG(LogTemp, Error, TEXT("PalTRUI pixel match update failed: status card missing: %s"), CardFrames[Index].FrameName);
+                return false;
+            }
+            if (!CardSize)
+            {
+                if (Card->GetParent() != StatusCards)
                 {
-                    Slot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
-                    Slot->SetPadding(FMargin(Index == 0 ? 0.0f : 8.0f, 0,
-                        Index + 1 == UE_ARRAY_COUNT(CardFrames) ? 0.0f : 8.0f, 0));
-                    Slot->SetVerticalAlignment(VAlign_Fill);
+                    UE_LOG(LogTemp, Error, TEXT("PalTRUI pixel match update failed: status card source hierarchy: %s"), CardFrames[Index].FrameName);
+                    return false;
                 }
+                const int32 CardIndex = StatusCards->GetChildIndex(Card);
+                if (CardIndex == INDEX_NONE || !StatusCards->RemoveChild(Card))
+                {
+                    UE_LOG(LogTemp, Error, TEXT("PalTRUI pixel match update failed: status card relocation: %s"), CardFrames[Index].FrameName);
+                    return false;
+                }
+                CardSize = Tree->ConstructWidget<USizeBox>(USizeBox::StaticClass(), FName(CardFrames[Index].SizeName));
+                CardSize->SetContent(Card);
+                if (!StatusCards->InsertChildAt(CardIndex, CardSize))
+                {
+                    UE_LOG(LogTemp, Error, TEXT("PalTRUI pixel match update failed: status card size insertion: %s"), CardFrames[Index].FrameName);
+                    return false;
+                }
+            }
+            else if (CardSize->GetContent() != Card || CardSize->GetParent() != StatusCards)
+            {
+                UE_LOG(LogTemp, Error, TEXT("PalTRUI pixel match update refused: partial status card size hierarchy: %s"), CardFrames[Index].FrameName);
+                return false;
+            }
+            CardSize->SetHeightOverride(288.0f);
+            if (UHorizontalBoxSlot* Slot = Cast<UHorizontalBoxSlot>(CardSize->Slot))
+            {
+                Slot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
+                Slot->SetPadding(FMargin(Index == 0 ? 0.0f : 8.0f, 0,
+                    Index + 1 == UE_ARRAY_COUNT(CardFrames) ? 0.0f : 8.0f, 0));
+                Slot->SetVerticalAlignment(VAlign_Fill);
+            }
+            if (USizeBoxSlot* CardContentSlot = Cast<USizeBoxSlot>(Card->Slot))
+            {
+                CardContentSlot->SetHorizontalAlignment(HAlign_Fill);
+                CardContentSlot->SetVerticalAlignment(VAlign_Fill);
             }
         }
 
@@ -4021,10 +4062,12 @@ namespace PalTRUIAssetBuilder
         if (UTextBlock* RecentHeading = Cast<UTextBlock>(Tree->FindWidget(TEXT("DashboardRecentEventsHeadingText"))))
         {
             RecentHeading->SetText(FText::FromString(TEXT("Son Olaylar")));
+            RecentHeading->SetRenderTranslation(FVector2D(0.0f, 22.0f));
         }
         if (UTextBlock* QuickHeading = Cast<UTextBlock>(Tree->FindWidget(TEXT("DashboardQuickActionsHeadingText"))))
         {
             QuickHeading->SetText(FText::FromString(TEXT("Hızlı İşlemler")));
+            QuickHeading->SetRenderTranslation(FVector2D(0.0f, 22.0f));
         }
         if (UTextBlock* ProtectionTitle = Cast<UTextBlock>(Tree->FindWidget(TEXT("DashboardProtectionCardTitleText"))))
         {
@@ -4458,15 +4501,19 @@ namespace PalTRUIAssetBuilder
             TEXT("DashboardPendingRejectButtonText"),
             TEXT("DashboardStatusCardsSize"),
             TEXT("DashboardStatusCardsFrame"),
+            TEXT("DashboardClanCardSize"),
             TEXT("DashboardClanCardFrame"),
             TEXT("DashboardClanCardContent"),
             TEXT("DashboardClanCardTitleText"),
             TEXT("DashboardClanCardValueText"),
             TEXT("DashboardClanCardDetailText"),
+            TEXT("DashboardDiplomacyCardSize"),
             TEXT("DashboardDiplomacyCardFrame"),
             TEXT("DashboardDiplomacyCardContent"),
             TEXT("DashboardDiplomacyCardTitleText"),
             TEXT("DashboardDiplomacyCardValueText"),
+            TEXT("DashboardProtectionCardSize"),
+            TEXT("DashboardBuildingsCardSize"),
             TEXT("DashboardDiplomacyCardDetailText"),
             TEXT("DashboardRelationsFrame"),
             TEXT("DashboardRelationsContent"),
@@ -4653,6 +4700,34 @@ namespace PalTRUIAssetBuilder
         {
             UE_LOG(LogTemp, Error, TEXT("PalTRUI asset verification failed: reference dashboard proportions are incomplete."));
             return false;
+        }
+        struct FVerifiedStatusCardGeometry
+        {
+            const TCHAR* FrameName;
+            const TCHAR* SizeName;
+        };
+        const FVerifiedStatusCardGeometry VerifiedStatusCards[] = {
+            { TEXT("DashboardClanCardFrame"), TEXT("DashboardClanCardSize") },
+            { TEXT("DashboardDiplomacyCardFrame"), TEXT("DashboardDiplomacyCardSize") },
+            { TEXT("DashboardProtectionCardFrame"), TEXT("DashboardProtectionCardSize") },
+            { TEXT("DashboardBuildingsCardFrame"), TEXT("DashboardBuildingsCardSize") }
+        };
+        for (const FVerifiedStatusCardGeometry& StatusCard : VerifiedStatusCards)
+        {
+            UBorder* CardFrame = Cast<UBorder>(Panel->WidgetTree->FindWidget(FName(StatusCard.FrameName)));
+            USizeBox* CardSize = Cast<USizeBox>(Panel->WidgetTree->FindWidget(FName(StatusCard.SizeName)));
+            UHorizontalBoxSlot* CardSlot = CardSize ? Cast<UHorizontalBoxSlot>(CardSize->Slot) : nullptr;
+            if (!CardFrame
+                || !CardSize
+                || CardSize->GetContent() != CardFrame
+                || !FMath::IsNearlyEqual(CardSize->GetHeightOverride(), 288.0f)
+                || !CardSlot
+                || CardSlot->GetSize().SizeRule != ESlateSizeRule::Fill
+                || CardSlot->GetVerticalAlignment() != VAlign_Fill)
+            {
+                UE_LOG(LogTemp, Error, TEXT("PalTRUI asset verification failed: fixed status card geometry is incomplete: %s."), StatusCard.FrameName);
+                return false;
+            }
         }
         for (const FName FutureButtonName : {
             FName(TEXT("FutureProtectionButton")),
