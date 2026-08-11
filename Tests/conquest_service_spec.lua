@@ -57,6 +57,9 @@ local function make_config(maximum)
             counter_attack_flag_radius_meters = 30,
             outpost_link_max_distance_meters = 1500,
             conquest_zone_radius_meters = 150,
+            territory_min_radius_meters = 50,
+            territory_max_radius_meters = 1000,
+            territory_name_max_length = 64,
             siege_min_distance_from_target_meters = 250,
             siege_max_distance_from_target_meters = 600,
             siege_min_distance_from_other_enemy_node_meters = 300,
@@ -163,6 +166,43 @@ register(service, {
     parent_node_id = "B_CAPITAL",
     x = 2400, y = 0, z = 0, now = 2
 })
+
+local renamed = service:rename_territory({
+    node_id = "B_OUTPOST_1",
+    guild_key = "GUILD_B",
+    actor_role = "DEPUTY_LEADER",
+    display_name = "Exceed Kuzey 3 Karakolu",
+    now = 3
+})
+equal(renamed.ok, true, "controller renames territory")
+equal(service.nodes.B_OUTPOST_1.display_name, "Exceed Kuzey 3 Karakolu",
+    "territory name persisted in domain")
+local radius_changed = service:set_territory_radius({
+    node_id = "B_OUTPOST_1",
+    guild_key = "GUILD_B",
+    actor_role = "COMMANDER",
+    radius_meters = 175,
+    now = 3
+})
+equal(radius_changed.ok, true, "controller changes territory radius")
+equal(service.nodes.B_OUTPOST_1.territory_radius_meters, 175,
+    "territory radius persisted in domain")
+equal(service:set_territory_radius({
+    node_id = "B_OUTPOST_1",
+    guild_key = "GUILD_B",
+    actor_role = "LEADER",
+    radius_meters = 1001,
+    now = 3
+}).error.code, "TERRITORY_RADIUS_OUT_OF_RANGE",
+    "oversized territory fails closed")
+equal(service:rename_territory({
+    node_id = "B_OUTPOST_1",
+    guild_key = "GUILD_A",
+    actor_role = "LEADER",
+    display_name = "Hijacked",
+    now = 3
+}).error.code, "TERRITORY_NOT_CONTROLLED",
+    "other guild cannot rename territory")
 
 local limit = service:register_node({
     node_id = "B_OUTPOST_3",

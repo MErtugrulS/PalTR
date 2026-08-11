@@ -314,6 +314,51 @@ function CommandService:_rebind_missing_flag(player)
         result.value.node_id
 end
 
+function CommandService:_update_nearest_territory(player, action, value)
+    local role, role_error = self:_conquest_role(player)
+    if not role then return false, role_error end
+
+    local nearby = self.conquest_flags:nearest_owned_flag(
+        player,
+        self.registry,
+        self.conquest.config
+    )
+    if not nearby.ok then return false, nearby.error.message end
+
+    local node = self.conquest:node_for_flag_reference(
+        nearby.value.flag_reference
+    )
+    if not node then
+        return false, "Yakindaki Klan Bayragi fetih sistemine kayitli degil"
+    end
+
+    local request = {
+        node_id = node.node_id,
+        guild_key = player.guild_key,
+        actor_role = role,
+        now = Clock.now()
+    }
+    local result
+    if action == "RENAME_TERRITORY" then
+        request.display_name = value
+        result = self.conquest:rename_territory(request)
+        if result.ok then
+            return true, "Bolge adi guncellendi: " .. result.value.display_name
+        end
+    else
+        request.radius_meters = tonumber(value)
+        result = self.conquest:set_territory_radius(request)
+        if result.ok then
+            return true, string.format(
+                "Bolge siniri guncellendi: %.0f metre",
+                result.value.territory_radius_meters
+            )
+        end
+    end
+
+    return false, result.error.message
+end
+
 function CommandService:_start_counter_attack(player)
     local role, role_error = self:_conquest_role(player)
     if not role then return false, role_error end
@@ -678,6 +723,7 @@ function CommandService:on_chat(
             true,
             "!durum | !klanlar | !iliskiler | !yardim | " ..
             "!fetihdurum | !bayrakaday | !baskent | !karakol | " ..
+            "!bolgeadi AD | !bolgesinir METRE | " ..
             "!bayrakyenile | !fetihbayragi | !karsisaldiri | " ..
             "!fetih KLAN | !kusatmakampi KLAN | !fetihedef KLAN | " ..
             "!savas KLAN | !ateskes KLAN | " ..
@@ -748,6 +794,17 @@ function CommandService:on_chat(
 
     if command.action == "START_COUNTER_ATTACK" then
         local ok, response = self:_start_counter_attack(player)
+        self:_respond(controller, player, command.raw, ok, response)
+        return
+    end
+
+    if command.action == "RENAME_TERRITORY"
+        or command.action == "SET_TERRITORY_RADIUS" then
+        local ok, response = self:_update_nearest_territory(
+            player,
+            command.action,
+            command.target
+        )
         self:_respond(controller, player, command.raw, ok, response)
         return
     end

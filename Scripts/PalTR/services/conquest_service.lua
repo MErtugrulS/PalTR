@@ -2,6 +2,7 @@ local Clock = require("PalTR.core.clock")
 local FileIO = require("PalTR.storage.file_io")
 local Result = require("PalTR.core.result")
 local TSV = require("PalTR.storage.tsv")
+local Text = require("PalTR.core.text")
 local PairKey = require("PalTR.domain.pair_key")
 local Rules = require("PalTR.domain.conquest_rules")
 local RaidWindow = require("PalTR.domain.raid_window")
@@ -487,6 +488,83 @@ function Conquest:register_node(request)
     if not saved.ok then return saved end
 
     self:_event("FAZ05_FLAG_REGISTERED", node_id .. "|" .. node_type)
+    return Result.ok(node)
+end
+
+function Conquest:rename_territory(request)
+    request = request or {}
+    local authorized = self:_authorized(request.actor_role)
+    if not authorized.ok then return authorized end
+
+    local node = self.nodes[text(request.node_id)]
+    local guild_key = text(request.guild_key)
+    if not node or node.current_controller ~= guild_key then
+        return Result.err(
+            "TERRITORY_NOT_CONTROLLED",
+            "Bolge bu klanin kontrolunde degil"
+        )
+    end
+
+    local name = Text.clean(request.display_name)
+    local maximum = math.max(
+        1,
+        math.floor(number(self.config.territory_name_max_length))
+    )
+    if name == "" then
+        return Result.err("TERRITORY_NAME_EMPTY", "Bolge adi bos olamaz")
+    end
+    if #name > maximum then
+        return Result.err(
+            "TERRITORY_NAME_TOO_LONG",
+            "Bolge adi en fazla " .. tostring(maximum) .. " karakter olabilir"
+        )
+    end
+
+    node.display_name = name
+    node.updated_at = self:_now(request.now)
+    local saved = self.repository:save_nodes(self.nodes)
+    if not saved.ok then return saved end
+    self:_event("FAZ05_TERRITORY_RENAMED", node.node_id .. "|" .. name)
+    return Result.ok(node)
+end
+
+function Conquest:set_territory_radius(request)
+    request = request or {}
+    local authorized = self:_authorized(request.actor_role)
+    if not authorized.ok then return authorized end
+
+    local node = self.nodes[text(request.node_id)]
+    local guild_key = text(request.guild_key)
+    if not node or node.current_controller ~= guild_key then
+        return Result.err(
+            "TERRITORY_NOT_CONTROLLED",
+            "Bolge bu klanin kontrolunde degil"
+        )
+    end
+
+    local radius = number(request.radius_meters)
+    local minimum = number(self.config.territory_min_radius_meters)
+    local maximum = number(self.config.territory_max_radius_meters)
+    if minimum <= 0 or maximum < minimum
+        or radius < minimum or radius > maximum then
+        return Result.err(
+            "TERRITORY_RADIUS_OUT_OF_RANGE",
+            string.format(
+                "Bolge siniri %.0f-%.0f metre arasinda olmali",
+                minimum,
+                maximum
+            )
+        )
+    end
+
+    node.territory_radius_meters = radius
+    node.updated_at = self:_now(request.now)
+    local saved = self.repository:save_nodes(self.nodes)
+    if not saved.ok then return saved end
+    self:_event(
+        "FAZ05_TERRITORY_RADIUS_CHANGED",
+        node.node_id .. "|" .. tostring(radius)
+    )
     return Result.ok(node)
 end
 

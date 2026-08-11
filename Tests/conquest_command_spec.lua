@@ -18,6 +18,10 @@ end
 
 equal(Parser.parse("!baskent").value.action, "REGISTER_CAPITAL", "capital parse")
 equal(Parser.parse("!karakol").value.action, "REGISTER_OUTPOST", "outpost parse")
+equal(Parser.parse("!bolgeadi Kuzey 3 Karakolu").value.action,
+    "RENAME_TERRITORY", "territory name parse")
+equal(Parser.parse("!bolgesinir 175").value.action,
+    "SET_TERRITORY_RADIUS", "territory radius parse")
 equal(Parser.parse("!fetihdurum").value.action, "CONQUEST_STATUS", "status parse")
 equal(Parser.parse("!fetih B").value.action, "START_CONQUEST", "conquest parse")
 equal(
@@ -57,6 +61,9 @@ local conquest = {
     nodes = {},
     registered = nil
 }
+conquest.config.territory_name_max_length = 64
+conquest.config.territory_min_radius_meters = 50
+conquest.config.territory_max_radius_meters = 1000
 
 function conquest:get_node(node_id) return self.nodes[node_id] end
 function conquest:nearest_controlled_node()
@@ -66,6 +73,23 @@ function conquest:register_node(request)
     self.registered = request
     self.nodes[request.node_id] = request
     return Result.ok(request)
+end
+function conquest:node_for_flag_reference(reference)
+    for _, node in pairs(self.nodes) do
+        if node.flag_reference == reference then return node end
+    end
+end
+function conquest:rename_territory(request)
+    self.territory_rename = request
+    local node = self.nodes[request.node_id]
+    node.display_name = request.display_name
+    return Result.ok(node)
+end
+function conquest:set_territory_radius(request)
+    self.territory_radius = request
+    local node = self.nodes[request.node_id]
+    node.territory_radius_meters = request.radius_meters
+    return Result.ok(node)
 end
 function conquest:rebind_missing_flag(request)
     self.rebound = request
@@ -195,6 +219,27 @@ ok = service:_register_nearest_conquest_flag(
 equal(ok, true, "deputy registers outpost")
 equal(conquest.registered.actor_role, "DEPUTY_LEADER", "deputy role mapped")
 equal(conquest.registered.parent_node_id, "CAPITAL_A", "nearest parent used")
+
+nearby.current = {
+    node_id = "BASE_B",
+    flag_reference = "FLAG_B",
+    guild_key = "A",
+    name = "Bravo",
+    actor_reference = "VerifiedFlagClass_C Instance",
+    x = 100, y = 0, z = 0
+}
+ok, message = service:_update_nearest_territory(
+    deputy, "RENAME_TERRITORY", "NWO Kuzey 3 Karakolu"
+)
+equal(ok, true, "deputy renames own territory")
+equal(conquest.territory_rename.node_id, "BASE_B", "nearby node renamed")
+equal(message, "Bolge adi guncellendi: NWO Kuzey 3 Karakolu",
+    "rename response")
+ok, message = service:_update_nearest_territory(
+    deputy, "SET_TERRITORY_RADIUS", "175"
+)
+equal(ok, true, "deputy changes own territory radius")
+equal(conquest.territory_radius.radius_meters, 175, "radius forwarded")
 
 nearby.current.node_id = "BASE_C"
 local member = { guild_key = "A", role = 3, is_master = false }
