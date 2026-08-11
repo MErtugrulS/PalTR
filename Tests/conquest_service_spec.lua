@@ -259,9 +259,18 @@ equal(runtime_result.value, 1, "G one outpost occupied")
 equal(service.nodes.B_OUTPOST_1.state, States.NODE.OCCUPIED, "G node occupied")
 local occupied_status = service:status_for_guild("GUILD_B", 24)
 equal(occupied_status.capital_count, 1, "G status reports capital")
-equal(occupied_status.outpost_count, 2, "G status reports outposts")
+equal(occupied_status.outpost_count, 1, "G status reports controlled outposts")
 equal(occupied_status.campaigns[1].direction, "DEFENSE", "G status direction")
 equal(occupied_status.occupations[1].remaining_seconds, 8, "G live timer reported")
+local expansion_parent = service:nearest_controlled_node(
+    "GUILD_A",
+    service.nodes.B_OUTPOST_1
+)
+equal(
+    expansion_parent.node_id,
+    "A_CAPITAL",
+    "G occupied enemy node cannot anchor permanent expansion"
+)
 local replay_result = service:process_runtime_events(23)
 equal(replay_result.ok, true, "G cleared queue reloads")
 equal(replay_result.value, 0, "G dispose event is not replayed")

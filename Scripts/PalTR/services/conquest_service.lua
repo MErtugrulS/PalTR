@@ -191,9 +191,12 @@ function Conquest:nearest_controlled_node(guild_key, location)
     local nearest_distance = math.huge
 
     for _, node in ipairs(self:nodes_for_controller(guild_key)) do
+        local expansion_ready = node.state == States.NODE.PROTECTED
+            or node.state == States.NODE.RESTORED
+            or node.state == States.NODE.CONQUERED
         local current_distance = Rules.distance(node, location or {})
 
-        if current_distance < nearest_distance then
+        if expansion_ready and current_distance < nearest_distance then
             nearest = node
             nearest_distance = current_distance
         end
