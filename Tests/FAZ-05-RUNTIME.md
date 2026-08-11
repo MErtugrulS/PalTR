@@ -62,6 +62,11 @@ UHT dump ve mevcut native hook sozlesmesiyle statik olarak dogrulananlar:
   ve en yakin gecerli dusman karakolunu kaydeder.
 - Lua aktif hedefleri `conquest_damage_policy.tsv` snapshot'ina yazar; mevcut
   native map-object hasar hook'u bu sozlesmeyi tuketir.
+- Lua aktif hedef bolgesini `conquest_zone_policy.tsv` snapshot'ina Unreal
+  dunya birimleriyle yazar. Native taraf hedef yapinin UHT dump'ta dogrulanmis
+  `UPalMapObjectModel.InitialTransformCache` konumunu kullanir. Istisna yalniz
+  hedef node'un mevcut sahibi, resmi saldiran klan ve ayarlanmis yaricap ayni
+  anda eslesirse uygulanir; yanlis klan ve bolge disi fail-closed kalir.
 - Hedef olmayan kayitli Klan Bayragi native politikada kapali kalir; yalniz aktif
   hedef ve dogru saldiran klan offline korumayi asabilir.
 - Oyun rol enumu `GuildMaster=1`, `SubMaster=2`, `Member=3`, `Guest=4` olarak
@@ -101,6 +106,10 @@ Asagidakiler oyun icinde henuz gecmis sayilmadi:
   izninin yeni tabela baglandiktan sonra da korunmasi.
 - Ateskes, ateskes bozma, yeniden silahlanma, karsi saldiri ve geri alma
   dongulerinin iki oyuncuyla runtime dogrulamasi.
+- Savunucu klan offline korumadayken resmi saldiranin aktif hedef bolgesi
+  icindeki normal yapilara hasar verebilmesi; ayni node yaricapi disindaki,
+  baska node yakinindaki ve yanlis klanin vurdugu yapilarin korunmaya devam
+  etmesi.
 - Ganimet kaydinin gercek fiziksel sandik veya teslim adapteriyle oyuncuya
   verilmesi; su anda yalniz domain/persistence kaydi vardir.
 - Oyunun bu surumunde ayri `COMMANDER` rolu bulunmadigi icin komutan yetkisi.
