@@ -3919,13 +3919,13 @@ namespace PalTRUIAssetBuilder
 
         const FLinearColor NoOutline = FLinearColor::Transparent;
         StyleRoundedFrame(Tree, TEXT("DashboardClanCardFrame"), PixelTheme::FromSRGB(8, 82, 77, 0.72f),
-            NoOutline, 3.0f, 0.0f, FMargin(14.0f));
+            NoOutline, 3.0f, 0.0f, FMargin(12.0f));
         StyleRoundedFrame(Tree, TEXT("DashboardDiplomacyCardFrame"), PixelTheme::FromSRGB(18, 67, 101, 0.72f),
-            NoOutline, 3.0f, 0.0f, FMargin(14.0f));
+            NoOutline, 3.0f, 0.0f, FMargin(12.0f));
         StyleRoundedFrame(Tree, TEXT("DashboardProtectionCardFrame"), PixelTheme::FromSRGB(115, 81, 25, 0.68f),
-            NoOutline, 3.0f, 0.0f, FMargin(14.0f));
+            NoOutline, 3.0f, 0.0f, FMargin(12.0f));
         StyleRoundedFrame(Tree, TEXT("DashboardBuildingsCardFrame"), PixelTheme::FromSRGB(92, 48, 21, 0.68f),
-            NoOutline, 3.0f, 0.0f, FMargin(14.0f));
+            NoOutline, 3.0f, 0.0f, FMargin(12.0f));
         StyleTransparentFrame(Tree, TEXT("DashboardRecentEventsFrame"), FMargin(16.0f));
         StyleTransparentFrame(Tree, TEXT("DashboardQuickActionsFrame"), FMargin(14.0f));
         StyleTransparentFrame(Tree, TEXT("DashboardRelationsFrame"), FMargin(14.0f));
@@ -3964,6 +3964,14 @@ namespace PalTRUIAssetBuilder
                 Text->SetColorAndOpacity(FSlateColor(PixelTheme::FromSRGB(66, 48, 24, 1.0f)));
                 StyleTextShadow(Tree, ParchmentText, FVector2D(0, 1), PixelTheme::FromSRGB(255, 244, 210, 0.34f));
             }
+        }
+        if (UTextBlock* RelationsHeading = Cast<UTextBlock>(Tree->FindWidget(TEXT("DashboardSidebarTitleText"))))
+        {
+            RelationsHeading->SetRenderTranslation(FVector2D(0.0f, 10.0f));
+        }
+        if (UTextBlock* PendingHeading = Cast<UTextBlock>(Tree->FindWidget(TEXT("PendingOffersHeadingText"))))
+        {
+            PendingHeading->SetRenderTranslation(FVector2D(0.0f, 10.0f));
         }
 
         struct FNavigationVisual
@@ -4093,8 +4101,8 @@ namespace PalTRUIAssetBuilder
         {
             if (USizeBox* IconSize = Cast<USizeBox>(Tree->FindWidget(CardIconSizeName)))
             {
-                IconSize->SetWidthOverride(112.0f);
-                IconSize->SetHeightOverride(112.0f);
+                IconSize->SetWidthOverride(88.0f);
+                IconSize->SetHeightOverride(88.0f);
             }
         }
         for (int32 Index = 1; Index <= 3; ++Index)
