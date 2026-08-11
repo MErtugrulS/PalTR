@@ -165,20 +165,35 @@ end
 
 function Repository:load_occupations()
     return load_table(self.paths.conquest_occupations, function(c)
+        local state = c[5]
+        local previous_state = c[6]
+        local counter_flag_reference = c[13] or ""
+        if counter_flag_reference == "" then
+            if state == "COUNTER_ATTACK" then state = "OCCUPIED" end
+            if previous_state == "COUNTER_ATTACK" then
+                previous_state = "OCCUPIED"
+            end
+        end
         return {
             key = c[1],
             node_id = c[1],
             original_owner = c[2],
             occupying_guild = c[3],
             war_id = c[4],
-            state = c[5],
-            previous_state = c[6],
+            state = state,
+            previous_state = previous_state,
             occupation_started_at = number(c[7]),
             remaining_seconds = number(c[8]),
             last_resumed_at = number(c[9]),
             loot_manifest_id = c[10],
             frontline_state = c[11],
-            updated_at = number(c[12])
+            updated_at = number(c[12]),
+            counter_flag_reference = counter_flag_reference,
+            counter_remaining_seconds = number(c[14]),
+            counter_last_resumed_at = number(c[15]),
+            counter_flag_x = number(c[16]),
+            counter_flag_y = number(c[17]),
+            counter_flag_z = number(c[18])
         }
     end)
 end
@@ -186,7 +201,7 @@ end
 function Repository:save_occupations(records)
     return save_table(
         self.paths.conquest_occupations,
-        "node_id\toriginal_owner\toccupying_guild\twar_id\tstate\tprevious_state\toccupation_started_at\tremaining_seconds\tlast_resumed_at\tloot_manifest_id\tfrontline_state\tupdated_at",
+        "node_id\toriginal_owner\toccupying_guild\twar_id\tstate\tprevious_state\toccupation_started_at\tremaining_seconds\tlast_resumed_at\tloot_manifest_id\tfrontline_state\tupdated_at\tcounter_flag_reference\tcounter_remaining_seconds\tcounter_last_resumed_at\tcounter_flag_x\tcounter_flag_y\tcounter_flag_z",
         records,
         function(r)
             return {
@@ -196,7 +211,11 @@ function Repository:save_occupations(records)
                 r.occupation_started_at,
                 r.remaining_seconds, r.last_resumed_at,
                 r.loot_manifest_id, r.frontline_state,
-                r.updated_at
+                r.updated_at, r.counter_flag_reference,
+                r.counter_remaining_seconds,
+                r.counter_last_resumed_at,
+                r.counter_flag_x, r.counter_flag_y,
+                r.counter_flag_z
             }
         end
     )

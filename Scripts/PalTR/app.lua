@@ -121,7 +121,7 @@ function App:_headers()
             "campaign_id\twar_id\tattacker_guild\tdefender_guild\tstate\tactive_target_node_id\tsiege_camp_reference\tsiege_x\tsiege_y\tsiege_z\trearm_until\tprevious_relation_state\tcreated_at\tupdated_at",
 
         [self.paths.conquest_occupations] =
-            "node_id\toriginal_owner\toccupying_guild\twar_id\tstate\tprevious_state\toccupation_started_at\tremaining_seconds\tlast_resumed_at\tloot_manifest_id\tfrontline_state\tupdated_at",
+            "node_id\toriginal_owner\toccupying_guild\twar_id\tstate\tprevious_state\toccupation_started_at\tremaining_seconds\tlast_resumed_at\tloot_manifest_id\tfrontline_state\tupdated_at\tcounter_flag_reference\tcounter_remaining_seconds\tcounter_last_resumed_at\tcounter_flag_x\tcounter_flag_y\tcounter_flag_z",
 
         [self.paths.conquest_loot] =
             "manifest_id\tnode_id\twar_id\towner_guild\tstate\tcreated_at\textracted_at",

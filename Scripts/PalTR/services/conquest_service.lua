@@ -298,11 +298,23 @@ function Conquest:status_for_guild(guild_key, now)
                     remaining - math.max(0, now - occupation.last_resumed_at)
                 )
             end
+            local counter_remaining = occupation.counter_remaining_seconds
+            if occupation.state == States.OCCUPATION.COUNTER_ATTACK
+                and occupation.counter_last_resumed_at > 0 then
+                counter_remaining = math.max(
+                    0,
+                    counter_remaining - math.max(
+                        0,
+                        now - occupation.counter_last_resumed_at
+                    )
+                )
+            end
 
             table.insert(status.occupations, {
                 node_id = occupation.node_id,
                 state = occupation.state,
                 remaining_seconds = remaining,
+                counter_remaining_seconds = counter_remaining,
                 original_owner = occupation.original_owner,
                 occupying_guild = occupation.occupying_guild,
                 updated_at = occupation.updated_at
@@ -370,6 +382,12 @@ function Conquest:_flag_reference_exists(reference)
     for _, node in pairs(self.nodes) do
         if node.flag_reference == reference
             or node.legacy_flag_reference == reference then
+            return true
+        end
+    end
+
+    for _, occupation in pairs(self.occupations) do
+        if text(occupation.counter_flag_reference) == reference then
             return true
         end
     end
@@ -896,7 +914,39 @@ function Conquest:write_damage_policy(now)
         end
     end
 
+    local occupations = {}
+    for _, occupation in pairs(self.occupations) do
+        if occupation.state == States.OCCUPATION.COUNTER_ATTACK
+            and text(occupation.counter_flag_reference) ~= "" then
+            table.insert(occupations, occupation)
+        end
+    end
+    table.sort(occupations, function(first, second)
+        return first.node_id < second.node_id
+    end)
+    for _, occupation in ipairs(occupations) do
+        table.insert(lines, TSV.encode({
+            occupation.counter_flag_reference,
+            occupation.node_id,
+            occupation.original_owner,
+            occupation.occupying_guild
+        }))
+    end
+
     return FileIO.overwrite(self.paths.conquest_damage_policy, lines)
+end
+
+function Conquest:_cancel_counter_attack(occupation, now)
+    occupation.state = States.OCCUPATION.OCCUPIED
+    occupation.frontline_state = "HELD"
+    occupation.counter_flag_reference = ""
+    occupation.counter_remaining_seconds = 0
+    occupation.counter_last_resumed_at = 0
+    occupation.counter_flag_x = 0
+    occupation.counter_flag_y = 0
+    occupation.counter_flag_z = 0
+    occupation.updated_at = now
+    self:_event("FAZ05_COUNTER_ATTACK_FAILED", occupation.node_id)
 end
 
 function Conquest:process_runtime_events(now)
@@ -934,6 +984,7 @@ function Conquest:process_runtime_events(now)
 
     local processed = 0
     local cleared_legacy_reference = false
+    local changed_occupations = false
 
     for index, line in ipairs(loaded.value or {}) do
         if index > 1 and line ~= "" then
@@ -943,6 +994,19 @@ function Conquest:process_runtime_events(now)
             local reference = text(columns[3])
 
             if marker == "FLAG_DISPOSED" and reference ~= "" then
+                for _, occupation in pairs(self.occupations) do
+                    if occupation.state == States.OCCUPATION.COUNTER_ATTACK
+                        and text(occupation.counter_flag_reference) == reference then
+                        self:_cancel_counter_attack(
+                            occupation,
+                            event_at > 0 and event_at or now
+                        )
+                        changed_occupations = true
+                        processed = processed + 1
+                        break
+                    end
+                end
+
                 local node = self:node_for_flag_reference(reference)
 
                 if node then
@@ -985,6 +1049,10 @@ function Conquest:process_runtime_events(now)
 
     if cleared_legacy_reference then
         local saved = self.repository:save_nodes(self.nodes)
+        if not saved.ok then return saved end
+    end
+    if changed_occupations then
+        local saved = self:_save_occupations()
         if not saved.ok then return saved end
     end
 
@@ -1074,7 +1142,13 @@ function Conquest:_create_occupation(campaign, node, now)
         last_resumed_at = now,
         loot_manifest_id = manifest.manifest_id,
         frontline_state = "HELD",
-        updated_at = now
+        updated_at = now,
+        counter_flag_reference = "",
+        counter_remaining_seconds = 0,
+        counter_last_resumed_at = 0,
+        counter_flag_x = 0,
+        counter_flag_y = 0,
+        counter_flag_z = 0
     }
 
     self.occupations[node.node_id] = occupation
@@ -1134,6 +1208,12 @@ function Conquest:_capital_defeated(campaign, capital, now)
             occupation.last_resumed_at = 0
             occupation.frontline_state = "FINALIZED"
             occupation.updated_at = now
+            occupation.counter_flag_reference = ""
+            occupation.counter_remaining_seconds = 0
+            occupation.counter_last_resumed_at = 0
+            occupation.counter_flag_x = 0
+            occupation.counter_flag_y = 0
+            occupation.counter_flag_z = 0
         end
     end
 
@@ -1198,6 +1278,18 @@ function Conquest:_pause_occupations(war_id, now)
                 0,
                 occupation.remaining_seconds - elapsed
             )
+            if occupation.state == States.OCCUPATION.COUNTER_ATTACK
+                and occupation.counter_last_resumed_at > 0 then
+                local counter_elapsed = math.max(
+                    0,
+                    now - occupation.counter_last_resumed_at
+                )
+                occupation.counter_remaining_seconds = math.max(
+                    0,
+                    occupation.counter_remaining_seconds - counter_elapsed
+                )
+                occupation.counter_last_resumed_at = 0
+            end
             occupation.previous_state = occupation.state
             occupation.state = States.OCCUPATION.PAUSED
             occupation.last_resumed_at = 0
@@ -1216,7 +1308,12 @@ function Conquest:_resume_occupations(war_id, now)
                 or States.OCCUPATION.OCCUPIED
             occupation.previous_state = ""
             occupation.last_resumed_at = now
-            occupation.frontline_state = "HELD"
+            if occupation.state == States.OCCUPATION.COUNTER_ATTACK then
+                occupation.counter_last_resumed_at = now
+                occupation.frontline_state = "COUNTER_ATTACK"
+            else
+                occupation.frontline_state = "HELD"
+            end
             occupation.updated_at = now
         end
     end
@@ -1232,6 +1329,12 @@ function Conquest:_finalize_occupation(occupation, now)
     occupation.last_resumed_at = 0
     occupation.frontline_state = "FINALIZED"
     occupation.updated_at = now
+    occupation.counter_flag_reference = ""
+    occupation.counter_remaining_seconds = 0
+    occupation.counter_last_resumed_at = 0
+    occupation.counter_flag_x = 0
+    occupation.counter_flag_y = 0
+    occupation.counter_flag_z = 0
     node.state = States.NODE.CONQUERED
     node.current_controller = occupation.occupying_guild
     node.guild_key = occupation.occupying_guild
@@ -1255,6 +1358,13 @@ function Conquest:_resolve_peace(campaign, now)
                     node.current_controller = occupation.original_owner
                     node.guild_key = occupation.original_owner
                     node.state = States.NODE.RESTORED
+                    if text(occupation.counter_flag_reference) ~= "" then
+                        node.flag_reference = occupation.counter_flag_reference
+                        node.flag_state = States.FLAG.BOUND
+                        node.x = number(occupation.counter_flag_x)
+                        node.y = number(occupation.counter_flag_y)
+                        node.z = number(occupation.counter_flag_z)
+                    end
                     node.updated_at = now
                 end
                 occupation.state = States.OCCUPATION.RESTORED
@@ -1262,6 +1372,12 @@ function Conquest:_resolve_peace(campaign, now)
                 occupation.last_resumed_at = 0
                 occupation.frontline_state = "RESTORED"
                 occupation.updated_at = now
+                occupation.counter_flag_reference = ""
+                occupation.counter_remaining_seconds = 0
+                occupation.counter_last_resumed_at = 0
+                occupation.counter_flag_x = 0
+                occupation.counter_flag_y = 0
+                occupation.counter_flag_z = 0
             end
         end
     end
@@ -1316,7 +1432,26 @@ function Conquest:_counter_attack_window(occupation, now)
     return Result.ok(campaign)
 end
 
-function Conquest:start_counter_attack(node_id, guild_key, actor_role, now)
+function Conquest:nearest_counter_attack_node(guild_key, location)
+    local nearest = nil
+    local nearest_distance = math.huge
+    for _, occupation in pairs(self.occupations) do
+        if occupation.original_owner == text(guild_key)
+            and occupation.state == States.OCCUPATION.OCCUPIED then
+            local node = self.nodes[occupation.node_id]
+            if node then
+                local current = Rules.distance(node, location or {})
+                if current < nearest_distance then
+                    nearest = node
+                    nearest_distance = current
+                end
+            end
+        end
+    end
+    return nearest, nearest_distance
+end
+
+function Conquest:start_counter_attack(node_id, guild_key, actor_role, flag, now)
     local authorized = self:_authorized(actor_role)
     if not authorized.ok then return authorized end
 
@@ -1333,13 +1468,105 @@ function Conquest:start_counter_attack(node_id, guild_key, actor_role, now)
     local window = self:_counter_attack_window(occupation, now)
     if not window.ok then return window end
 
+    flag = flag or {}
+    local reference = text(flag.flag_reference)
+    if reference == "" or text(flag.guild_key) ~= guild_key then
+        return Result.err(
+            "COUNTER_FLAG_OWNER_MISMATCH",
+            "Karsi saldiri bayragi eski sahibi klana ait olmali"
+        )
+    end
+    if self:_flag_reference_exists(reference) then
+        return Result.err(
+            "FLAG_ALREADY_REGISTERED",
+            "Bu Klan Bayragi zaten fetih sistemine kayitli"
+        )
+    end
+
+    local node = self.nodes[occupation.node_id]
+    local maximum = number(self.config.counter_attack_flag_radius_meters)
+    if maximum <= 0 or not node or Rules.distance(node, flag) > maximum then
+        return Result.err(
+            "COUNTER_FLAG_NOT_NEAR",
+            "Karsi saldiri bayragi isgal noktasina yeterince yakin degil"
+        )
+    end
+
+    local hold_seconds = number(self.config.counter_attack_hold_seconds)
+    if hold_seconds <= 0 then
+        return Result.err(
+            "COUNTER_HOLD_INVALID",
+            "Karsi saldiri koruma suresi gecersiz"
+        )
+    end
+
     occupation.state = States.OCCUPATION.COUNTER_ATTACK
     occupation.frontline_state = "COUNTER_ATTACK"
+    occupation.counter_flag_reference = reference
+    occupation.counter_remaining_seconds = hold_seconds
+    occupation.counter_last_resumed_at = now
+    occupation.counter_flag_x = number(flag.x)
+    occupation.counter_flag_y = number(flag.y)
+    occupation.counter_flag_z = number(flag.z)
     occupation.updated_at = now
     local saved = self:_save_occupations()
     if not saved.ok then return saved end
-    self:_event("FAZ05_COUNTER_ATTACK", node_id)
+    self:_event("FAZ05_COUNTER_ATTACK", node_id .. "|" .. reference)
     return Result.ok(occupation)
+end
+
+function Conquest:_apply_occupation_restore(occupation, now)
+    local node = self.nodes[occupation.node_id]
+    if not node then return Result.err("NODE_NOT_FOUND", "Isgal node'u yok") end
+
+    local replacement = text(occupation.counter_flag_reference)
+    node.current_controller = occupation.original_owner
+    node.guild_key = occupation.original_owner
+    node.state = States.NODE.RESTORED
+    node.flag_reference = replacement
+    node.flag_state = States.FLAG.BOUND
+    node.x = number(occupation.counter_flag_x)
+    node.y = number(occupation.counter_flag_y)
+    node.z = number(occupation.counter_flag_z)
+    node.updated_at = now
+    occupation.state = States.OCCUPATION.RESTORED
+    occupation.previous_state = ""
+    occupation.remaining_seconds = 0
+    occupation.last_resumed_at = 0
+    occupation.frontline_state = "RESTORED"
+    occupation.updated_at = now
+    occupation.counter_flag_reference = ""
+    occupation.counter_remaining_seconds = 0
+    occupation.counter_last_resumed_at = 0
+    occupation.counter_flag_x = 0
+    occupation.counter_flag_y = 0
+    occupation.counter_flag_z = 0
+
+    local manifest = self.loot_manifests[occupation.loot_manifest_id]
+    if manifest and manifest.state ~= States.LOOT.EXTRACTED then
+        local recovered = Loot.recover(
+            manifest,
+            occupation.original_owner,
+            occupation.original_owner
+        )
+        if not recovered.ok then return recovered end
+    end
+
+    for _, campaign in pairs(self.campaigns) do
+        if campaign.war_id == occupation.war_id
+            and campaign.active_target_node_id ~= "" then
+            local target = self.nodes[campaign.active_target_node_id]
+            if target and not self:_reachable(campaign, target) then
+                target.state = States.NODE.PROTECTED
+                target.updated_at = now
+                campaign.active_target_node_id = ""
+                campaign.updated_at = now
+            end
+        end
+    end
+
+    self:_event("FAZ05_OCCUPATION_RESTORED", occupation.node_id)
+    return Result.ok(node)
 end
 
 function Conquest:restore_occupation(node_id, guild_key, actor_role, now)
@@ -1357,45 +1584,27 @@ function Conquest:restore_occupation(node_id, guild_key, actor_role, now)
     now = self:_now(now)
     local window = self:_counter_attack_window(occupation, now)
     if not window.ok then return window end
-
-    local node = self.nodes[occupation.node_id]
-    node.current_controller = occupation.original_owner
-    node.guild_key = occupation.original_owner
-    node.state = States.NODE.RESTORED
-    node.updated_at = now
-    occupation.state = States.OCCUPATION.RESTORED
-    occupation.previous_state = ""
-    occupation.remaining_seconds = 0
-    occupation.last_resumed_at = 0
-    occupation.frontline_state = "RESTORED"
-    occupation.updated_at = now
-
-    local manifest = self.loot_manifests[occupation.loot_manifest_id]
-    if manifest and manifest.state ~= States.LOOT.EXTRACTED then
-        Loot.recover(manifest, guild_key, occupation.original_owner)
-        self:_save_loot()
+    local elapsed = math.max(0, now - occupation.counter_last_resumed_at)
+    if occupation.counter_last_resumed_at <= 0
+        or elapsed < occupation.counter_remaining_seconds then
+        return Result.err(
+            "COUNTER_ATTACK_HOLD_ACTIVE",
+            "Karsi saldiri bayragi henuz yeterince korunmadi"
+        )
     end
 
-    for _, campaign in pairs(self.campaigns) do
-        if campaign.war_id == occupation.war_id
-            and campaign.active_target_node_id ~= "" then
-            local target = self.nodes[campaign.active_target_node_id]
-            if target and not self:_reachable(campaign, target) then
-                target.state = States.NODE.PROTECTED
-                target.updated_at = now
-                campaign.active_target_node_id = ""
-                campaign.updated_at = now
-            end
-        end
-    end
+    local restored = self:_apply_occupation_restore(occupation, now)
+    if not restored.ok then return restored end
 
     local nodes = self.repository:save_nodes(self.nodes)
     if not nodes.ok then return nodes end
     local occupations = self:_save_occupations()
     if not occupations.ok then return occupations end
-    self:_save_campaigns()
-    self:_event("FAZ05_OCCUPATION_RESTORED", node_id)
-    return Result.ok(node)
+    local campaigns = self:_save_campaigns()
+    if not campaigns.ok then return campaigns end
+    local loot = self:_save_loot()
+    if not loot.ok then return loot end
+    return restored
 end
 
 function Conquest:mark_loot_in_transit(manifest_id, guild_key)
@@ -1486,8 +1695,23 @@ function Conquest:tick(now)
             or occupation.state == States.OCCUPATION.COUNTER_ATTACK then
             local elapsed = math.max(0, now - occupation.last_resumed_at)
             if elapsed >= occupation.remaining_seconds then
-                self:_finalize_occupation(occupation, now)
+                local finalized = self:_finalize_occupation(occupation, now)
+                if not finalized.ok then return finalized end
                 changed = true
+            elseif occupation.state == States.OCCUPATION.COUNTER_ATTACK
+                and occupation.counter_last_resumed_at > 0 then
+                local counter_elapsed = math.max(
+                    0,
+                    now - occupation.counter_last_resumed_at
+                )
+                if counter_elapsed >= occupation.counter_remaining_seconds then
+                    local restored = self:_apply_occupation_restore(
+                        occupation,
+                        now
+                    )
+                    if not restored.ok then return restored end
+                    changed = true
+                end
             end
         end
     end

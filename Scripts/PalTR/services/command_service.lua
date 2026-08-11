@@ -314,6 +314,40 @@ function CommandService:_rebind_conquered_flag(player)
         result.value.node_id
 end
 
+function CommandService:_start_counter_attack(player)
+    local role, role_error = self:_conquest_role(player)
+    if not role then return false, role_error end
+
+    local nearby = self.conquest_flags:nearest_owned_candidate(
+        player,
+        self.registry,
+        self.conquest.config
+    )
+    if not nearby.ok then return false, nearby.error.message end
+
+    local node = self.conquest:nearest_counter_attack_node(
+        player.guild_key,
+        nearby.value
+    )
+    if not node then
+        return false, "Klanina ait geri alinabilir isgal noktasi bulunamadi"
+    end
+
+    local result = self.conquest:start_counter_attack(
+        node.node_id,
+        player.guild_key,
+        role,
+        nearby.value,
+        Clock.now()
+    )
+    if not result.ok then return false, result.error.message end
+
+    return true,
+        "Karsi saldiri basladi. Bayragi " ..
+        format_duration(result.value.counter_remaining_seconds) ..
+        " koru: " .. node.node_id
+end
+
 function CommandService:_conquest_status_message(player)
     local ok, error_message = self:_require_identity(player)
     if not ok then return false, error_message end
@@ -360,6 +394,13 @@ function CommandService:_conquest_status_message(player)
                 "(" .. occupation.state .. ", " ..
                 format_duration(occupation.remaining_seconds) .. ")"
         )
+        if occupation.state == ConquestStates.OCCUPATION.COUNTER_ATTACK then
+            table.insert(
+                parts,
+                "KarsiSaldiri=" ..
+                    format_duration(occupation.counter_remaining_seconds)
+            )
+        end
     end
 
     return true, table.concat(parts, " | ")
@@ -637,7 +678,7 @@ function CommandService:on_chat(
             true,
             "!durum | !klanlar | !iliskiler | !yardim | " ..
             "!fetihdurum | !bayrakaday | !baskent | !karakol | " ..
-            "!fetihbayragi | " ..
+            "!fetihbayragi | !karsisaldiri | " ..
             "!fetih KLAN | !kusatmakampi KLAN | !fetihedef KLAN | " ..
             "!savas KLAN | !ateskes KLAN | " ..
             "!ateskesboz KLAN | !baris KLAN | " ..
@@ -701,6 +742,12 @@ function CommandService:on_chat(
 
     if command.action == "REBIND_CONQUERED_FLAG" then
         local ok, response = self:_rebind_conquered_flag(player)
+        self:_respond(controller, player, command.raw, ok, response)
+        return
+    end
+
+    if command.action == "START_COUNTER_ATTACK" then
+        local ok, response = self:_start_counter_attack(player)
         self:_respond(controller, player, command.raw, ok, response)
         return
     end

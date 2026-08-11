@@ -33,6 +33,8 @@ return {
         raid_window_start = "20:00",
         raid_window_end = "00:00",
         occupation_hold_seconds = 86400,
+        counter_attack_hold_seconds = 600,
+        counter_attack_flag_radius_meters = 30,
         outpost_link_max_distance_meters = 1500,
         conquest_zone_radius_meters = 150,
         siege_min_distance_from_target_meters = 250,

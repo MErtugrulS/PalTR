@@ -51,6 +51,8 @@ local function make_config(maximum)
             raid_window_start = "00:00",
             raid_window_end = "00:00",
             occupation_hold_seconds = 10,
+            counter_attack_hold_seconds = 1,
+            counter_attack_flag_radius_meters = 30,
             outpost_link_max_distance_meters = 1500,
             conquest_zone_radius_meters = 150,
             siege_min_distance_from_target_meters = 250,
@@ -316,7 +318,46 @@ equal(first_manifest.state, States.LOOT.CREATED, "G loot created")
 
 equal(
     service:start_counter_attack(
-        "B_OUTPOST_1", "GUILD_B", "COMMANDER", 23
+        "B_OUTPOST_1",
+        "GUILD_B",
+        "LEADER",
+        {
+            flag_reference = "WRONG_OWNER_FLAG",
+            guild_key = "GUILD_A",
+            x = 0, y = 0, z = 0
+        },
+        23
+    ).error.code,
+    "COUNTER_FLAG_OWNER_MISMATCH",
+    "H foreign flag cannot start counter attack"
+)
+equal(
+    service:start_counter_attack(
+        "B_OUTPOST_1",
+        "GUILD_B",
+        "LEADER",
+        {
+            flag_reference = "DISTANT_COUNTER_FLAG",
+            guild_key = "GUILD_B",
+            x = 100, y = 0, z = 0
+        },
+        23
+    ).error.code,
+    "COUNTER_FLAG_NOT_NEAR",
+    "H distant flag cannot start counter attack"
+)
+
+equal(
+    service:start_counter_attack(
+        "B_OUTPOST_1",
+        "GUILD_B",
+        "COMMANDER",
+        {
+            flag_reference = "B_COUNTER_FLAG_1",
+            guild_key = "GUILD_B",
+            x = 0, y = 0, z = 0
+        },
+        23
     ).ok,
     true,
     "H counter attack starts"
@@ -328,37 +369,67 @@ equal(
     "OCCUPATION_EXPIRED",
     "H expired counter attack cannot restore"
 )
-relation.state = DiplomacyStates.CEASEFIRE
+equal(service:write_damage_policy(23).ok, true, "H counter flag policy written")
+local counter_policy_file = assert(io.open(paths.conquest_damage_policy, "r"))
+local counter_policy = counter_policy_file:read("*a")
+counter_policy_file:close()
+equal(
+    counter_policy:find(
+        "B_COUNTER_FLAG_1\tB_OUTPOST_1\tGUILD_B\tGUILD_A",
+        1,
+        true
+    ) ~= nil,
+    true,
+    "H occupier may destroy counter flag"
+)
+local counter_event_file = assert(io.open(paths.conquest_runtime_events, "w"))
+counter_event_file:write(
+    "timestamp\tmarker\tflag_reference\n" ..
+    "24\tFLAG_DISPOSED\tB_COUNTER_FLAG_1\n"
+)
+counter_event_file:close()
+equal(service:process_runtime_events(24).value, 1, "H destroyed counter flag handled")
+equal(service.occupations.B_OUTPOST_1.state, States.OCCUPATION.OCCUPIED, "H failed counter returns to occupation")
+equal(
+    service:start_counter_attack(
+        "B_OUTPOST_1",
+        "GUILD_B",
+        "LEADER",
+        {
+            flag_reference = "B_FLAG_1_REBUILT",
+            guild_key = "GUILD_B",
+            x = 0, y = 0, z = 0
+        },
+        24
+    ).ok,
+    true,
+    "H counter attack can be retried"
+)
 equal(
     service:restore_occupation(
         "B_OUTPOST_1", "GUILD_B", "LEADER", 24
+    ).error.code,
+    "COUNTER_ATTACK_HOLD_ACTIVE",
+    "H counter flag cannot restore before hold completes"
+)
+relation.state = DiplomacyStates.CEASEFIRE
+equal(
+    service:restore_occupation(
+        "B_OUTPOST_1", "GUILD_B", "LEADER", 25
     ).error.code,
     "WAR_NOT_ACTIVE",
     "H ceasefire blocks restore before scheduler tick"
 )
 relation.state = DiplomacyStates.WAR
 equal(
-    service:restore_occupation(
-        "B_OUTPOST_1", "GUILD_B", "LEADER", 24
-    ).ok,
+    service:tick(25).ok,
     true,
-    "H occupation restored"
+    "H scheduler restores completed counter attack"
 )
 equal(service.nodes.B_OUTPOST_1.current_controller, "GUILD_B", "H owner restored")
 equal(first_manifest.state, States.LOOT.RECOVERED, "H loot recovered")
-
-local defender_rebind = service:rebind_conquered_flag({
-    guild_key = "GUILD_B",
-    actor_role = "LEADER",
-    flag = {
-        flag_reference = "B_FLAG_1_REBUILT",
-        guild_key = "GUILD_B",
-        x = 0, y = 0, z = 0
-    },
-    now = 24
-})
-equal(defender_rebind.ok, true, "H restored owner plants replacement flag")
 equal(service.nodes.B_OUTPOST_1.flag_state, States.FLAG.BOUND, "H flag rebound")
+equal(service.nodes.B_OUTPOST_1.flag_reference, "B_FLAG_1_REBUILT", "H counter flag becomes restored flag")
 
 equal(
     service:select_target(
@@ -381,11 +452,29 @@ equal(
     "outpost occupied again"
 )
 
+service.config.counter_attack_hold_seconds = 10
+equal(
+    service:start_counter_attack(
+        "B_OUTPOST_1",
+        "GUILD_B",
+        "LEADER",
+        {
+            flag_reference = "B_COUNTER_FLAG_PAUSED",
+            guild_key = "GUILD_B",
+            x = 0, y = 0, z = 0
+        },
+        27
+    ).ok,
+    true,
+    "J counter attack starts before ceasefire"
+)
+
 relation.state = DiplomacyStates.CEASEFIRE
 relation.previous_state = DiplomacyStates.WAR
 equal(service:tick(31).ok, true, "J ceasefire tick")
 equal(campaign.state, States.CAMPAIGN.CEASEFIRE_PAUSED, "J campaign paused")
 equal(service.occupations.B_OUTPOST_1.remaining_seconds, 5, "J timer frozen")
+equal(service.occupations.B_OUTPOST_1.counter_remaining_seconds, 6, "J counter timer frozen")
 
 local second_manifest = service.loot_manifests[
     service.occupations.B_OUTPOST_1.loot_manifest_id
@@ -406,6 +495,7 @@ equal(service:tick(130).ok, true, "K rearm completes")
 equal(campaign.state, States.CAMPAIGN.ACTIVE, "K campaign resumes")
 equal(service:tick(135).ok, true, "I occupation finalizes")
 equal(service.nodes.B_OUTPOST_1.state, States.NODE.CONQUERED, "I node conquered")
+equal(service.occupations.B_OUTPOST_1.counter_flag_reference, "", "I expired occupation clears counter flag")
 equal(service.nodes.B_OUTPOST_1.flag_state, States.FLAG.MISSING, "I conquered flag awaits replacement")
 
 equal(

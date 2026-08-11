@@ -125,7 +125,13 @@ local occupation = {
     last_resumed_at = 0,
     loot_manifest_id = "LOOT_B",
     frontline_state = "PAUSED",
-    updated_at = 200
+    updated_at = 200,
+    counter_flag_reference = "COUNTER_FLAG",
+    counter_remaining_seconds = 60,
+    counter_last_resumed_at = 0,
+    counter_flag_x = 11,
+    counter_flag_y = 22,
+    counter_flag_z = 33
 }
 
 equal(
@@ -136,6 +142,21 @@ equal(
 local loaded_occupation = repository:load_occupations().NODE_B
 equal(loaded_occupation.remaining_seconds, 800, "occupation timer restored")
 equal(loaded_occupation.previous_state, "OCCUPIED", "pause state restored")
+equal(loaded_occupation.counter_flag_reference, "COUNTER_FLAG", "counter flag restored")
+equal(loaded_occupation.counter_remaining_seconds, 60, "counter timer restored")
+equal(loaded_occupation.counter_flag_y, 22, "counter location restored")
+
+local legacy_occupation = assert(io.open(paths.conquest_occupations, "w"))
+legacy_occupation:write(
+    "node_id\toriginal_owner\toccupying_guild\twar_id\tstate\tprevious_state\toccupation_started_at\tremaining_seconds\tlast_resumed_at\tloot_manifest_id\tfrontline_state\tupdated_at\n" ..
+    "LEGACY_COUNTER\tGUILD_B\tGUILD_A\tWAR\tCOUNTER_ATTACK\t\t100\t800\t100\tLOOT_B\tCOUNTER_ATTACK\t200\n"
+)
+legacy_occupation:close()
+equal(
+    repository:load_occupations().LEGACY_COUNTER.state,
+    "OCCUPIED",
+    "legacy counter attack without physical flag fails closed"
+)
 
 local manifest = {
     manifest_id = "LOOT_B",

@@ -36,6 +36,11 @@ equal(
     "REBIND_CONQUERED_FLAG",
     "captured flag parse"
 )
+equal(
+    Parser.parse("!karsisaldiri").value.action,
+    "START_COUNTER_ATTACK",
+    "counter attack parse"
+)
 
 local registry = { guilds = {}, runtime_players = {} }
 local conquest = {
@@ -60,6 +65,18 @@ end
 function conquest:rebind_conquered_flag(request)
     self.rebound = request
     return Result.ok({ node_id = "CAPTURED_B" })
+end
+function conquest:nearest_counter_attack_node()
+    return { node_id = "OCCUPIED_B" }, 5
+end
+function conquest:start_counter_attack(node_id, guild_key, role, flag)
+    self.counter_attack = {
+        node_id = node_id,
+        guild_key = guild_key,
+        role = role,
+        flag = flag
+    }
+    return Result.ok({ counter_remaining_seconds = 60 })
 end
 function conquest:nodes_for_controller(guild_key)
     local result = {}
@@ -123,7 +140,7 @@ local nearby = {
 }
 function nearby:nearest_owned_flag() return Result.ok(self.current) end
 function nearby:nearest_owned_candidate()
-    return Result.ok({ actor_reference = "VerifiedFlagClass_C Instance" })
+    return Result.ok(self.current)
 end
 
 local build_objects = {}
@@ -147,6 +164,7 @@ local service = CommandService.new(
 )
 
 local leader = { guild_key = "A", role = 1, is_master = true }
+nearby.current.actor_reference = "VerifiedFlagClass_C Instance"
 local ok, message = service:_register_nearest_conquest_flag(
     leader,
     States.NODE_TYPE.CAPITAL
@@ -161,6 +179,7 @@ nearby.current = {
     flag_reference = "FLAG_B",
     guild_key = "A",
     name = "Bravo",
+    actor_reference = "VerifiedFlagClass_C Instance",
     x = 100, y = 0, z = 0
 }
 local deputy = { guild_key = "A", role = 2, is_master = false }
@@ -228,6 +247,24 @@ equal(
     message,
     "Fethedilen karakola yeni Klan Bayragi baglandi: CAPTURED_B",
     "rebind response"
+)
+
+nearby.current = {
+    node_id = "COUNTER_FLAG",
+    flag_reference = "COUNTER_FLAG",
+    guild_key = "A",
+    name = "Klan Bayragi",
+    actor_reference = "CounterFlagClass_C Instance",
+    x = 25, y = 20, z = 30
+}
+ok, message = service:_start_counter_attack(deputy)
+equal(ok, true, "deputy starts physical counter attack")
+equal(conquest.counter_attack.node_id, "OCCUPIED_B", "occupied node forwarded")
+equal(conquest.counter_attack.flag.flag_reference, "COUNTER_FLAG", "counter flag forwarded")
+equal(
+    message,
+    "Karsi saldiri basladi. Bayragi 1 dk koru: OCCUPIED_B",
+    "counter attack response"
 )
 
 os.remove("conquest_command_responses.tsv")
