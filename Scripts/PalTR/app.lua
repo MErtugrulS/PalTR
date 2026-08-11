@@ -14,6 +14,7 @@ local DamageObserver = require("PalTR.services.damage_observer")
 local DamagePolicy = require("PalTR.services.damage_policy")
 local ProtectionService = require("PalTR.services.protection_service")
 local ConquestService = require("PalTR.services.conquest_service")
+local TerritoryService = require("PalTR.services.territory_service")
 local Scheduler = require("PalTR.services.scheduler")
 
 local App = {}
@@ -58,6 +59,14 @@ function App.new(config)
         Logger.new("Conquest")
     )
 
+    local territory = TerritoryService.new(
+        paths,
+        config,
+        registry,
+        conquest,
+        Logger.new("Territory")
+    )
+
     return setmetatable({
         config = config,
         paths = paths,
@@ -69,6 +78,7 @@ function App.new(config)
         damage_policy = damage_policy,
         protection = protection,
         conquest = conquest,
+        territory = territory,
 
         commands = CommandService.new(
             paths,
@@ -385,6 +395,14 @@ function App:_tick()
             tostring(policy_result.error)
         )
     end
+
+    local territory_result = self.territory:refresh()
+    if not territory_result.ok then
+        self.logger:error(
+            "FAZ05_TERRITORY_REFRESH_FAILED | " ..
+            tostring(territory_result.error)
+        )
+    end
 end
 
 function App:start()
@@ -400,6 +418,13 @@ function App:start()
         self.logger:error(
             "FAZ05_DAMAGE_POLICY_INITIAL_WRITE_FAILED | " ..
             tostring(initial_policy.error)
+        )
+    end
+    local initial_territory = self.territory:refresh()
+    if not initial_territory.ok then
+        self.logger:error(
+            "FAZ05_TERRITORY_INITIAL_WRITE_FAILED | " ..
+            tostring(initial_territory.error)
         )
     end
     self:_register_hooks()
