@@ -33,8 +33,13 @@ equal(
 equal(Parser.parse("!bayrakaday").value.action, "FLAG_CANDIDATE", "candidate parse")
 equal(
     Parser.parse("!fetihbayragi").value.action,
-    "REBIND_CONQUERED_FLAG",
+    "REBIND_MISSING_FLAG",
     "captured flag parse"
+)
+equal(
+    Parser.parse("!bayrakyenile").value.action,
+    "REBIND_MISSING_FLAG",
+    "missing flag alias parse"
 )
 equal(
     Parser.parse("!karsisaldiri").value.action,
@@ -62,7 +67,7 @@ function conquest:register_node(request)
     self.nodes[request.node_id] = request
     return Result.ok(request)
 end
-function conquest:rebind_conquered_flag(request)
+function conquest:rebind_missing_flag(request)
     self.rebound = request
     return Result.ok({ node_id = "CAPTURED_B" })
 end
@@ -239,13 +244,13 @@ nearby.current = {
     name = "Klan Bayragi",
     x = 15, y = 20, z = 30
 }
-ok, message = service:_rebind_conquered_flag(deputy)
+ok, message = service:_rebind_missing_flag(deputy)
 equal(ok, true, "deputy rebinds captured flag")
 equal(conquest.rebound.actor_role, "DEPUTY_LEADER", "rebind role forwarded")
 equal(conquest.rebound.flag.flag_reference, "NEW_FLAG", "new flag forwarded")
 equal(
     message,
-    "Fethedilen karakola yeni Klan Bayragi baglandi: CAPTURED_B",
+    "Eksik stratejik node'a yeni Klan Bayragi baglandi: CAPTURED_B",
     "rebind response"
 )
 

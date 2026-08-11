@@ -23,7 +23,7 @@ return {
         flag_candidate_actor_class_tokens = {
             "BP_BuildObject_Signboard"
         },
-        captured_flag_rebind_radius_meters = 30,
+        flag_rebind_radius_meters = 30,
         siege_camp_interaction_radius_meters = 20,
         siege_camp_actor_class_tokens = {
             "BP_BuildObject_WorkBench_C"

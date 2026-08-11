@@ -291,7 +291,7 @@ function CommandService:_register_nearest_conquest_flag(player, node_type)
         (camp.name ~= "" and camp.name or camp.node_id)
 end
 
-function CommandService:_rebind_conquered_flag(player)
+function CommandService:_rebind_missing_flag(player)
     local role, role_error = self:_conquest_role(player)
     if not role then return false, role_error end
 
@@ -302,7 +302,7 @@ function CommandService:_rebind_conquered_flag(player)
     )
     if not nearby.ok then return false, nearby.error.message end
 
-    local result = self.conquest:rebind_conquered_flag({
+    local result = self.conquest:rebind_missing_flag({
         guild_key = player.guild_key,
         actor_role = role,
         flag = nearby.value,
@@ -310,7 +310,7 @@ function CommandService:_rebind_conquered_flag(player)
     })
     if not result.ok then return false, result.error.message end
 
-    return true, "Fethedilen karakola yeni Klan Bayragi baglandi: " ..
+    return true, "Eksik stratejik node'a yeni Klan Bayragi baglandi: " ..
         result.value.node_id
 end
 
@@ -678,7 +678,7 @@ function CommandService:on_chat(
             true,
             "!durum | !klanlar | !iliskiler | !yardim | " ..
             "!fetihdurum | !bayrakaday | !baskent | !karakol | " ..
-            "!fetihbayragi | !karsisaldiri | " ..
+            "!bayrakyenile | !fetihbayragi | !karsisaldiri | " ..
             "!fetih KLAN | !kusatmakampi KLAN | !fetihedef KLAN | " ..
             "!savas KLAN | !ateskes KLAN | " ..
             "!ateskesboz KLAN | !baris KLAN | " ..
@@ -740,8 +740,8 @@ function CommandService:on_chat(
         return
     end
 
-    if command.action == "REBIND_CONQUERED_FLAG" then
-        local ok, response = self:_rebind_conquered_flag(player)
+    if command.action == "REBIND_MISSING_FLAG" then
+        local ok, response = self:_rebind_missing_flag(player)
         self:_respond(controller, player, command.raw, ok, response)
         return
     end

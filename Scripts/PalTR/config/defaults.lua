@@ -31,7 +31,7 @@ return {
         max_outposts_per_clan = 10,
         world_units_per_meter = 100,
         flag_interaction_radius_meters = 20,
-        captured_flag_rebind_radius_meters = 30,
+        flag_rebind_radius_meters = 30,
         conquest_flag_actor_class_tokens = {
             "BP_BuildObject_Signboard_C"
         },

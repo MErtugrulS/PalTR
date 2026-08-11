@@ -486,7 +486,7 @@ function Conquest:register_node(request)
     return Result.ok(node)
 end
 
-function Conquest:rebind_conquered_flag(request)
+function Conquest:rebind_missing_flag(request)
     request = request or {}
     local authorized = self:_authorized(request.actor_role)
     if not authorized.ok then return authorized end
@@ -511,7 +511,8 @@ function Conquest:rebind_conquered_flag(request)
     for _, node in pairs(self.nodes) do
         local eligible = node.current_controller == guild_key
             and node.flag_state == States.FLAG.MISSING
-            and (node.state == States.NODE.CONQUERED
+            and (node.state == States.NODE.PROTECTED
+                or node.state == States.NODE.CONQUERED
                 or node.state == States.NODE.RESTORED)
         if eligible then
             local current = Rules.distance(node, flag)
@@ -522,11 +523,11 @@ function Conquest:rebind_conquered_flag(request)
         end
     end
 
-    local maximum = number(self.config.captured_flag_rebind_radius_meters)
+    local maximum = number(self.config.flag_rebind_radius_meters)
     if maximum <= 0 or not nearest or nearest_distance > maximum then
         return Result.err(
             "CONQUERED_NODE_NOT_NEAR",
-            "Yakinda yeniden bayrak bekleyen fethedilmis karakol yok"
+            "Yakinda yeniden bayrak bekleyen kontrollu stratejik node yok"
         )
     end
 
@@ -540,7 +541,7 @@ function Conquest:rebind_conquered_flag(request)
     local saved = self.repository:save_nodes(self.nodes)
     if not saved.ok then return saved end
 
-    self:_event("FAZ05_CAPTURED_FLAG_REBOUND", nearest.node_id .. "|" .. reference)
+    self:_event("FAZ05_FLAG_REBOUND", nearest.node_id .. "|" .. reference)
     return Result.ok(nearest)
 end
 
@@ -985,6 +986,7 @@ function Conquest:process_runtime_events(now)
     local processed = 0
     local cleared_legacy_reference = false
     local changed_occupations = false
+    local changed_nodes = false
 
     for index, line in ipairs(loaded.value or {}) do
         if index > 1 and line ~= "" then
@@ -1034,6 +1036,13 @@ function Conquest:process_runtime_events(now)
                             end
                         end
                     end
+
+                    if flag_bound(node) then
+                        node.flag_state = States.FLAG.MISSING
+                        node.updated_at = event_at > 0 and event_at or now
+                        changed_nodes = true
+                        self:_event("FAZ05_FLAG_MISSING", node.node_id)
+                    end
                 end
 
                 for _, current in pairs(self.nodes) do
@@ -1047,7 +1056,7 @@ function Conquest:process_runtime_events(now)
         end
     end
 
-    if cleared_legacy_reference then
+    if cleared_legacy_reference or changed_nodes then
         local saved = self.repository:save_nodes(self.nodes)
         if not saved.ok then return saved end
     end

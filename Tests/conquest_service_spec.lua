@@ -45,7 +45,7 @@ local function make_config(maximum)
         },
         conquest = {
             max_outposts_per_clan = maximum or 10,
-            captured_flag_rebind_radius_meters = 30,
+            flag_rebind_radius_meters = 30,
             raid_timezone = "Europe/Istanbul",
             raid_utc_offset_minutes = 180,
             raid_window_start = "00:00",
@@ -172,6 +172,32 @@ local limit = service:register_node({
 })
 equal(limit.ok, false, "N outpost limit blocks")
 equal(limit.error.code, "OUTPOST_LIMIT_REACHED", "N limit reason")
+
+local own_dispose_file = assert(io.open(paths.conquest_runtime_events, "w"))
+own_dispose_file:write(
+    "timestamp\tmarker\tflag_reference\n" ..
+    "4\tFLAG_DISPOSED\tA_FLAG_CAPITAL\n"
+)
+own_dispose_file:close()
+equal(service:process_runtime_events(4).ok, true, "registered non-target dispose processed")
+equal(service.nodes.A_CAPITAL.flag_state, States.FLAG.MISSING, "disposed capital marked missing")
+equal(service:status_for_guild("GUILD_A", 4).missing_flag_count, 1, "missing capital reported")
+equal(
+    service:rebind_missing_flag({
+        guild_key = "GUILD_A",
+        actor_role = "LEADER",
+        flag = {
+            flag_reference = "A_FLAG_CAPITAL_REBUILT",
+            guild_key = "GUILD_A",
+            x = -2000, y = 0, z = 0
+        },
+        now = 5
+    }).ok,
+    true,
+    "protected missing capital accepts replacement flag"
+)
+equal(service.nodes.A_CAPITAL.flag_state, States.FLAG.BOUND, "replacement capital bound")
+equal(service:status_for_guild("GUILD_A", 5).missing_flag_count, 0, "missing capital cleared")
 
 local unauthorized = service:start_campaign(
     "GUILD_A", "GUILD_B", "MEMBER", 10
@@ -505,7 +531,7 @@ equal(
 )
 
 equal(
-    service:rebind_conquered_flag({
+    service:rebind_missing_flag({
         guild_key = "GUILD_A",
         actor_role = "COMMANDER",
         flag = {
@@ -555,7 +581,7 @@ equal(
     "winner may remove transferred owner's old physical flag"
 )
 equal(
-    service:rebind_conquered_flag({
+    service:rebind_missing_flag({
         guild_key = "GUILD_A",
         actor_role = "DEPUTY_LEADER",
         flag = {
