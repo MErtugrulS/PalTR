@@ -5,8 +5,6 @@ return {
         scheduler_interval_ms = 5000,
         guild_scan_seconds = 60,
         player_validity_poll = true,
-        enable_structure_damage_probe = true,
-
         -- Faz-04 oyuncu hasar politikasini uygular.
         enable_damage_enforcement = true
     },

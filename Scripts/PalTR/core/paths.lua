@@ -17,7 +17,6 @@ function Paths.new(root)
         events = join(root, "diplomacy_events.tsv"),
         responses = join(root, "command_responses.tsv"),
         damage = join(root, "passive_damage_events.tsv"),
-        structure = join(root, "structure_damage_probe.tsv"),
         latest_status = join(root, "latest_status.txt"),
         health = join(root, "health.tsv")
     }

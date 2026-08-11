@@ -4,8 +4,6 @@ local Clock = require("PalTR.core.clock")
 local FileIO = require("PalTR.storage.file_io")
 local TSV = require("PalTR.storage.tsv")
 local HookRegistry = require("PalTR.runtime.hook_registry")
-local StructureProbe = require("PalTR.runtime.structure_probe")
-local StructurePreDamageProbe = require("PalTR.runtime.structure_predamage_probe")
 local Announcer = require("PalTR.runtime.announcer")
 local RegistryService = require("PalTR.services.registry_service")
 local DiplomacyService = require("PalTR.services.diplomacy_service")
@@ -113,9 +111,6 @@ function App:_headers()
 
         [self.paths.damage] =
             "timestamp\ttarget_path\tplayer_name\tguild_key\tdetail",
-
-        [self.paths.structure] =
-            "timestamp\tfunction\tobject_path\tguild_id\tparameters",
 
         [self.paths.health] =
             "timestamp\tversion\tstatus"
@@ -305,25 +300,6 @@ function App:_register_hooks()
             )
         end
     )
-    if self.config.runtime
-        .enable_structure_damage_probe then
-
-        StructureProbe.register(
-                self.hooks,
-                self.paths.structure,
-                self.registry,
-                self.damage_policy,
-                Logger.new("StructureProbe")
-            )
-
-            StructurePreDamageProbe.register(
-                self.hooks,
-                self.paths.structure,
-                self.registry,
-                self.damage_policy,
-                Logger.new("StructurePreDamage")
-            )
-    end
 end
 
 function App:_tick()
