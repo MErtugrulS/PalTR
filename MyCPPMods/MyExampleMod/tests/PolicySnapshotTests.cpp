@@ -31,8 +31,10 @@ int main()
 
     write_file(
         root / "player_registry.tsv",
-        "player_key\tplayer_name\tplayer_id\tplayer_uid\tguild_key\n"
-        "owner\tOwner\t1\tAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\tGUILD_A\n");
+        "player_key\tplayer_name\tplayer_id\tplayer_uid\tguild_key\trole\tis_master\tplayer_state_path\tpawn_path\n"
+        "owner\tOwner\t1\tAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\tGUILD_A\t1\ttrue\tStateA\tPawnA\n"
+        "attacker\tAttacker\t2\tBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB\tGUILD_B\t1\tfalse\tStateB\tPawnB\n"
+        "neutral\tNeutral\t3\tCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC\tGUILD_C\t1\tfalse\tStateC\tPawnC\n");
     write_file(
         root / "guild_registry.tsv",
         "guild_key\tguild_name\tguild_id\n"
@@ -53,6 +55,21 @@ int main()
         "BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB");
     ok &= expect(allied.block, "active alliance blocks");
     ok &= expect(allied.reason == "ACTIVE_ALLIANCE", "alliance reason preserved");
+
+    const auto allied_by_pawn = snapshot.evaluate_alliance_structure_damage_by_pawn(
+        "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+        "PawnB");
+    ok &= expect(allied_by_pawn.block, "active alliance blocks by attacker pawn");
+
+    const auto neutral_by_pawn = snapshot.evaluate_alliance_structure_damage_by_pawn(
+        "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+        "PawnC");
+    ok &= expect(!neutral_by_pawn.block, "neutral pawn relation allows");
+
+    const auto unknown_pawn = snapshot.evaluate_alliance_structure_damage_by_pawn(
+        "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+        "UnknownPawn");
+    ok &= expect(!unknown_pawn.block, "unresolved pawn identity fails open");
 
     const auto neutral = snapshot.evaluate_alliance_structure_damage(
         "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",

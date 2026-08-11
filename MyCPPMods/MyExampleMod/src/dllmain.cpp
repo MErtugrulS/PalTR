@@ -20,6 +20,8 @@ namespace
     constexpr auto damage_function_path =
         STR("/Script/Pal.PalNetworkMapObjectComponent:RequestDamageMapObject_ToServer");
     constexpr auto model_class_path = STR("/Script/Pal.PalMapObjectModel");
+    constexpr auto player_controller_class_path = STR("/Script/Pal.PalPlayerController");
+    constexpr auto controller_class_path = STR("/Script/Engine.Controller");
     constexpr auto data_root = "C:/PalTR-Dev/Data";
 
     std::string guid_text(const RC::Unreal::FGuid& guid)
@@ -36,6 +38,21 @@ namespace
     RC::StringType unreal_text(const std::string& value)
     {
         return RC::StringType(value.begin(), value.end());
+    }
+
+    std::string ascii_text(const RC::StringType& value)
+    {
+        std::string result;
+        result.reserve(value.size());
+        for (const auto character : value)
+        {
+            if (static_cast<unsigned int>(character) > 0x7F)
+            {
+                return {};
+            }
+            result.push_back(static_cast<char>(character));
+        }
+        return result;
     }
 
     bool is_guid_property(RC::Unreal::FProperty* property)
@@ -90,12 +107,12 @@ namespace PalTR
 
             m_hook_id = Hook::RegisterProcessEventPreCallback(
                 [this](Hook::TCallbackIterationData<void>& hook,
-                       UObject*,
+                       UObject* context,
                        UFunction* function,
                        void* parameters) {
                     if (function == m_damage_function)
                     {
-                        handle_damage_request(hook, parameters);
+                        handle_damage_request(hook, context, parameters);
                     }
                 },
                 {false, false, STR("PalTRStructureGuard"), STR("AlliedStructureDamage")});
@@ -122,8 +139,19 @@ namespace PalTR
                 nullptr,
                 nullptr,
                 model_class_path);
+            m_player_controller_class = UObjectGlobals::StaticFindObject<UClass*>(
+                nullptr,
+                nullptr,
+                player_controller_class_path);
+            m_controller_class = UObjectGlobals::StaticFindObject<UClass*>(
+                nullptr,
+                nullptr,
+                controller_class_path);
 
-            if (m_damage_function == nullptr || m_model_class == nullptr)
+            if (m_damage_function == nullptr
+                || m_model_class == nullptr
+                || m_player_controller_class == nullptr
+                || m_controller_class == nullptr)
             {
                 return false;
             }
@@ -136,11 +164,14 @@ namespace PalTR
                 FName(STR("InstanceId"), FNAME_Find));
             m_build_player_property = m_model_class->FindProperty(
                 FName(STR("BuildPlayerUId"), FNAME_Find));
+            m_controller_pawn_property = m_controller_class->FindProperty(
+                FName(STR("Pawn"), FNAME_Find));
 
             if (m_instance_id_parameter == nullptr
                 || m_info_parameter == nullptr
                 || m_model_instance_property == nullptr
-                || m_build_player_property == nullptr)
+                || m_build_player_property == nullptr
+                || m_controller_pawn_property == nullptr)
             {
                 return false;
             }
@@ -154,6 +185,7 @@ namespace PalTR
             if (!is_guid_property(m_instance_id_parameter)
                 || !is_guid_property(m_model_instance_property)
                 || !is_guid_property(m_build_player_property)
+                || CastField<FObjectPropertyBase>(m_controller_pawn_property) == nullptr
                 || info_struct->GetName() != STR("PalDamageInfo"))
             {
                 return false;
@@ -216,6 +248,7 @@ namespace PalTR
 
         void handle_damage_request(
             Hook::TCallbackIterationData<void>& hook,
+            UObject* context,
             void* parameters)
         {
             if (parameters == nullptr)
@@ -233,18 +266,21 @@ namespace PalTR
                     return;
                 }
 
-                auto* const* attacker_slot =
-                    m_attacker_property->ContainerPtrToValuePtr<UObject*>(info);
-                UObject* attacker = attacker_slot == nullptr ? nullptr : *attacker_slot;
-                if (attacker == nullptr
-                    || !attacker->GetFullName().contains(STR("BP_Player_")))
+                if (context == nullptr)
                 {
                     return;
                 }
 
-                const auto* attacker_group =
-                    m_attacker_group_property->ContainerPtrToValuePtr<FGuid>(info);
-                if (attacker_group == nullptr || !attacker_group->is_valid())
+                UObject* controller = context->GetTypedOuter(m_player_controller_class);
+                if (controller == nullptr)
+                {
+                    return;
+                }
+
+                auto* const* pawn_slot =
+                    m_controller_pawn_property->ContainerPtrToValuePtr<UObject*>(controller);
+                UObject* pawn = pawn_slot == nullptr ? nullptr : *pawn_slot;
+                if (pawn == nullptr || !pawn->GetFullName().contains(STR("BP_Player_")))
                 {
                     return;
                 }
@@ -264,9 +300,10 @@ namespace PalTR
                     return;
                 }
 
-                const auto decision = m_policy.evaluate_alliance_structure_damage(
+                const auto pawn_name = pawn->GetFullName();
+                const auto decision = m_policy.evaluate_alliance_structure_damage_by_pawn(
                     build_player_uid,
-                    guid_text(*attacker_group));
+                    ascii_text(pawn_name));
                 if (!decision.block)
                 {
                     return;
@@ -291,12 +328,15 @@ namespace PalTR
         Hook::GlobalCallbackId m_hook_id{Hook::ERROR_ID};
         UFunction* m_damage_function{};
         UClass* m_model_class{};
+        UClass* m_player_controller_class{};
+        UClass* m_controller_class{};
         FProperty* m_instance_id_parameter{};
         FStructProperty* m_info_parameter{};
         FProperty* m_attacker_group_property{};
         FProperty* m_attacker_property{};
         FProperty* m_model_instance_property{};
         FProperty* m_build_player_property{};
+        FProperty* m_controller_pawn_property{};
         std::unordered_map<std::string, std::string> m_build_player_by_instance;
     };
 }

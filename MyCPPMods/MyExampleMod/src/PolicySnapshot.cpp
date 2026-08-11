@@ -118,6 +118,7 @@ namespace PalTR
         }
 
         std::unordered_map<std::string, std::string> player_guild_by_uid;
+        std::unordered_map<std::string, std::string> player_guild_by_pawn_path;
         std::unordered_map<std::string, std::string> guild_key_by_group_id;
         std::unordered_set<std::string> alliance_pairs;
 
@@ -131,6 +132,10 @@ namespace PalTR
             if (!uid.empty() && !columns[4].empty())
             {
                 player_guild_by_uid[uid] = columns[4];
+            }
+            if (columns.size() > 8 && !columns[8].empty() && !columns[4].empty())
+            {
+                player_guild_by_pawn_path[columns[8]] = columns[4];
             }
         }
 
@@ -160,6 +165,7 @@ namespace PalTR
         }
 
         m_player_guild_by_uid = std::move(player_guild_by_uid);
+        m_player_guild_by_pawn_path = std::move(player_guild_by_pawn_path);
         m_guild_key_by_group_id = std::move(guild_key_by_group_id);
         m_alliance_pairs = std::move(alliance_pairs);
         error.clear();
@@ -176,6 +182,36 @@ namespace PalTR
         const auto attacker = m_guild_key_by_group_id.find(normalize_guid(attacker_group_id));
         if (owner == m_player_guild_by_uid.end()
             || attacker == m_guild_key_by_group_id.end())
+        {
+            result.reason = "STRUCTURE_IDENTITY_UNRESOLVED";
+            return result;
+        }
+
+        result.target_guild_key = owner->second;
+        result.attacker_guild_key = attacker->second;
+
+        if (result.target_guild_key == result.attacker_guild_key)
+        {
+            result.reason = "SAME_GUILD_NOT_HANDLED";
+            return result;
+        }
+
+        result.block = m_alliance_pairs.contains(
+            pair_key(result.target_guild_key, result.attacker_guild_key));
+        result.reason = result.block ? "ACTIVE_ALLIANCE" : "NOT_ALLIED";
+        return result;
+    }
+
+    AllianceDecision PolicySnapshot::evaluate_alliance_structure_damage_by_pawn(
+        const std::string& build_player_uid,
+        const std::string& attacker_pawn_path) const
+    {
+        AllianceDecision result{};
+
+        const auto owner = m_player_guild_by_uid.find(normalize_guid(build_player_uid));
+        const auto attacker = m_player_guild_by_pawn_path.find(attacker_pawn_path);
+        if (owner == m_player_guild_by_uid.end()
+            || attacker == m_player_guild_by_pawn_path.end())
         {
             result.reason = "STRUCTURE_IDENTITY_UNRESOLVED";
             return result;
