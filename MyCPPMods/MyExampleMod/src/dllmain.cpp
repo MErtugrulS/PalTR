@@ -13,6 +13,7 @@
 #include <chrono>
 #include <iomanip>
 #include <exception>
+#include <fstream>
 #include <sstream>
 #include <string>
 #include <unordered_map>
@@ -21,6 +22,8 @@ namespace
 {
     constexpr auto damage_function_path =
         STR("/Script/Pal.PalNetworkMapObjectComponent:RequestDamageMapObject_ToServer");
+    constexpr auto dispose_function_path =
+        STR("/Script/Pal.PalMapObject:OnDisposeModel_ServerInternal");
     constexpr auto npc_damage_function_path =
         STR("/Script/Pal.PalPlayerController:DamageReactionComponent_ProcessDamage_ToServer_ToNPC");
     constexpr auto enemy_player_damage_function_path =
@@ -136,6 +139,10 @@ namespace PalTR
                     {
                         handle_damage_request(hook, context, parameters);
                     }
+                    else if (function == m_dispose_function)
+                    {
+                        handle_map_object_dispose(parameters);
+                    }
                     else if (function == m_is_enemy_function)
                     {
                         handle_is_enemy(hook, parameters);
@@ -198,6 +205,10 @@ namespace PalTR
                 nullptr,
                 nullptr,
                 damage_function_path);
+            m_dispose_function = UObjectGlobals::StaticFindObject<UFunction*>(
+                nullptr,
+                nullptr,
+                dispose_function_path);
             m_npc_damage_function = UObjectGlobals::StaticFindObject<UFunction*>(
                 nullptr,
                 nullptr,
@@ -248,6 +259,7 @@ namespace PalTR
                 controller_class_path);
 
             if (m_damage_function == nullptr
+                || m_dispose_function == nullptr
                 || m_npc_damage_function == nullptr
                 || m_enemy_player_damage_function == nullptr
                 || m_is_enemy_function == nullptr
@@ -266,6 +278,8 @@ namespace PalTR
 
             m_instance_id_parameter = m_damage_function->FindProperty(
                 FName(STR("InstanceId"), FNAME_Find));
+            m_dispose_model_parameter = m_dispose_function->FindProperty(
+                FName(STR("DisposeModel"), FNAME_Find));
             m_info_parameter = CastField<FStructProperty>(
                 m_damage_function->FindProperty(FName(STR("Info"), FNAME_Find)));
             m_npc_damage_info_parameter = CastField<FStructProperty>(
@@ -311,6 +325,7 @@ namespace PalTR
                 FName(STR("Transmitter"), FNAME_Find));
 
             if (m_instance_id_parameter == nullptr
+                || m_dispose_model_parameter == nullptr
                 || m_info_parameter == nullptr
                 || m_npc_damage_info_parameter == nullptr
                 || m_npc_damage_defender_parameter == nullptr
@@ -351,6 +366,7 @@ namespace PalTR
             if (!is_guid_property(m_instance_id_parameter)
                 || !is_guid_property(m_model_instance_property)
                 || !is_guid_property(m_build_player_property)
+                || CastField<FObjectPropertyBase>(m_dispose_model_parameter) == nullptr
                 || CastField<FObjectPropertyBase>(m_npc_damage_defender_parameter) == nullptr
                 || CastField<FObjectPropertyBase>(m_enemy_player_damage_defender_parameter) == nullptr
                 || CastField<FObjectPropertyBase>(m_is_enemy_actor_a_parameter) == nullptr
@@ -873,11 +889,72 @@ namespace PalTR
             }
         }
 
+        void handle_map_object_dispose(void* parameters)
+        {
+            if (parameters == nullptr || !ensure_policy_current())
+            {
+                return;
+            }
+
+            try
+            {
+                auto* const* model_slot =
+                    m_dispose_model_parameter->ContainerPtrToValuePtr<UObject*>(parameters);
+                UObject* model = model_slot == nullptr ? nullptr : *model_slot;
+                if (model == nullptr || !model->IsA(m_model_class))
+                {
+                    return;
+                }
+
+                const auto* instance_id =
+                    m_model_instance_property->ContainerPtrToValuePtr<FGuid>(model);
+                if (instance_id == nullptr || !instance_id->is_valid())
+                {
+                    return;
+                }
+
+                const auto reference = guid_text(*instance_id);
+                if (!m_policy.is_conquest_flag(reference))
+                {
+                    return;
+                }
+
+                const auto path = std::filesystem::path(data_root)
+                    / "conquest_runtime_events.tsv";
+                const bool needs_header = !std::filesystem::exists(path)
+                    || std::filesystem::file_size(path) == 0;
+                std::ofstream output(path, std::ios::app);
+                if (!output)
+                {
+                    Output::send<LogLevel::Error>(
+                        STR("[PalTRStructureGuard] Conquest dispose event open failed.\n"));
+                    return;
+                }
+                if (needs_header)
+                {
+                    output << "timestamp\tmarker\tflag_reference\n";
+                }
+                const auto now = std::chrono::duration_cast<std::chrono::seconds>(
+                    std::chrono::system_clock::now().time_since_epoch()).count();
+                output << now << "\tFLAG_DISPOSED\t" << reference << "\n";
+                Output::send<LogLevel::Warning>(
+                    STR("[PalTRStructureGuard] Conquest flag disposed: {}\n"),
+                    unreal_text(reference));
+            }
+            catch (const std::exception& exception)
+            {
+                Output::send<LogLevel::Error>(
+                    STR("[PalTRStructureGuard] Conquest dispose hook failed open: {}\n"),
+                    unreal_text(exception.what()));
+            }
+        }
+
         PolicySnapshot m_policy;
         ProtectionActivityStore m_activity;
         Hook::GlobalCallbackId m_pre_hook_id{Hook::ERROR_ID};
         Hook::GlobalCallbackId m_post_hook_id{Hook::ERROR_ID};
         UFunction* m_damage_function{};
+        UFunction* m_dispose_function{};
         UFunction* m_npc_damage_function{};
         UFunction* m_enemy_player_damage_function{};
         UFunction* m_is_enemy_function{};
@@ -891,6 +968,7 @@ namespace PalTR
         UClass* m_network_transmitter_class{};
         UClass* m_controller_class{};
         FProperty* m_instance_id_parameter{};
+        FProperty* m_dispose_model_parameter{};
         FStructProperty* m_info_parameter{};
         FStructProperty* m_npc_damage_info_parameter{};
         FProperty* m_npc_damage_defender_parameter{};

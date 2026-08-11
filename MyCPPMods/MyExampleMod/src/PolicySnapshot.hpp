@@ -51,6 +51,7 @@ namespace PalTR
         ConquestFlagDecision evaluate_conquest_flag_damage(
             const std::string& instance_id,
             const std::string& attacker_guild_key) const;
+        bool is_conquest_flag(const std::string& instance_id) const;
 
     private:
         bool reload(std::string& error);

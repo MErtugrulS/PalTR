@@ -435,4 +435,9 @@ namespace PalTR
             : "CONQUEST_FLAG_PROTECTED";
         return result;
     }
+
+    bool PolicySnapshot::is_conquest_flag(const std::string& instance_id) const
+    {
+        return m_conquest_flag_owner.contains(normalize_guid(instance_id));
+    }
 }

@@ -137,6 +137,12 @@ int main()
         "33333333333333333333333333333333",
         "GUILD_B");
     ok &= expect(!ordinary_structure.handled, "ordinary structure not handled");
+    ok &= expect(
+        snapshot.is_conquest_flag("11111111-1111-1111-1111-111111111111"),
+        "registered conquest flag recognized for dispose hook");
+    ok &= expect(
+        !snapshot.is_conquest_flag("33333333333333333333333333333333"),
+        "ordinary structure ignored by dispose hook");
 
     const auto offline_external = snapshot.evaluate_protected_guilds(
         "GUILD_A",
