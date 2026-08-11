@@ -39,20 +39,35 @@ Saf Lua testlerinde asagidaki kurallar dogrulandi:
 - Ganimet secimi ayarlanabilir agirlikli tablodan tek en degerli Pal topu
   secicisi uretiyor.
 
-## Fetih runtime engelleri
+## Fetih world entegrasyonu
 
-Asagidakiler dogrulanmis Palworld/UE sozlesmesi bulunmadan uygulanmadi ve
-runtime'da gecmis sayilmadi:
+UHT dump ve mevcut native hook sozlesmesiyle statik olarak dogrulananlar:
 
-- Bayrak ve kusatma kampi icin dogrulanmis world class, spawn, sahiplik,
-  referans ve yok edilme adapteri.
-- Bayrak hasarini merkezi fetih politikasina baglayacak dogrulanmis native hook.
-- `LEADER`, `DEPUTY_LEADER` ve `COMMANDER` rollerini mevcut oyun rol verisinden
-  hatasiz esleyecek adapter.
+- Normal Pal Kutusu `PalBaseCampModel` kimlik, klan, sahip map-object ve konum
+  getter'lariyla baskent/karakol olarak kaydedilir.
+- Oyuncu Pal Kutusunun yaninda `!baskent` veya `!karakol` kullanir.
+- Varsayilan fiziksel kusatma kampi gercek runtime kaydinda gorulen
+  `BP_BuildObject_WorkBench_C` yapisidir; izinli sinif listesi config'tedir.
+- `!fetih KLAN` kampanyayi, `!kusatmakampi KLAN` yakindaki klana ait tezgahi
+  ve en yakin gecerli dusman karakolunu kaydeder.
+- Lua aktif hedefleri `conquest_damage_policy.tsv` snapshot'ina yazar; mevcut
+  native map-object hasar hook'u bu sozlesmeyi tuketir.
+- Hedef olmayan kayitli Pal Kutusu native politikada kapali kalir; yalniz aktif
+  hedef ve dogru saldiran klan offline korumayi asabilir.
+- Oyun rol enumu `GuildMaster=1`, `SubMaster=2`, `Member=3`, `Guest=4` olarak
+  dogrulandi. Lider ve yardimci lider eslemesi config'ten yapilir.
+
+## Runtime'da bekleyenler
+
+Asagidakiler oyun icinde henuz gecmis sayilmadi:
+
+- Pal Kutusu ve calisma tezgahi adapterlerinin gercek server objelerinde kimlik,
+  sahiplik ve metre donusumu.
+- Chat komutlarinin lider/yardimci lider yetkisiyle kayit olusturmasi.
+- Native hedef/ hedef-disi Pal Kutusu hasar davranisi ve restart persistence.
+- Oyunun bu surumunde ayri `COMMANDER` rolu bulunmadigi icin komutan yetkisi.
 - `CAPTURE_SPHERE_LEVEL:Ancient_2` secicisini fiziksel item kimligine cevirip
   sandiga/spawn noktasina koyacak dogrulanmis item adapteri.
-- Bayrak bolgesindeki offline-koruma istisnasini native hasar akimina baglayan
-  world-object eslemesi.
 
 Baskin saati `raid_utc_offset_minutes` ile hesaplanir. Lua runtime'inda IANA
 zaman dilimi veritabani olmadigi icin `Europe/Istanbul` etiketi aciklayicidir;
