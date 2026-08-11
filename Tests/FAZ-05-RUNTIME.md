@@ -43,6 +43,11 @@ Saf Lua testlerinde asagidaki kurallar dogrulandi:
   klanin yeni baskentle sifirdan baslamasina izin veriyor.
 - Ganimet secimi ayarlanabilir agirlikli tablodan tek en degerli Pal topu
   secicisi uretiyor.
+- Karsi saldiri artik anlik domain komutu degildir. Eski sahip isgal noktasina
+  kendi fiziksel Klan Bayragi'ni kurar; ayarlanabilir koruma suresi dolarsa
+  karakol `RESTORED` olur. Bayrak once yikilirsa isgal devam eder.
+- Karsi saldiri ve isgal sureleri ayri tutulur, ateskeste ikisi de donar ve
+  restart sonrasi fiziksel bayrak referansi ile birlikte geri yuklenir.
 
 ## Fetih world entegrasyonu
 
@@ -101,6 +106,13 @@ Asagidakiler oyun icinde henuz gecmis sayilmadi:
 - Oyunun bu surumunde ayri `COMMANDER` rolu bulunmadigi icin komutan yetkisi.
 - PAK'ta statik kimligi `PalSphere_Ancient_2` olarak dogrulandi; bunu fiziksel
   sandiga/spawn noktasina koyacak guvenli global item adapteri bulunmadi.
+
+Ganimet world entegrasyonu icin UHT dump yeniden tarandi. Oyuncu network
+component'inde dogrudan envantere ekleme RPC'si bulunuyor, ancak ganimetin cebe
+otomatik verilmemesi kuralina aykiri. World drop fonksiyonlari ise incident,
+status veya cheat-manager nesnelerine bagli; bagimsiz ve guvenli bir server
+spawn sozlesmesi vermiyor. Bu nedenle dogrulanmamis nesne olusturma veya ozel
+fonksiyon cagrisi eklenmedi.
 
 Baskin saati `raid_utc_offset_minutes` ile hesaplanir. Lua runtime'inda IANA
 zaman dilimi veritabani olmadigi icin `Europe/Istanbul` etiketi aciklayicidir;
