@@ -4690,6 +4690,17 @@ namespace PalTRUIAssetBuilder
             }
             if (UButton* Button = Cast<UButton>(Widget))
             {
+                // SetBackgroundColor only tints the existing Slate brushes.  It
+                // does not remove them, so the legacy button chrome was still
+                // being drawn over the raster skin in every interaction state.
+                FButtonStyle SkinStyle = Button->WidgetStyle;
+                SkinStyle.SetNormal(FSlateNoResource());
+                SkinStyle.SetHovered(FSlateNoResource());
+                SkinStyle.SetPressed(FSlateNoResource());
+                SkinStyle.SetDisabled(FSlateNoResource());
+                SkinStyle.SetNormalPadding(FMargin(0.0f));
+                SkinStyle.SetPressedPadding(FMargin(0.0f));
+                Button->SetStyle(SkinStyle);
                 Button->SetBackgroundColor(FLinearColor::Transparent);
             }
             if (UImage* Image = Cast<UImage>(Widget))
@@ -4710,6 +4721,78 @@ namespace PalTRUIAssetBuilder
                             : ESlateVisibility::Collapsed
                     );
                 }
+            }
+        }
+
+        // The reference skin supplies the header crest.  Keep the live title
+        // clear of it while retaining the original header flow for the server,
+        // guild, role and notification values.
+        if (USizeBox* HeaderCrestImageSize = Cast<USizeBox>(Tree->FindWidget(TEXT("HeaderCrestImageSize"))))
+        {
+            HeaderCrestImageSize->SetVisibility(ESlateVisibility::HitTestInvisible);
+            HeaderCrestImageSize->SetWidthOverride(104.0f);
+            HeaderCrestImageSize->SetHeightOverride(78.0f);
+        }
+
+        // Every navigation button uses the same fixed icon and label columns.
+        // Without a filling UButtonSlot Slate centers each row by its own text
+        // width, which produced the visibly staggered sidebar in runtime.
+        struct FSkinNavigationGeometry
+        {
+            const TCHAR* Button;
+            const TCHAR* Content;
+            const TCHAR* IconSize;
+            const TCHAR* Label;
+            const TCHAR* Arrow;
+        };
+        const FSkinNavigationGeometry SkinNavigation[] = {
+            { TEXT("ClanTabButton"), TEXT("ClanNavContent"), TEXT("ClanNavIconSize"), TEXT("ClanTabText"), TEXT("ClanNavArrowText") },
+            { TEXT("DiplomacyTabButton"), TEXT("DiplomacyNavContent"), TEXT("DiplomacyNavIconSize"), TEXT("DiplomacyTabText"), TEXT("DiplomacyNavArrowText") },
+            { TEXT("AllianceTabButton"), TEXT("AllianceNavContent"), TEXT("AllianceNavIconSize"), TEXT("AllianceTabText"), TEXT("AllianceNavArrowText") },
+            { TEXT("ChatTabButton"), TEXT("GuildsNavContent"), TEXT("GuildsNavIconSize"), TEXT("ChatTabText"), TEXT("GuildsNavArrowText") },
+            { TEXT("FutureProtectionButton"), TEXT("ProtectionNavContent"), TEXT("ProtectionNavIconSize"), TEXT("FutureProtectionButtonText"), TEXT("ProtectionNavArrowText") },
+            { TEXT("FutureStructuresButton"), TEXT("StructuresNavContent"), TEXT("StructuresNavIconSize"), TEXT("FutureStructuresButtonText"), TEXT("StructuresNavArrowText") }
+        };
+        for (const FSkinNavigationGeometry& Spec : SkinNavigation)
+        {
+            UButton* Button = Cast<UButton>(Tree->FindWidget(FName(Spec.Button)));
+            UHorizontalBox* Content = Cast<UHorizontalBox>(Tree->FindWidget(FName(Spec.Content)));
+            USizeBox* IconSize = Cast<USizeBox>(Tree->FindWidget(FName(Spec.IconSize)));
+            UTextBlock* Label = Cast<UTextBlock>(Tree->FindWidget(FName(Spec.Label)));
+            UTextBlock* Arrow = Cast<UTextBlock>(Tree->FindWidget(FName(Spec.Arrow)));
+            if (!Button || !Content || !IconSize || !Label || !Arrow || Button->GetContent() != Content)
+            {
+                UE_LOG(LogTemp, Error, TEXT("PalTRUI SkinV2 creation failed: navigation geometry missing: %s"), Spec.Button);
+                return false;
+            }
+            if (UButtonSlot* ContentSlot = Cast<UButtonSlot>(Content->Slot))
+            {
+                ContentSlot->SetHorizontalAlignment(HAlign_Fill);
+                ContentSlot->SetVerticalAlignment(VAlign_Center);
+                ContentSlot->SetPadding(FMargin(16.0f, 0.0f, 14.0f, 0.0f));
+            }
+            else
+            {
+                UE_LOG(LogTemp, Error, TEXT("PalTRUI SkinV2 creation failed: navigation slot missing: %s"), Spec.Button);
+                return false;
+            }
+            IconSize->SetWidthOverride(46.0f);
+            IconSize->SetHeightOverride(46.0f);
+            if (UHorizontalBoxSlot* IconSlot = Cast<UHorizontalBoxSlot>(IconSize->Slot))
+            {
+                IconSlot->SetPadding(FMargin(0.0f, 0.0f, 14.0f, 0.0f));
+                IconSlot->SetVerticalAlignment(VAlign_Center);
+            }
+            if (UHorizontalBoxSlot* LabelSlot = Cast<UHorizontalBoxSlot>(Label->Slot))
+            {
+                LabelSlot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
+                LabelSlot->SetVerticalAlignment(VAlign_Center);
+            }
+            Label->SetJustification(ETextJustify::Left);
+            if (UHorizontalBoxSlot* ArrowSlot = Cast<UHorizontalBoxSlot>(Arrow->Slot))
+            {
+                ArrowSlot->SetPadding(FMargin(10.0f, 0.0f, 0.0f, 0.0f));
+                ArrowSlot->SetVerticalAlignment(VAlign_Center);
             }
         }
 
