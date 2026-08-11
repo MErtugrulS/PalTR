@@ -164,15 +164,6 @@ function UE.call(object, method_name, ...)
     end)
 end
 
-function UE.find_object(object_path)
-    if type(StaticFindObject) ~= "function" then return nil end
-    local ok, result = UE.safe(function()
-        return StaticFindObject(object_path)
-    end)
-    if not ok then return nil end
-    return UE.unwrap(result)
-end
-
 function UE.find_all(class_name)
     local ok, objects = pcall(FindAllOf, class_name)
     if not ok or objects == nil then return {} end
