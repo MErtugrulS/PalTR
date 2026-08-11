@@ -58,7 +58,11 @@ local function quantity(entry, random)
         return minimum
     end
 
-    return minimum + math.floor(random() * (maximum - minimum + 1))
+    local roll = math.max(
+        0,
+        math.min(0.999999, tonumber(random()) or 0)
+    )
+    return minimum + math.floor(roll * (maximum - minimum + 1))
 end
 
 function Loot.create(node, campaign, config, now, random)

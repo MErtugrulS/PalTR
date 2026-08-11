@@ -47,6 +47,28 @@ equal(item.item_selector, "CAPTURE_SPHERE_LEVEL:Ancient_2", "highest sphere sele
 equal(item.item_id, "PalSphere_Ancient_2", "verified static item id")
 equal(item.quantity, 1, "single sphere reward")
 
+local ranged_config = {
+    loot_table = {
+        {
+            item_id = "PalSphere_Ancient_2",
+            enabled = true,
+            weight = 1,
+            min_quantity = 1,
+            max_quantity = 2
+        }
+    }
+}
+local upper_bound = Loot.create(
+    { node_id = "OUTPOST_B" },
+    { war_id = "WAR_2", attacker_guild = "GUILD_A" },
+    ranged_config,
+    101,
+    function() return 1 end
+)
+local upper_item
+for _, value in pairs(upper_bound.value.items) do upper_item = value end
+equal(upper_item.quantity, 2, "loot quantity clamps random upper bound")
+
 equal(Loot.mark_in_transit(created.value.manifest).ok, true, "loot in transit")
 equal(
     Loot.extract(created.value.manifest, "GUILD_B", 200).ok,
