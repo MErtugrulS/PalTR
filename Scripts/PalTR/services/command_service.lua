@@ -34,7 +34,7 @@ local SUCCESS_MESSAGES = {
         "Ateskes teklifi kaydedildi",
 
     BREAK_CEASEFIRE =
-        "Ateskes bozuldu. Savas yeniden basladi",
+        "Ateskes bozuldu. Fetih hazirlik suresi basladi",
 
     PEACE =
         "Baris teklifi kaydedildi",
@@ -720,8 +720,7 @@ function CommandService:on_chat(
     elseif command.action == "CEASEFIRE" then
         self:_announce_guild(
             target.key,
-            own_name ..
-            " klani 12 saatlik ateskes teklif etti. " ..
+            own_name .. " klani suresiz ateskes teklif etti. " ..
             "!kabul " .. own_name ..
             " veya !reddet " .. own_name
         )
@@ -739,7 +738,12 @@ function CommandService:on_chat(
         local message_text =
             own_name ..
             " klani ateskesi bozdu. " ..
-            "Savas yeniden basladi."
+            "Fetih hasari " ..
+            format_duration(
+                self.diplomacy.config.diplomacy
+                    .ceasefire_rearm_seconds
+            ) ..
+            " sonra yeniden acilacak."
 
         self:_announce_guild(
             player.guild_key,
@@ -758,7 +762,7 @@ function CommandService:on_chat(
         if pending_state == States.CEASEFIRE_PENDING then
             accepted_text =
                 own_name .. " ile " .. target_name ..
-                " arasinda 12 saatlik ateskes basladi."
+                " arasinda suresiz ateskes basladi."
 
         elseif pending_state == States.PEACE_PENDING then
             accepted_text =
