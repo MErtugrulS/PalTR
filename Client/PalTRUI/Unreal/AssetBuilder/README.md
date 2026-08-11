@@ -120,7 +120,10 @@ Run the commandlet once with `-CreateSkinV2` to create the parallel
 `WBP_PalTRPanel_SkinV2` production candidate. The command imports the cleaned
 1672x941 raster shell, duplicates the proven interaction widget tree, and makes
 the duplicated tree a dynamic text/input overlay. It refuses to overwrite an
-existing SkinV2 asset and never modifies `WBP_PalTRPanel`.
+existing SkinV2 asset and never modifies `WBP_PalTRPanel`. Sidebar icons,
+labels, ordering, visibility, enabled state, and selection remain runtime UMG
+controls rather than baked skin content, so future entries can be replaced
+without regenerating the shell texture.
 
 Run the commandlet with `-VerifySkinV2` to verify the parallel panel, full-canvas
 shell geometry, and the minimum renderer/interaction controls without modifying

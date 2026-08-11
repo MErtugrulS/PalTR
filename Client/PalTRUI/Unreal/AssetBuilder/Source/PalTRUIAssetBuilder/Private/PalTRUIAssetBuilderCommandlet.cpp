@@ -4696,7 +4696,19 @@ namespace PalTRUIAssetBuilder
             {
                 if (Image != BaseImage)
                 {
-                    Image->SetVisibility(ESlateVisibility::Collapsed);
+                    const FName ImageName = Image->GetFName();
+                    const bool bRuntimeNavigationIcon =
+                        ImageName == TEXT("ClanNavIcon")
+                        || ImageName == TEXT("DiplomacyNavIcon")
+                        || ImageName == TEXT("AllianceNavIcon")
+                        || ImageName == TEXT("GuildsNavIcon")
+                        || ImageName == TEXT("ProtectionNavIcon")
+                        || ImageName == TEXT("StructuresNavIcon");
+                    Image->SetVisibility(
+                        bRuntimeNavigationIcon
+                            ? ESlateVisibility::HitTestInvisible
+                            : ESlateVisibility::Collapsed
+                    );
                 }
             }
         }
