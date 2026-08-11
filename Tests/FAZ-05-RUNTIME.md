@@ -72,6 +72,29 @@ UHT dump ve mevcut native hook sozlesmesiyle statik olarak dogrulananlar:
 - Oyun rol enumu `GuildMaster=1`, `SubMaster=2`, `Member=3`, `Guest=4` olarak
   dogrulandi. Lider ve yardimci lider eslemesi config'ten yapilir.
 
+## Siyasi bolge ve harita sozlesmesi
+
+- Baskent ve karakol siyasi sinirlari fetih hasar yaricapindan ayridir. Ilk
+  surum yatay duzlemde dairesel alan kullanir; varsayilan baskent 250 metre,
+  karakol 150 metredir ve config'ten degistirilebilir.
+- Her node `display_name` ve `territory_radius_meters` alani tasir. Eski kayitlar
+  geriye uyumlu okunur; bos ad otomatik olarak `Klan Baskenti` veya
+  `Klan N. Karakolu`, sifir yaricap node tipinin varsayilani olur.
+- Yetkili klan rolu kendi kayitli fiziksel bayraginin yaninda
+  `!bolgeadi AD` ve `!bolgesinir METRE` komutlarini kullanabilir. Uzak node veya
+  baska klanin kontrolundeki node degistirilemez.
+- Sunucu `territory_snapshot.tsv` dosyasina node kimligi, gorunen ad, tip,
+  mevcut kontrolcu, metre cinsinden merkez/yaricap, fetih ve bayrak durumunu
+  deterministik sirada yazar. Harita arayuzu bu sozlesmeyi tuketecek; bu commit
+  oyun haritasi cizimi veya client UI degisikligi yapmaz.
+- Oyuncu konumu mevcut dogrulanmis `K2_GetActorLocation` akisi ile 5 saniyelik
+  scheduler'da okunur. Yeni bolgeye giriste mevcut `SendSystemAnnounce`
+  sozlesmesiyle tek bildirim gonderilir. Ayni bolgede beklemek tekrar bildirim
+  uretmez; 20 metrelik ayarlanabilir cikis toleransi sinir titresimini onler.
+- Cakisan alanlarda merkeze olan mesafenin yaricapa orani en kucuk node
+  secilir. Bayragi gecici olarak kayip node siyasi haritadan silinmez ve fetih
+  sonrasi ad/snapshot mevcut kontrolcu klana gore guncellenir.
+
 ## Fetih runtime dogrulamasi
 
 - Ayakli tabela `BP_BuildObject_Signboard_C` gecici fiziksel Klan Bayragi olarak
@@ -127,6 +150,15 @@ Asagidakiler oyun icinde henuz gecmis sayilmadi:
 - Oyunun bu surumunde ayri `COMMANDER` rolu bulunmadigi icin komutan yetkisi.
 - PAK'ta statik kimligi `PalSphere_Ancient_2` olarak dogrulandi; bunu fiziksel
   sandiga/spawn noktasina koyacak guvenli global item adapteri bulunmadi.
+- Baskent ve karakol sinirina giriste bildirimin oyun ustunde yalniz bir kez
+  gorunmesi; sinirda ileri-geri hareketin spam yapmamasi, cikis/yeniden giriste
+  bildirimin tekrar gelmesi ve iki alan cakismasinda dogru bolgenin secilmesi.
+- `!bolgeadi NWO Kuzey 3 Karakolu` ve `!bolgesinir 175` komutlarinin yalniz
+  yetkili rol ve yakindaki klana ait kayitli bayrakta calismasi; member, uzak
+  bayrak ve baska klan bayragi denemelerinin reddedilmesi.
+- `territory_snapshot.tsv` kaydinin runtime koordinatlari, adlari, yaricaplari ve
+  fetih sonrasi yeni kontrolcuyu dogru yansitmasi. Snapshot'in oyun haritasinda
+  marker ve dairesel alan olarak gosterilmesi ayri client UI entegrasyonudur.
 
 Ganimet world entegrasyonu icin UHT dump yeniden tarandi. Oyuncu network
 component'inde dogrudan envantere ekleme RPC'si bulunuyor, ancak ganimetin cebe
