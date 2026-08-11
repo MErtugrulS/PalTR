@@ -1,4 +1,5 @@
 local Logger = require("PalTR.core.logger")
+local Version = require("PalTR.core.version")
 local Paths = require("PalTR.core.paths")
 local Clock = require("PalTR.core.clock")
 local FileIO = require("PalTR.storage.file_io")
@@ -12,6 +13,7 @@ local CommandService = require("PalTR.services.command_service")
 local DamageObserver = require("PalTR.services.damage_observer")
 local DamagePolicy = require("PalTR.services.damage_policy")
 local ProtectionService = require("PalTR.services.protection_service")
+local ConquestService = require("PalTR.services.conquest_service")
 local Scheduler = require("PalTR.services.scheduler")
 
 local App = {}
@@ -49,6 +51,13 @@ function App.new(config)
         Logger.new("Protection")
     )
 
+    local conquest = ConquestService.new(
+        paths,
+        config,
+        diplomacy,
+        Logger.new("Conquest")
+    )
+
     return setmetatable({
         config = config,
         paths = paths,
@@ -59,6 +68,7 @@ function App.new(config)
         status = status,
         damage_policy = damage_policy,
         protection = protection,
+        conquest = conquest,
 
         commands = CommandService.new(
             paths,
@@ -99,6 +109,27 @@ function App:_headers()
 
         [self.paths.protection_activity] =
             "guild_key\tlast_hostile_at",
+
+        [self.paths.conquest_nodes] =
+            "node_id\tguild_key\tnode_type\tflag_reference\tlocation_x\tlocation_y\tlocation_z\tparent_node_id\tstate\toriginal_owner\tcurrent_controller\tcreated_at\tupdated_at",
+
+        [self.paths.conquest_edges] =
+            "edge_id\tnode_a\tnode_b\tcreated_at",
+
+        [self.paths.conquest_campaigns] =
+            "campaign_id\twar_id\tattacker_guild\tdefender_guild\tstate\tactive_target_node_id\tsiege_camp_reference\tsiege_x\tsiege_y\tsiege_z\trearm_until\tprevious_relation_state\tcreated_at\tupdated_at",
+
+        [self.paths.conquest_occupations] =
+            "node_id\toriginal_owner\toccupying_guild\twar_id\tstate\tprevious_state\toccupation_started_at\tremaining_seconds\tlast_resumed_at\tloot_manifest_id\tfrontline_state\tupdated_at",
+
+        [self.paths.conquest_loot] =
+            "manifest_id\tnode_id\twar_id\towner_guild\tstate\tcreated_at\textracted_at",
+
+        [self.paths.conquest_loot_items] =
+            "item_key\tmanifest_id\titem_id\titem_selector\tquantity\ttier\tcategory",
+
+        [self.paths.conquest_events] =
+            "timestamp\tmarker\tdetail",
 
         [self.paths.relations] =
             "pair_key\tguild_a\tguild_b\tstate\tprevious_state\trequested_by\taccepted_by\tcreated_at\tupdated_at\tactive_at\texpires_at\tnote",
@@ -314,6 +345,15 @@ function App:_tick()
     end
 
     self.protection:refresh(now)
+
+    local conquest_result = self.conquest:tick(now)
+
+    if not conquest_result.ok then
+        self.logger:error(
+            "FAZ05_CONQUEST_TICK_FAILED | " ..
+            tostring(conquest_result.error)
+        )
+    end
 end
 
 function App:start()
@@ -337,7 +377,7 @@ function App:start()
 
             TSV.encode({
                 Clock.now(),
-                "0.9.0-dev-faz05",
+                Version.version,
                 "STARTED"
             })
         }
@@ -345,11 +385,11 @@ function App:start()
 
     self.status:build(
         nil,
-        "PalTR Faz-05 offline koruma baslatildi"
+        "PalTR Faz-05 fetih domain servisi baslatildi"
     )
 
     self.logger:info(
-        "Faz-05 offline koruma baslatildi"
+        "FAZ05_RULES_LOADED | fetih domain ve persistence servisi aktif"
     )
 
     self.logger:info(
