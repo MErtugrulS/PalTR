@@ -623,9 +623,16 @@ local function clan_view(snapshot, action_transport_ready, action_pending)
         ),
         dashboard = {
             cards = { clan_card, diplomacy_card },
+            clan_role_text = player.is_master == true and "Lider"
+                or (text(player.guild_key) ~= "" and "Uye" or "-"),
+            clan_member_count_text = tostring(#members),
+            clan_online_count_text = tostring(online_count),
             war_count = war_count,
             alliance_count = alliance_count,
             pending_count = pending_count,
+            war_count_text = tostring(war_count),
+            alliance_count_text = tostring(alliance_count),
+            pending_count_text = tostring(pending_count),
             relations_empty = #relation_preview_lines == 0,
             relation_rows = relation_row_models,
             relations_text = #relation_preview_lines == 0

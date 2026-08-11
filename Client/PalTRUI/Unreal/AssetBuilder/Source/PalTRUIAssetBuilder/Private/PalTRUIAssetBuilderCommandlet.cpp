@@ -4048,6 +4048,229 @@ namespace PalTRUIAssetBuilder
             CardTint->SetRenderScale(FVector2D(1.0f, 1.12f));
             StyleTransparentFrame(Tree, FName(CardFrames[Index].FrameName), FMargin(14.0f));
         }
+
+        auto EnsureCardDivider = [Tree](
+            UVerticalBox* Parent,
+            const FName SizeName,
+            const FName BorderName
+        ) -> bool
+        {
+            USizeBox* DividerSize = Cast<USizeBox>(Tree->FindWidget(SizeName));
+            UBorder* Divider = Cast<UBorder>(Tree->FindWidget(BorderName));
+            if (!DividerSize && !Divider)
+            {
+                DividerSize = Tree->ConstructWidget<USizeBox>(USizeBox::StaticClass(), SizeName);
+                DividerSize->SetHeightOverride(1.0f);
+                Divider = Tree->ConstructWidget<UBorder>(UBorder::StaticClass(), BorderName);
+                DividerSize->SetContent(Divider);
+                UVerticalBoxSlot* Slot = AddVertical(Parent, DividerSize, FMargin(4.0f, 7.0f, 4.0f, 8.0f));
+                Slot->SetHorizontalAlignment(HAlign_Fill);
+            }
+            else if (!DividerSize || !Divider
+                || DividerSize->GetContent() != Divider
+                || DividerSize->GetParent() != Parent)
+            {
+                return false;
+            }
+            DividerSize->SetHeightOverride(1.0f);
+            Divider->SetBrushColor(PixelTheme::FromSRGB(180, 145, 78, 0.46f));
+            Divider->SetPadding(FMargin(0.0f));
+            return true;
+        };
+
+        auto EnsureMetricRow = [Tree](
+            UVerticalBox* Parent,
+            const FName RowName,
+            const FName LabelName,
+            const TCHAR* LabelValue,
+            const FName ValueName,
+            const TCHAR* InitialValue,
+            const FLinearColor ValueColor
+        ) -> bool
+        {
+            UHorizontalBox* Row = Cast<UHorizontalBox>(Tree->FindWidget(RowName));
+            UTextBlock* Label = Cast<UTextBlock>(Tree->FindWidget(LabelName));
+            UTextBlock* Value = Cast<UTextBlock>(Tree->FindWidget(ValueName));
+            if (!Row && !Label && !Value)
+            {
+                Row = Tree->ConstructWidget<UHorizontalBox>(UHorizontalBox::StaticClass(), RowName);
+                Label = MakeText(Tree, LabelName, LabelValue, 12);
+                Label->SetColorAndOpacity(FSlateColor(PixelTheme::TextSecondary));
+                UHorizontalBoxSlot* LabelSlot = AddHorizontal(Row, Label);
+                LabelSlot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
+                LabelSlot->SetVerticalAlignment(VAlign_Center);
+                Value = MakeText(Tree, ValueName, InitialValue, 12);
+                Value->SetJustification(ETextJustify::Right);
+                AddHorizontal(Row, Value, FMargin(8.0f, 0.0f, 0.0f, 0.0f))->SetVerticalAlignment(VAlign_Center);
+                UVerticalBoxSlot* RowSlot = AddVertical(Parent, Row, FMargin(4.0f, 0.0f, 4.0f, 5.0f));
+                RowSlot->SetHorizontalAlignment(HAlign_Fill);
+            }
+            else if (!Row || !Label || !Value
+                || Row->GetParent() != Parent
+                || Label->GetParent() != Row
+                || Value->GetParent() != Row)
+            {
+                return false;
+            }
+            Label->SetText(FText::FromString(LabelValue));
+            Value->SetColorAndOpacity(FSlateColor(ValueColor));
+            StyleTextShadow(Tree, LabelName, FVector2D(1.0f, 1.0f));
+            StyleTextShadow(Tree, ValueName, FVector2D(1.0f, 1.0f));
+            return true;
+        };
+
+        UVerticalBox* ClanCardContent = Cast<UVerticalBox>(Tree->FindWidget(TEXT("DashboardClanCardContent")));
+        UVerticalBox* DiplomacyCardContent = Cast<UVerticalBox>(Tree->FindWidget(TEXT("DashboardDiplomacyCardContent")));
+        UVerticalBox* ProtectionCardContent = Cast<UVerticalBox>(Tree->FindWidget(TEXT("DashboardProtectionCardContent")));
+        UVerticalBox* BuildingsCardContent = Cast<UVerticalBox>(Tree->FindWidget(TEXT("DashboardBuildingsCardContent")));
+        if (!ClanCardContent || !DiplomacyCardContent || !ProtectionCardContent || !BuildingsCardContent
+            || !EnsureCardDivider(ClanCardContent, TEXT("DashboardClanCardDividerSize"), TEXT("DashboardClanCardDivider"))
+            || !EnsureMetricRow(ClanCardContent,
+                TEXT("DashboardClanRoleRow"), TEXT("DashboardClanRoleLabelText"), TEXT("Rol:"),
+                TEXT("DashboardClanRoleValueText"), TEXT("-"), PixelTheme::FromSRGB(88, 219, 130, 1.0f))
+            || !EnsureMetricRow(ClanCardContent,
+                TEXT("DashboardClanMembersRow"), TEXT("DashboardClanMembersLabelText"), TEXT("Uye:"),
+                TEXT("DashboardClanMembersValueText"), TEXT("0"), PixelTheme::TextPrimary)
+            || !EnsureCardDivider(DiplomacyCardContent, TEXT("DashboardDiplomacyCardDividerSize"), TEXT("DashboardDiplomacyCardDivider"))
+            || !EnsureMetricRow(DiplomacyCardContent,
+                TEXT("DashboardDiplomacyWarRow"), TEXT("DashboardDiplomacyWarLabelText"), TEXT("Savas:"),
+                TEXT("DashboardDiplomacyWarValueText"), TEXT("0"), PixelTheme::FromSRGB(220, 73, 61, 1.0f))
+            || !EnsureMetricRow(DiplomacyCardContent,
+                TEXT("DashboardDiplomacyAllianceRow"), TEXT("DashboardDiplomacyAllianceLabelText"), TEXT("Ittifak:"),
+                TEXT("DashboardDiplomacyAllianceValueText"), TEXT("0"), PixelTheme::FromSRGB(80, 205, 127, 1.0f))
+            || !EnsureMetricRow(DiplomacyCardContent,
+                TEXT("DashboardDiplomacyPendingRow"), TEXT("DashboardDiplomacyPendingLabelText"), TEXT("Bekleyen:"),
+                TEXT("DashboardDiplomacyPendingValueText"), TEXT("0"), PixelTheme::FromSRGB(241, 188, 54, 1.0f))
+            || !EnsureCardDivider(ProtectionCardContent, TEXT("DashboardProtectionCardDividerSize"), TEXT("DashboardProtectionCardDivider"))
+            || !EnsureMetricRow(ProtectionCardContent,
+                TEXT("DashboardProtectionOfflineRow"), TEXT("DashboardProtectionOfflineLabelText"), TEXT("Offline Koruma:"),
+                TEXT("DashboardProtectionOfflineValueText"), TEXT("Kapali"), PixelTheme::FromSRGB(226, 77, 54, 1.0f))
+            || !EnsureMetricRow(ProtectionCardContent,
+                TEXT("DashboardProtectionRaidRow"), TEXT("DashboardProtectionRaidLabelText"), TEXT("Baskin Penceresi:"),
+                TEXT("DashboardProtectionRaidValueText"), TEXT("Pasif"), PixelTheme::FromSRGB(236, 171, 47, 1.0f))
+            || !EnsureCardDivider(BuildingsCardContent, TEXT("DashboardBuildingsCardDividerSize"), TEXT("DashboardBuildingsCardDivider"))
+            || !EnsureMetricRow(BuildingsCardContent,
+                TEXT("DashboardBuildingsProtectedRow"), TEXT("DashboardBuildingsProtectedLabelText"), TEXT("Korunan Us:"),
+                TEXT("DashboardBuildingsProtectedValueText"), TEXT("2"), PixelTheme::FromSRGB(91, 214, 115, 1.0f))
+            || !EnsureMetricRow(BuildingsCardContent,
+                TEXT("DashboardBuildingsRiskRow"), TEXT("DashboardBuildingsRiskLabelText"), TEXT("Riskli Bolge:"),
+                TEXT("DashboardBuildingsRiskValueText"), TEXT("1"), PixelTheme::FromSRGB(232, 113, 38, 1.0f)))
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI pixel match update failed: status card metric hierarchy."));
+            return false;
+        }
+        if (UTextBlock* LegacyClanDetail = Cast<UTextBlock>(Tree->FindWidget(TEXT("DashboardClanCardDetailText"))))
+        {
+            LegacyClanDetail->SetVisibility(ESlateVisibility::Collapsed);
+        }
+        if (UTextBlock* LegacyDiplomacyValue = Cast<UTextBlock>(Tree->FindWidget(TEXT("DashboardDiplomacyCardValueText"))))
+        {
+            LegacyDiplomacyValue->SetVisibility(ESlateVisibility::Collapsed);
+        }
+        if (UTextBlock* LegacyDiplomacyDetail = Cast<UTextBlock>(Tree->FindWidget(TEXT("DashboardDiplomacyCardDetailText"))))
+        {
+            LegacyDiplomacyDetail->SetVisibility(ESlateVisibility::Collapsed);
+        }
+        for (const FName LegacyMockText : {
+            FName(TEXT("DashboardProtectionCardValueText")),
+            FName(TEXT("DashboardProtectionCardDetailText")),
+            FName(TEXT("DashboardBuildingsCardValueText")),
+            FName(TEXT("DashboardBuildingsCardDetailText"))
+        })
+        {
+            if (UTextBlock* Text = Cast<UTextBlock>(Tree->FindWidget(LegacyMockText)))
+            {
+                Text->SetVisibility(ESlateVisibility::Collapsed);
+            }
+        }
+
+        auto EnsureSectionHeader = [Tree](
+            UVerticalBox* Parent,
+            UTextBlock* Heading,
+            const FName RowName,
+            const FName IconSizeName,
+            const FName IconName,
+            UTexture2D* IconTexture
+        ) -> bool
+        {
+            UHorizontalBox* HeaderRow = Cast<UHorizontalBox>(Tree->FindWidget(RowName));
+            USizeBox* IconSize = Cast<USizeBox>(Tree->FindWidget(IconSizeName));
+            UImage* Icon = Cast<UImage>(Tree->FindWidget(IconName));
+            if (!HeaderRow && !IconSize && !Icon)
+            {
+                if (!Heading || Heading->GetParent() != Parent || !Parent->RemoveChild(Heading))
+                {
+                    return false;
+                }
+                HeaderRow = Tree->ConstructWidget<UHorizontalBox>(UHorizontalBox::StaticClass(), RowName);
+                IconSize = Tree->ConstructWidget<USizeBox>(USizeBox::StaticClass(), IconSizeName);
+                IconSize->SetWidthOverride(30.0f);
+                IconSize->SetHeightOverride(30.0f);
+                Icon = Tree->ConstructWidget<UImage>(UImage::StaticClass(), IconName);
+                IconSize->SetContent(Icon);
+                AddHorizontal(HeaderRow, IconSize, FMargin(0.0f, 0.0f, 10.0f, 0.0f))->SetVerticalAlignment(VAlign_Center);
+                UHorizontalBoxSlot* HeadingSlot = AddHorizontal(HeaderRow, Heading);
+                HeadingSlot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
+                HeadingSlot->SetVerticalAlignment(VAlign_Center);
+                UVerticalBoxSlot* RowSlot = Cast<UVerticalBoxSlot>(Parent->InsertChildAt(0, HeaderRow));
+                if (!RowSlot)
+                {
+                    return false;
+                }
+                RowSlot->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 12.0f));
+                RowSlot->SetHorizontalAlignment(HAlign_Fill);
+            }
+            else if (!HeaderRow || !IconSize || !Icon || !Heading
+                || HeaderRow->GetParent() != Parent
+                || IconSize->GetContent() != Icon
+                || IconSize->GetParent() != HeaderRow
+                || Heading->GetParent() != HeaderRow)
+            {
+                return false;
+            }
+            Icon->SetBrushFromTexture(IconTexture, true);
+            Heading->SetRenderTranslation(FVector2D::ZeroVector);
+            Heading->SetJustification(ETextJustify::Left);
+            return true;
+        };
+
+        UVerticalBox* RecentContent = Cast<UVerticalBox>(Tree->FindWidget(TEXT("DashboardRecentEventsContent")));
+        UVerticalBox* QuickContent = Cast<UVerticalBox>(Tree->FindWidget(TEXT("DashboardQuickActionsContent")));
+        UTextBlock* RecentHeadingComponent = Cast<UTextBlock>(Tree->FindWidget(TEXT("DashboardRecentEventsHeadingText")));
+        UTextBlock* QuickHeadingComponent = Cast<UTextBlock>(Tree->FindWidget(TEXT("DashboardQuickActionsHeadingText")));
+        if (!RecentContent || !QuickContent
+            || !EnsureSectionHeader(RecentContent, RecentHeadingComponent,
+                TEXT("DashboardRecentEventsHeaderRow"), TEXT("DashboardRecentEventsHeaderIconSize"),
+                TEXT("DashboardRecentEventsHeaderIcon"), DiplomacyIcon)
+            || !EnsureSectionHeader(QuickContent, QuickHeadingComponent,
+                TEXT("DashboardQuickActionsHeaderRow"), TEXT("DashboardQuickActionsHeaderIconSize"),
+                TEXT("DashboardQuickActionsHeaderIcon"), ProtectionIcon))
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI pixel match update failed: lower section header hierarchy."));
+            return false;
+        }
+
+        UBorder* RecentAllFrame = Cast<UBorder>(Tree->FindWidget(TEXT("DashboardRecentEventsAllFrame")));
+        UTextBlock* RecentAllText = Cast<UTextBlock>(Tree->FindWidget(TEXT("DashboardRecentEventsAllText")));
+        if (!RecentAllFrame && !RecentAllText)
+        {
+            RecentAllFrame = Tree->ConstructWidget<UBorder>(UBorder::StaticClass(), TEXT("DashboardRecentEventsAllFrame"));
+            RecentAllText = MakeText(Tree, TEXT("DashboardRecentEventsAllText"), TEXT("Tumunu Gor  >"), 12);
+            RecentAllText->SetJustification(ETextJustify::Center);
+            RecentAllFrame->SetContent(RecentAllText);
+            UVerticalBoxSlot* AllSlot = AddVertical(RecentContent, RecentAllFrame, FMargin(0.0f, 8.0f, 0.0f, 0.0f));
+            AllSlot->SetHorizontalAlignment(HAlign_Right);
+        }
+        else if (!RecentAllFrame || !RecentAllText
+            || RecentAllFrame->GetContent() != RecentAllText
+            || RecentAllFrame->GetParent() != RecentContent)
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI pixel match update refused: partial recent all component."));
+            return false;
+        }
+        StyleRoundedFrame(Tree, TEXT("DashboardRecentEventsAllFrame"),
+            PixelTheme::FromSRGB(7, 27, 37, 0.96f), PixelTheme::GoldMuted, 4.0f, 1.0f, FMargin(14.0f, 6.0f));
+
         StyleTransparentFrame(Tree, TEXT("DashboardRecentEventsFrame"), FMargin(16.0f));
         StyleTransparentFrame(Tree, TEXT("DashboardQuickActionsFrame"), FMargin(14.0f));
         StyleTransparentFrame(Tree, TEXT("DashboardRelationsFrame"), FMargin(14.0f));
@@ -4090,27 +4313,23 @@ namespace PalTRUIAssetBuilder
         if (UTextBlock* RelationsHeading = Cast<UTextBlock>(Tree->FindWidget(TEXT("DashboardSidebarTitleText"))))
         {
             RelationsHeading->SetText(FText::FromString(TEXT("İlişkiler")));
-            RelationsHeading->SetRenderTranslation(FVector2D(0.0f, 16.0f));
+            RelationsHeading->SetRenderTranslation(FVector2D::ZeroVector);
         }
         if (UTextBlock* PendingHeading = Cast<UTextBlock>(Tree->FindWidget(TEXT("PendingOffersHeadingText"))))
         {
             PendingHeading->SetText(FText::FromString(TEXT("Bekleyen Teklifler")));
-            PendingHeading->SetRenderTranslation(FVector2D(0.0f, 28.0f));
+            PendingHeading->SetRenderTranslation(FVector2D::ZeroVector);
         }
         ClanHeading->SetText(FText::FromString(TEXT("Klan Durumu")));
         if (UTextBlock* RecentHeading = Cast<UTextBlock>(Tree->FindWidget(TEXT("DashboardRecentEventsHeadingText"))))
         {
             RecentHeading->SetText(FText::FromString(TEXT("Son Olaylar")));
-            RecentHeading->SetRenderTranslation(FVector2D(0.0f, 22.0f));
+            RecentHeading->SetRenderTranslation(FVector2D::ZeroVector);
         }
         if (UTextBlock* QuickHeading = Cast<UTextBlock>(Tree->FindWidget(TEXT("DashboardQuickActionsHeadingText"))))
         {
             QuickHeading->SetText(FText::FromString(TEXT("Hızlı İşlemler")));
             QuickHeading->SetRenderTranslation(FVector2D::ZeroVector);
-            if (UVerticalBoxSlot* HeadingSlot = Cast<UVerticalBoxSlot>(QuickHeading->Slot))
-            {
-                HeadingSlot->SetPadding(FMargin(0.0f, 17.0f, 0.0f, 10.0f));
-            }
         }
         if (UTextBlock* ProtectionActionText = Cast<UTextBlock>(Tree->FindWidget(TEXT("DashboardProtectionButtonText"))))
         {
@@ -4236,11 +4455,17 @@ namespace PalTRUIAssetBuilder
                 return false;
             }
             Icon->SetBrushFromTexture(EventTextures[Index - 1], true);
-            IconSize->SetWidthOverride(38.0f);
-            IconSize->SetHeightOverride(38.0f);
-            StyleTransparentFrame(Tree,
+            IconSize->SetWidthOverride(30.0f);
+            IconSize->SetHeightOverride(30.0f);
+            StyleRoundedFrame(Tree,
                 FName(*FString::Printf(TEXT("DashboardRecentEvent%dFrame"), Index)),
-                FMargin(4.0f, 4.0f));
+                Index % 2 == 1
+                    ? PixelTheme::FromSRGB(14, 48, 62, 0.76f)
+                    : PixelTheme::FromSRGB(8, 34, 47, 0.72f),
+                PixelTheme::FromSRGB(70, 92, 94, 0.32f),
+                2.0f,
+                0.5f,
+                FMargin(7.0f, 5.0f));
         }
 
         for (const FName CardIconSizeName : {
@@ -4259,15 +4484,18 @@ namespace PalTRUIAssetBuilder
         for (int32 Index = 1; Index <= 3; ++Index)
         {
             if (USizeBox* IconSize = Cast<USizeBox>(Tree->FindWidget(
-                FName(*FString::Printf(TEXT("DashboardRelation%dIconSize"), Index)))))
+                FName(*FString::Printf(TEXT("DashboardRelationRow%dIconSize"), Index)))))
             {
-                IconSize->SetWidthOverride(64.0f);
-                IconSize->SetHeightOverride(72.0f);
                 IconSize->SetWidthOverride(72.0f);
+                IconSize->SetHeightOverride(72.0f);
             }
-            StyleTransparentFrame(Tree,
+            StyleRoundedFrame(Tree,
                 FName(*FString::Printf(TEXT("DashboardRelationRow%dFrame"), Index)),
-                FMargin(4.0f, 6.0f));
+                PixelTheme::FromSRGB(24, 28, 28, 0.94f),
+                PixelTheme::FromSRGB(105, 91, 59, 0.72f),
+                4.0f,
+                1.0f,
+                FMargin(8.0f, 7.0f));
             SetTextFontSize(Tree,
                 FName(*FString::Printf(TEXT("DashboardRelationRow%dNameText"), Index)), 16);
             SetTextFontSize(Tree,
@@ -4556,6 +4784,14 @@ namespace PalTRUIAssetBuilder
             TEXT("DashboardClanCardTitleText"),
             TEXT("DashboardClanCardValueText"),
             TEXT("DashboardClanCardDetailText"),
+            TEXT("DashboardClanCardDividerSize"),
+            TEXT("DashboardClanCardDivider"),
+            TEXT("DashboardClanRoleRow"),
+            TEXT("DashboardClanRoleLabelText"),
+            TEXT("DashboardClanRoleValueText"),
+            TEXT("DashboardClanMembersRow"),
+            TEXT("DashboardClanMembersLabelText"),
+            TEXT("DashboardClanMembersValueText"),
             TEXT("DashboardDiplomacyCardSize"),
             TEXT("DashboardDiplomacyCardOverlay"),
             TEXT("DashboardDiplomacyCardTintFrame"),
@@ -4563,13 +4799,48 @@ namespace PalTRUIAssetBuilder
             TEXT("DashboardDiplomacyCardContent"),
             TEXT("DashboardDiplomacyCardTitleText"),
             TEXT("DashboardDiplomacyCardValueText"),
+            TEXT("DashboardDiplomacyCardDividerSize"),
+            TEXT("DashboardDiplomacyCardDivider"),
+            TEXT("DashboardDiplomacyWarRow"),
+            TEXT("DashboardDiplomacyWarLabelText"),
+            TEXT("DashboardDiplomacyWarValueText"),
+            TEXT("DashboardDiplomacyAllianceRow"),
+            TEXT("DashboardDiplomacyAllianceLabelText"),
+            TEXT("DashboardDiplomacyAllianceValueText"),
+            TEXT("DashboardDiplomacyPendingRow"),
+            TEXT("DashboardDiplomacyPendingLabelText"),
+            TEXT("DashboardDiplomacyPendingValueText"),
             TEXT("DashboardProtectionCardSize"),
             TEXT("DashboardProtectionCardOverlay"),
             TEXT("DashboardProtectionCardTintFrame"),
+            TEXT("DashboardProtectionCardDividerSize"),
+            TEXT("DashboardProtectionCardDivider"),
+            TEXT("DashboardProtectionOfflineRow"),
+            TEXT("DashboardProtectionOfflineLabelText"),
+            TEXT("DashboardProtectionOfflineValueText"),
+            TEXT("DashboardProtectionRaidRow"),
+            TEXT("DashboardProtectionRaidLabelText"),
+            TEXT("DashboardProtectionRaidValueText"),
             TEXT("DashboardBuildingsCardSize"),
             TEXT("DashboardBuildingsCardOverlay"),
             TEXT("DashboardBuildingsCardTintFrame"),
+            TEXT("DashboardBuildingsCardDividerSize"),
+            TEXT("DashboardBuildingsCardDivider"),
+            TEXT("DashboardBuildingsProtectedRow"),
+            TEXT("DashboardBuildingsProtectedLabelText"),
+            TEXT("DashboardBuildingsProtectedValueText"),
+            TEXT("DashboardBuildingsRiskRow"),
+            TEXT("DashboardBuildingsRiskLabelText"),
+            TEXT("DashboardBuildingsRiskValueText"),
             TEXT("DashboardDiplomacyCardDetailText"),
+            TEXT("DashboardRecentEventsHeaderRow"),
+            TEXT("DashboardRecentEventsHeaderIconSize"),
+            TEXT("DashboardRecentEventsHeaderIcon"),
+            TEXT("DashboardRecentEventsAllFrame"),
+            TEXT("DashboardRecentEventsAllText"),
+            TEXT("DashboardQuickActionsHeaderRow"),
+            TEXT("DashboardQuickActionsHeaderIconSize"),
+            TEXT("DashboardQuickActionsHeaderIcon"),
             TEXT("DashboardRelationsFrame"),
             TEXT("DashboardRelationsContent"),
             TEXT("DashboardRelationsHeadingText"),
