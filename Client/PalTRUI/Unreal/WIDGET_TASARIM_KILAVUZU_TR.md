@@ -4,18 +4,31 @@ Bu kılavuz, PalTR panelinin görsel tasarımını Unreal Editor içinde manuel
 olarak hazırlarken mevcut Lua veri bağlantısını ve çalışan etkileşimleri
 korumak için hazırlanmıştır.
 
-## 1. Düzenlenecek asset
+## 1. Sıfırdan tasarım çalışma düzeni
 
-Unreal Editor içinde yalnızca şu Widget Blueprint'i düzenle:
+Eski otomatik tasarım katmanları temizlenmiştir. Tasarıma başlamak için Unreal
+Editor içinde hazırlanan şu bağımsız şablonu aç:
+
+`/Game/Mods/PalTRUI/WBP_PalTRPanel_DesignTemplate`
+
+Bu asset yalnız component hiyerarşisi, referansa yakın yerleşim, placeholder
+metinler, temel hover stilleri ve tıklama kalkanı içerir. Sunucu verisi veya
+diplomasi aksiyonları bağlı değildir.
+
+İlk aşamada yalnız bu şablonun görsel tasarımını tamamla. Tasarım onaylandıktan
+sonra şablonun son halini runtime yolu olan aşağıdaki assete taşıyıp kod
+bağlantılarını birlikte kuracağız:
 
 `/Game/Mods/PalTRUI/WBP_PalTRPanel`
 
-Fiziksel Modding Kit konumu:
-
-`C:\PalTR-Dev\PalworldModdingKit\Content\Mods\PalTRUI\WBP_PalTRPanel.uasset`
-
 Runtime artık `WBP_PalTRPanel_SkinV2` aramaz. Eski otomatik SkinV2 ve tam
 panel kaplama assetleri kaldırılmıştır.
+
+Şablondaki `Template...` adlı componentleri yeniden düzenleyebilir, çoğaltabilir
+ve anlaşılır geçici adlarla değiştirebilirsin.
+Görsel tasarım tamamlandıktan sonra bu kılavuzdaki runtime adlarını ve kod
+bağlantılarını birlikte uygulayacağız. Tasarım tamamlanana kadar F6 panelinin
+çalışması beklenmez.
 
 Referans görseller şurada bulunur:
 
@@ -25,7 +38,9 @@ Referans görseli tam ekran bir Image olarak widget'ın üstüne koyma. Görseli
 ikinci monitörde veya Image Comparison aracıyla yalnızca ölçü referansı olarak
 kullan.
 
-## 2. Temel çalışma kuralı
+## 2. Entegrasyon aşamasındaki temel çalışma kuralı
+
+Bu bölüm tasarım bittikten sonra kod bağlantısı yapılırken uygulanacaktır.
 
 Bir widget'ın görünüşünü, boyutunu, padding değerini, rengini, fontunu,
 brush'ını, anchor'ını ve animasyonunu değiştirebilirsin. Runtime tarafından

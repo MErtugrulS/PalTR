@@ -9,6 +9,13 @@ The generated widget is a renderer shell. It contains stable, named controls for
 
 The generator refuses to overwrite either target asset.
 
+Run the commandlet with `-CreateManualDesignTemplate` to create the independent
+`/Game/Mods/PalTRUI/WBP_PalTRPanel_DesignTemplate` visual-design starter. It
+contains only a reference-like component hierarchy, placeholder content,
+button hover styles, and a full-panel pointer shield. It deliberately has no
+snapshot binding, diplomacy actions, transport, or runtime attachment and
+refuses to overwrite an existing template asset.
+
 Run the commandlet with `-UpdateRelationNavigation` to update an existing
 panel in place with the renderer-facing `PreviousRelationButton` and
 `NextRelationButton` controls. The update is idempotent and refuses partial

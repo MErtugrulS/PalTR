@@ -475,6 +475,483 @@ namespace PalTRUIAssetBuilder
         return Blueprint;
     }
 
+    UWidgetBlueprint* CreateManualDesignTemplate()
+    {
+        const FString PackageName = FString(AssetRoot)
+            / TEXT("WBP_PalTRPanel_DesignTemplate");
+        UPackage* Package = CreatePackage(*PackageName);
+        UWidgetBlueprint* Blueprint = Cast<UWidgetBlueprint>(
+            FKismetEditorUtilities::CreateBlueprint(
+                UUserWidget::StaticClass(),
+                Package,
+                TEXT("WBP_PalTRPanel_DesignTemplate"),
+                BPTYPE_Normal,
+                UWidgetBlueprint::StaticClass(),
+                UWidgetBlueprintGeneratedClass::StaticClass(),
+                TEXT("PalTRUIAssetBuilder")
+            )
+        );
+        if (!Blueprint || !Blueprint->WidgetTree)
+        {
+            return nullptr;
+        }
+
+        UWidgetTree* Tree = Blueprint->WidgetTree;
+        auto MakeFrame = [Tree](
+            const FName Name,
+            const FLinearColor Fill,
+            const FLinearColor Outline,
+            const FMargin Padding,
+            const float Radius = 6.0f
+        )
+        {
+            UBorder* Frame = Tree->ConstructWidget<UBorder>(
+                UBorder::StaticClass(),
+                Name
+            );
+            Frame->SetBrush(FSlateRoundedBoxBrush(
+                Fill,
+                Radius,
+                Outline,
+                1.25f
+            ));
+            Frame->SetBrushColor(FLinearColor::White);
+            Frame->SetPadding(Padding);
+            Frame->SetHorizontalAlignment(HAlign_Fill);
+            Frame->SetVerticalAlignment(VAlign_Fill);
+            return Frame;
+        };
+        auto MakeHeading = [Tree](
+            const FName Name,
+            const TCHAR* Label,
+            const int32 Size
+        )
+        {
+            UTextBlock* Heading = MakeText(Tree, Name, Label, Size);
+            Heading->SetColorAndOpacity(FSlateColor(PixelTheme::TextPrimary));
+            Heading->SetShadowOffset(FVector2D(1.0f, 2.0f));
+            Heading->SetShadowColorAndOpacity(FLinearColor(0, 0, 0, 0.9f));
+            return Heading;
+        };
+        auto MakeStyledButton = [Tree](
+            const FName ButtonName,
+            const FName TextName,
+            const TCHAR* Label
+        )
+        {
+            UButton* Button = MakeTabButton(Tree, ButtonName, TextName, Label);
+            StyleButton(Tree, ButtonName, PixelTheme::CyanDark);
+            Button->IsFocusable = false;
+            return Button;
+        };
+
+        UCanvasPanel* Root = Tree->ConstructWidget<UCanvasPanel>(
+            UCanvasPanel::StaticClass(),
+            TEXT("RootCanvas")
+        );
+        Tree->RootWidget = Root;
+
+        UButton* Shield = Tree->ConstructWidget<UButton>(
+            UButton::StaticClass(),
+            TEXT("PanelInputShield")
+        );
+        FButtonStyle ShieldStyle = Shield->WidgetStyle;
+        const FSlateNoResource EmptyBrush;
+        ShieldStyle.SetNormal(EmptyBrush);
+        ShieldStyle.SetHovered(EmptyBrush);
+        ShieldStyle.SetPressed(EmptyBrush);
+        ShieldStyle.SetDisabled(EmptyBrush);
+        ShieldStyle.SetNormalPadding(FMargin(0.0f));
+        ShieldStyle.SetPressedPadding(FMargin(0.0f));
+        Shield->SetStyle(ShieldStyle);
+        Shield->SetBackgroundColor(FLinearColor::Transparent);
+        Shield->SetColorAndOpacity(FLinearColor::White);
+        Shield->IsFocusable = false;
+        UCanvasPanelSlot* ShieldSlot = Root->AddChildToCanvas(Shield);
+        ShieldSlot->SetAnchors(FAnchors(0.035f, 0.045f, 0.965f, 0.955f));
+        ShieldSlot->SetAlignment(FVector2D::ZeroVector);
+        ShieldSlot->SetOffsets(FMargin(0.0f));
+
+        UBorder* Panel = MakeFrame(
+            TEXT("TemplatePanelBackground"),
+            PixelTheme::FromSRGB(7, 18, 27, 0.92f),
+            PixelTheme::GoldMuted,
+            FMargin(10.0f),
+            10.0f
+        );
+        Shield->SetContent(Panel);
+        if (UButtonSlot* PanelSlot = Cast<UButtonSlot>(Panel->Slot))
+        {
+            PanelSlot->SetHorizontalAlignment(HAlign_Fill);
+            PanelSlot->SetVerticalAlignment(VAlign_Fill);
+        }
+
+        UVerticalBox* Shell = Tree->ConstructWidget<UVerticalBox>(
+            UVerticalBox::StaticClass(),
+            TEXT("TemplateShell")
+        );
+        Panel->SetContent(Shell);
+
+        UBorder* HeaderFrame = MakeFrame(
+            TEXT("TemplateHeaderFrame"),
+            PixelTheme::FromSRGB(10, 29, 43, 0.96f),
+            PixelTheme::GoldMuted,
+            FMargin(18.0f, 10.0f),
+            6.0f
+        );
+        UHorizontalBox* Header = Tree->ConstructWidget<UHorizontalBox>(
+            UHorizontalBox::StaticClass(),
+            TEXT("TemplateHeaderRow")
+        );
+        HeaderFrame->SetContent(Header);
+        UTextBlock* Crest = MakeHeading(
+            TEXT("TemplateCrestPlaceholder"),
+            TEXT("◆"),
+            34
+        );
+        Crest->SetColorAndOpacity(FSlateColor(PixelTheme::Gold));
+        AddHorizontal(Header, Crest, FMargin(0, 0, 12, 0));
+        UHorizontalBoxSlot* TitleSlot = AddHorizontal(
+            Header,
+            MakeHeading(TEXT("TemplateTitleText"), TEXT("PALTR PANEL"), 30)
+        );
+        TitleSlot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
+        for (const auto& Badge : {
+            TTuple<FName, FName, const TCHAR*>(
+                TEXT("TemplateServerBadge"),
+                TEXT("TemplateServerBadgeText"),
+                TEXT("●  Sunucu Aktif")
+            ),
+            TTuple<FName, FName, const TCHAR*>(
+                TEXT("TemplateGuildBadge"),
+                TEXT("TemplateGuildBadgeText"),
+                TEXT("Klan: -")
+            ),
+            TTuple<FName, FName, const TCHAR*>(
+                TEXT("TemplateRoleBadge"),
+                TEXT("TemplateRoleBadgeText"),
+                TEXT("Rol: -")
+            ),
+            TTuple<FName, FName, const TCHAR*>(
+                TEXT("TemplateNotificationBadge"),
+                TEXT("TemplateNotificationBadgeText"),
+                TEXT("Bildirim: 0")
+            )
+        })
+        {
+            AddHorizontal(
+                Header,
+                MakeStyledButton(Badge.Get<0>(), Badge.Get<1>(), Badge.Get<2>()),
+                FMargin(6, 0, 0, 0)
+            );
+        }
+        AddHorizontal(
+            Header,
+            MakeStyledButton(
+                TEXT("TemplateCloseButton"),
+                TEXT("TemplateCloseButtonText"),
+                TEXT("X")
+            ),
+            FMargin(8, 0, 0, 0)
+        );
+        AddVertical(Shell, HeaderFrame, FMargin(0, 0, 0, 10));
+
+        UHorizontalBox* Body = Tree->ConstructWidget<UHorizontalBox>(
+            UHorizontalBox::StaticClass(),
+            TEXT("TemplateBodyRow")
+        );
+        UVerticalBoxSlot* BodySlot = AddVertical(Shell, Body, FMargin(0, 0, 0, 10));
+        BodySlot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
+        BodySlot->SetVerticalAlignment(VAlign_Fill);
+
+        USizeBox* SidebarSize = Tree->ConstructWidget<USizeBox>(
+            USizeBox::StaticClass(),
+            TEXT("TemplateSidebarSize")
+        );
+        SidebarSize->SetWidthOverride(250.0f);
+        UBorder* SidebarFrame = MakeFrame(
+            TEXT("TemplateSidebarFrame"),
+            PixelTheme::FromSRGB(6, 25, 36, 0.94f),
+            PixelTheme::GoldMuted,
+            FMargin(12.0f),
+            6.0f
+        );
+        SidebarSize->SetContent(SidebarFrame);
+        UVerticalBox* Sidebar = Tree->ConstructWidget<UVerticalBox>(
+            UVerticalBox::StaticClass(),
+            TEXT("TemplateSidebar")
+        );
+        SidebarFrame->SetContent(Sidebar);
+        AddVertical(
+            Sidebar,
+            MakeHeading(TEXT("TemplateMenuHeading"), TEXT("MENU"), 16),
+            FMargin(6, 4, 0, 12)
+        );
+        for (const auto& Entry : {
+            TTuple<FName, FName, const TCHAR*>(TEXT("TemplateHomeButton"), TEXT("TemplateHomeText"), TEXT("⌂  Ana Sayfa")),
+            TTuple<FName, FName, const TCHAR*>(TEXT("TemplateDiplomacyButton"), TEXT("TemplateDiplomacyText"), TEXT("◇  Diplomasi")),
+            TTuple<FName, FName, const TCHAR*>(TEXT("TemplateGuildsButton"), TEXT("TemplateGuildsText"), TEXT("♜  Klanlar")),
+            TTuple<FName, FName, const TCHAR*>(TEXT("TemplateProtectionButton"), TEXT("TemplateProtectionText"), TEXT("⚔  Savaş / Koruma")),
+            TTuple<FName, FName, const TCHAR*>(TEXT("TemplateBuildingsButton"), TEXT("TemplateBuildingsText"), TEXT("▣  Yapılar")),
+            TTuple<FName, FName, const TCHAR*>(TEXT("TemplateRegionsButton"), TEXT("TemplateRegionsText"), TEXT("⌖  Bölgeler")),
+            TTuple<FName, FName, const TCHAR*>(TEXT("TemplatePlayersButton"), TEXT("TemplatePlayersText"), TEXT("●  Oyuncular")),
+            TTuple<FName, FName, const TCHAR*>(TEXT("TemplateNotificationsButton"), TEXT("TemplateNotificationsText"), TEXT("◆  Bildirimler")),
+            TTuple<FName, FName, const TCHAR*>(TEXT("TemplateSettingsButton"), TEXT("TemplateSettingsText"), TEXT("⚙  Ayarlar"))
+        })
+        {
+            AddVertical(
+                Sidebar,
+                MakeStyledButton(Entry.Get<0>(), Entry.Get<1>(), Entry.Get<2>()),
+                FMargin(0, 0, 0, 7)
+            );
+        }
+        AddHorizontal(Body, SidebarSize, FMargin(0, 0, 10, 0));
+
+        UBorder* MainFrame = MakeFrame(
+            TEXT("TemplateMainFrame"),
+            PixelTheme::FromSRGB(18, 49, 69, 0.86f),
+            PixelTheme::GoldMuted,
+            FMargin(16.0f),
+            6.0f
+        );
+        UHorizontalBoxSlot* MainSlot = AddHorizontal(
+            Body,
+            MainFrame,
+            FMargin(0, 0, 10, 0)
+        );
+        MainSlot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
+        MainSlot->SetVerticalAlignment(VAlign_Fill);
+        UVerticalBox* Main = Tree->ConstructWidget<UVerticalBox>(
+            UVerticalBox::StaticClass(),
+            TEXT("TemplateMainColumn")
+        );
+        MainFrame->SetContent(Main);
+        AddVertical(
+            Main,
+            MakeHeading(TEXT("TemplatePageHeading"), TEXT("Klan Durumu"), 26)
+        );
+        UTextBlock* Subtitle = MakeText(
+            Tree,
+            TEXT("TemplatePageSubtitle"),
+            TEXT("Klanınızın genel durumunu ve önemli bilgileri buradan takip edin."),
+            14
+        );
+        Subtitle->SetColorAndOpacity(FSlateColor(PixelTheme::TextSecondary));
+        AddVertical(Main, Subtitle, FMargin(0, 4, 0, 14));
+
+        UHorizontalBox* Cards = Tree->ConstructWidget<UHorizontalBox>(
+            UHorizontalBox::StaticClass(),
+            TEXT("TemplateStatusCards")
+        );
+        const TArray<TTuple<FName, const TCHAR*, const TCHAR*, FLinearColor>> CardSpecs = {
+            { TEXT("TemplateClanCard"), TEXT("Klanım"), TEXT("Klan bilgisi"), PixelTheme::FromSRGB(7, 75, 69, 0.94f) },
+            { TEXT("TemplateDiplomacyCard"), TEXT("Diplomasi"), TEXT("Savaş / İttifak"), PixelTheme::FromSRGB(13, 60, 88, 0.94f) },
+            { TEXT("TemplateProtectionCard"), TEXT("Koruma"), TEXT("Yakında"), PixelTheme::FromSRGB(91, 65, 19, 0.94f) },
+            { TEXT("TemplateBuildingsCard"), TEXT("Yapılar"), TEXT("Yakında"), PixelTheme::FromSRGB(79, 43, 24, 0.94f) }
+        };
+        for (int32 Index = 0; Index < CardSpecs.Num(); ++Index)
+        {
+            const auto& Spec = CardSpecs[Index];
+            UBorder* Card = MakeFrame(
+                Spec.Get<0>(),
+                Spec.Get<3>(),
+                PixelTheme::GoldMuted,
+                FMargin(14.0f),
+                8.0f
+            );
+            UVerticalBox* CardContent = Tree->ConstructWidget<UVerticalBox>(
+                UVerticalBox::StaticClass(),
+                FName(*FString::Printf(TEXT("TemplateCardContent%d"), Index + 1))
+            );
+            Card->SetContent(CardContent);
+            AddVertical(
+                CardContent,
+                MakeHeading(
+                    FName(*FString::Printf(TEXT("TemplateCardTitle%d"), Index + 1)),
+                    Spec.Get<1>(),
+                    20
+                ),
+                FMargin(0, 0, 0, 24)
+            );
+            UTextBlock* IconPlaceholder = MakeHeading(
+                FName(*FString::Printf(TEXT("TemplateCardIcon%d"), Index + 1)),
+                TEXT("◆"),
+                38
+            );
+            IconPlaceholder->SetColorAndOpacity(FSlateColor(PixelTheme::Gold));
+            AddVertical(CardContent, IconPlaceholder, FMargin(0, 0, 0, 18));
+            AddVertical(
+                CardContent,
+                MakeHeading(
+                    FName(*FString::Printf(TEXT("TemplateCardValue%d"), Index + 1)),
+                    Spec.Get<2>(),
+                    18
+                )
+            );
+            UHorizontalBoxSlot* CardSlot = AddHorizontal(
+                Cards,
+                Card,
+                Index + 1 < CardSpecs.Num() ? FMargin(0, 0, 10, 0) : FMargin(0)
+            );
+            CardSlot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
+            CardSlot->SetVerticalAlignment(VAlign_Fill);
+        }
+        UVerticalBoxSlot* CardsSlot = AddVertical(Main, Cards, FMargin(0, 0, 0, 12));
+        CardsSlot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
+        CardsSlot->SetVerticalAlignment(VAlign_Fill);
+
+        UHorizontalBox* Lower = Tree->ConstructWidget<UHorizontalBox>(
+            UHorizontalBox::StaticClass(),
+            TEXT("TemplateLowerRow")
+        );
+        UBorder* EventsFrame = MakeFrame(
+            TEXT("TemplateRecentEventsFrame"),
+            PixelTheme::FromSRGB(9, 31, 43, 0.94f),
+            PixelTheme::GoldMuted,
+            FMargin(14.0f),
+            6.0f
+        );
+        UVerticalBox* Events = Tree->ConstructWidget<UVerticalBox>(
+            UVerticalBox::StaticClass(),
+            TEXT("TemplateRecentEvents")
+        );
+        EventsFrame->SetContent(Events);
+        AddVertical(Events, MakeHeading(TEXT("TemplateEventsHeading"), TEXT("Son Olaylar"), 20), FMargin(0, 0, 0, 10));
+        for (int32 Index = 1; Index <= 5; ++Index)
+        {
+            AddVertical(
+                Events,
+                MakeText(
+                    Tree,
+                    FName(*FString::Printf(TEXT("TemplateEvent%d"), Index)),
+                    TEXT("◆  Olay satırı                         zaman"),
+                    13
+                ),
+                FMargin(0, 0, 0, 7)
+            );
+        }
+        UHorizontalBoxSlot* EventsSlot = AddHorizontal(Lower, EventsFrame, FMargin(0, 0, 10, 0));
+        EventsSlot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
+        EventsSlot->SetVerticalAlignment(VAlign_Fill);
+
+        UBorder* ActionsFrame = MakeFrame(
+            TEXT("TemplateQuickActionsFrame"),
+            PixelTheme::FromSRGB(9, 31, 43, 0.94f),
+            PixelTheme::GoldMuted,
+            FMargin(14.0f),
+            6.0f
+        );
+        UVerticalBox* Actions = Tree->ConstructWidget<UVerticalBox>(
+            UVerticalBox::StaticClass(),
+            TEXT("TemplateQuickActions")
+        );
+        ActionsFrame->SetContent(Actions);
+        AddVertical(Actions, MakeHeading(TEXT("TemplateActionsHeading"), TEXT("Hızlı İşlemler"), 20), FMargin(0, 0, 0, 10));
+        for (const auto& Action : {
+            TTuple<FName, FName, const TCHAR*>(TEXT("TemplateOpenDiplomacy"), TEXT("TemplateOpenDiplomacyText"), TEXT("Diplomasiyi Aç  >")),
+            TTuple<FName, FName, const TCHAR*>(TEXT("TemplateViewOffers"), TEXT("TemplateViewOffersText"), TEXT("Teklifleri Gör  >")),
+            TTuple<FName, FName, const TCHAR*>(TEXT("TemplateListGuilds"), TEXT("TemplateListGuildsText"), TEXT("Klanları Listele  >")),
+            TTuple<FName, FName, const TCHAR*>(TEXT("TemplateProtectionStatus"), TEXT("TemplateProtectionStatusText"), TEXT("Koruma Durumu  >"))
+        })
+        {
+            AddVertical(
+                Actions,
+                MakeStyledButton(Action.Get<0>(), Action.Get<1>(), Action.Get<2>()),
+                FMargin(0, 0, 0, 8)
+            );
+        }
+        UHorizontalBoxSlot* ActionsSlot = AddHorizontal(Lower, ActionsFrame);
+        ActionsSlot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
+        ActionsSlot->SetVerticalAlignment(VAlign_Fill);
+        UVerticalBoxSlot* LowerSlot = AddVertical(Main, Lower);
+        LowerSlot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
+        LowerSlot->SetVerticalAlignment(VAlign_Fill);
+
+        USizeBox* RightSize = Tree->ConstructWidget<USizeBox>(
+            USizeBox::StaticClass(),
+            TEXT("TemplateRightColumnSize")
+        );
+        RightSize->SetWidthOverride(350.0f);
+        UVerticalBox* Right = Tree->ConstructWidget<UVerticalBox>(
+            UVerticalBox::StaticClass(),
+            TEXT("TemplateRightColumn")
+        );
+        RightSize->SetContent(Right);
+        UBorder* RelationsFrame = MakeFrame(
+            TEXT("TemplateRelationsFrame"),
+            PixelTheme::RelationDark,
+            PixelTheme::GoldMuted,
+            FMargin(14.0f),
+            6.0f
+        );
+        UVerticalBox* Relations = Tree->ConstructWidget<UVerticalBox>(
+            UVerticalBox::StaticClass(),
+            TEXT("TemplateRelations")
+        );
+        RelationsFrame->SetContent(Relations);
+        AddVertical(Relations, MakeHeading(TEXT("TemplateRelationsHeading"), TEXT("İlişkiler"), 21), FMargin(0, 0, 0, 14));
+        AddVertical(Relations, MakeText(Tree, TEXT("TemplateRelation1"), TEXT("◆  Klan adı                         Tarafsız"), 15), FMargin(0, 0, 0, 14));
+        AddVertical(Relations, MakeText(Tree, TEXT("TemplateRelation2"), TEXT("◆  Klan adı                         İttifak"), 15), FMargin(0, 0, 0, 14));
+        AddVertical(Relations, MakeText(Tree, TEXT("TemplateRelation3"), TEXT("◆  Klan adı                         Savaş"), 15));
+        UVerticalBoxSlot* RelationsSlot = AddVertical(Right, RelationsFrame, FMargin(0, 0, 0, 10));
+        RelationsSlot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
+
+        UBorder* OffersFrame = MakeFrame(
+            TEXT("TemplatePendingOffersFrame"),
+            PixelTheme::RelationDark,
+            PixelTheme::GoldMuted,
+            FMargin(14.0f),
+            6.0f
+        );
+        UVerticalBox* Offers = Tree->ConstructWidget<UVerticalBox>(
+            UVerticalBox::StaticClass(),
+            TEXT("TemplatePendingOffers")
+        );
+        OffersFrame->SetContent(Offers);
+        AddVertical(Offers, MakeHeading(TEXT("TemplateOffersHeading"), TEXT("Bekleyen Teklifler"), 21), FMargin(0, 0, 0, 14));
+        AddVertical(Offers, MakeText(Tree, TEXT("TemplateOfferGuild"), TEXT("◆  Klan adı"), 17), FMargin(0, 0, 0, 6));
+        AddVertical(Offers, MakeText(Tree, TEXT("TemplateOfferType"), TEXT("İttifak Teklifi"), 14), FMargin(0, 0, 0, 14));
+        UHorizontalBox* OfferActions = Tree->ConstructWidget<UHorizontalBox>(
+            UHorizontalBox::StaticClass(),
+            TEXT("TemplateOfferActions")
+        );
+        UHorizontalBoxSlot* AcceptSlot = AddHorizontal(
+            OfferActions,
+            MakeStyledButton(TEXT("TemplateAcceptButton"), TEXT("TemplateAcceptText"), TEXT("✓  Kabul")),
+            FMargin(0, 0, 8, 0)
+        );
+        AcceptSlot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
+        UHorizontalBoxSlot* RejectSlot = AddHorizontal(
+            OfferActions,
+            MakeStyledButton(TEXT("TemplateRejectButton"), TEXT("TemplateRejectText"), TEXT("×  Reddet"))
+        );
+        RejectSlot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
+        AddVertical(Offers, OfferActions);
+        UVerticalBoxSlot* OffersSlot = AddVertical(Right, OffersFrame);
+        OffersSlot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
+        AddHorizontal(Body, RightSize);
+
+        UBorder* FooterFrame = MakeFrame(
+            TEXT("TemplateFooterFrame"),
+            PixelTheme::FromSRGB(8, 24, 35, 0.96f),
+            PixelTheme::GoldMuted,
+            FMargin(12.0f, 7.0f),
+            5.0f
+        );
+        UTextBlock* Footer = MakeHeading(
+            TEXT("TemplateFooterText"),
+            TEXT("F6  Panel     |     Esc  Kapat"),
+            15
+        );
+        FooterFrame->SetContent(Footer);
+        AddVertical(Shell, FooterFrame);
+
+        FAssetRegistryModule::AssetCreated(Blueprint);
+        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
+        FKismetEditorUtilities::CompileBlueprint(Blueprint);
+        return Blueprint;
+    }
+
     bool UpdateRelationNavigation()
     {
         UWidgetBlueprint* Panel = LoadObject<UWidgetBlueprint>(
@@ -5516,6 +5993,37 @@ UPalTRUIAssetBuilderCommandlet::UPalTRUIAssetBuilderCommandlet()
 int32 UPalTRUIAssetBuilderCommandlet::Main(const FString& Params)
 {
     using namespace PalTRUIAssetBuilder;
+
+    if (FParse::Param(*Params, TEXT("CreateManualDesignTemplate")))
+    {
+        const FString PackageName = FString(AssetRoot)
+            / TEXT("WBP_PalTRPanel_DesignTemplate");
+        if (FPackageName::DoesPackageExist(PackageName))
+        {
+            UE_LOG(
+                LogTemp,
+                Error,
+                TEXT("PalTRUI manual design template refused: target already exists.")
+            );
+            return 29;
+        }
+        UWidgetBlueprint* Template = CreateManualDesignTemplate();
+        if (!Template || !SaveAsset(Template))
+        {
+            UE_LOG(
+                LogTemp,
+                Error,
+                TEXT("PalTRUI manual design template creation failed.")
+            );
+            return 30;
+        }
+        UE_LOG(
+            LogTemp,
+            Display,
+            TEXT("PALTR_UI_MANUAL_DESIGN_TEMPLATE_OK | asset=/Game/Mods/PalTRUI/WBP_PalTRPanel_DesignTemplate")
+        );
+        return 0;
+    }
 
     if (FParse::Param(*Params, TEXT("Verify")))
     {
