@@ -375,6 +375,11 @@ namespace PalTR
             {
                 continue;
             }
+            const auto radius_squared = radius * radius;
+            if (!std::isfinite(radius_squared))
+            {
+                continue;
+            }
 
             conquest_zones.push_back(ConquestZone{
                 columns[0],
@@ -383,7 +388,7 @@ namespace PalTR
                 center_x,
                 center_y,
                 center_z,
-                radius * radius});
+                radius_squared});
         }
 
         m_player_guild_by_uid = std::move(player_guild_by_uid);

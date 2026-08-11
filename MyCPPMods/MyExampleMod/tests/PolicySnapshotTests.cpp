@@ -60,7 +60,8 @@ int main()
         root / "conquest_zone_policy.tsv",
         "node_id\towner_guild\tallowed_attacker_guild\tcenter_x_world\tcenter_y_world\tcenter_z_world\tradius_world\n"
         "NODE_A\tGUILD_A\tGUILD_B\t1000\t2000\t3000\t15000\n"
-        "INVALID\tGUILD_A\tGUILD_C\t0\t0\t0\tnot-a-radius\n");
+        "INVALID\tGUILD_A\tGUILD_C\t0\t0\t0\tnot-a-radius\n"
+        "OVERFLOW\tGUILD_A\tGUILD_C\t0\t0\t0\t1e308\n");
 
     PalTR::PolicySnapshot snapshot(root);
     std::string error;
@@ -174,6 +175,10 @@ int main()
         !snapshot.evaluate_conquest_zone_damage(
             "GUILD_C", "GUILD_B", 1000, 2000, 3000).allow,
         "wrong target does not get conquest exception");
+    ok &= expect(
+        !snapshot.evaluate_conquest_zone_damage(
+            "GUILD_A", "GUILD_C", 0, 0, 0).allow,
+        "overflowing conquest radius fails closed");
 
     const auto offline_external = snapshot.evaluate_protected_guilds(
         "GUILD_A",
