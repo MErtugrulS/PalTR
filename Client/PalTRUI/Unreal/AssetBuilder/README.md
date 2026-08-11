@@ -9,6 +9,14 @@ The generated widget is a renderer shell. It contains stable, named controls for
 
 The generator refuses to overwrite either target asset.
 
+Run the commandlet once with `-CreateHeaderDesignTemplate` to create the
+independent `/Game/Mods/PalTRUI/WBP_PalTRHeader_DesignTemplate` component.
+The component uses the literal 1511x77 reference-header crop as its base layer,
+adds the stable `HeaderActivePlayerCountText`, a clickable
+`HeaderNotificationsButton`, a visible `HeaderCloseButton`, and a transparent
+`HeaderInputShield`. It has no runtime bindings or click actions and refuses to
+overwrite an existing asset.
+
 Run the commandlet with `-CreateManualDesignTemplate` to create the independent
 `/Game/Mods/PalTRUI/WBP_PalTRPanel_DesignTemplate` visual-design starter. It
 contains only a reference-like component hierarchy, placeholder content,

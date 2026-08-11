@@ -34,6 +34,22 @@ Referans görseller şurada bulunur:
 
 `Client/PalTRUI/Unreal/DesignReference/pixel-match-1672x941`
 
+### Header için ayrı çalışma componenti
+
+Content Browser yolu:
+
+`Content/Mods/PalTRUI/WBP_PalTRHeader_DesignTemplate`
+
+Bu component 1511x77 piksel referans header görselini doğrudan taban katmanı
+olarak kullanır. Yalnız şu düzenlenebilir kontroller görselin üstündedir:
+
+- `HeaderActivePlayerCountText`: başlangıç örneği `Aktif oyuncu sayısı: 12`
+- `HeaderNotificationsButton`: hover/pressed durumu olan tıklanabilir alan
+- `HeaderCloseButton`: görünür X kapatma butonu
+- `HeaderInputShield`: header içindeki boş tıklamaların oyuna geçmesini önler
+
+Bu ilk parçada butonlara runtime aksiyonu veya sunucu verisi bağlanmamıştır.
+
 Referans görseli tam ekran bir Image olarak widget'ın üstüne koyma. Görseli
 ikinci monitörde veya Image Comparison aracıyla yalnızca ölçü referansı olarak
 kullan.

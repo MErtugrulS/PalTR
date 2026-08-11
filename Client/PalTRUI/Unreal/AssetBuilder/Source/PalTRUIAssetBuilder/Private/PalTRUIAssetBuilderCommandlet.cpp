@@ -475,6 +475,171 @@ namespace PalTRUIAssetBuilder
         return Blueprint;
     }
 
+    UWidgetBlueprint* CreateHeaderDesignTemplate()
+    {
+        const FString ArtDirectory = FPaths::ConvertRelativePathToFull(
+            FPaths::ProjectPluginsDir() / TEXT("PalTRUIAssetBuilder/Resources")
+        );
+        UTexture2D* HeaderReference = ImportUITexture(
+            TEXT("/Game/Mods/PalTRUI/Art/T_PalTRHeaderReference"),
+            TEXT("T_PalTRHeaderReference"),
+            ArtDirectory / TEXT("paltr_header_reference.png")
+        );
+        if (!HeaderReference)
+        {
+            return nullptr;
+        }
+
+        const FString PackageName = FString(AssetRoot)
+            / TEXT("WBP_PalTRHeader_DesignTemplate");
+        UPackage* Package = CreatePackage(*PackageName);
+        UWidgetBlueprint* Blueprint = Cast<UWidgetBlueprint>(
+            FKismetEditorUtilities::CreateBlueprint(
+                UUserWidget::StaticClass(),
+                Package,
+                TEXT("WBP_PalTRHeader_DesignTemplate"),
+                BPTYPE_Normal,
+                UWidgetBlueprint::StaticClass(),
+                UWidgetBlueprintGeneratedClass::StaticClass(),
+                TEXT("PalTRUIAssetBuilder")
+            )
+        );
+        if (!Blueprint || !Blueprint->WidgetTree)
+        {
+            return nullptr;
+        }
+
+        UWidgetTree* Tree = Blueprint->WidgetTree;
+        USizeBox* Root = Tree->ConstructWidget<USizeBox>(
+            USizeBox::StaticClass(),
+            TEXT("HeaderRootSize")
+        );
+        Root->SetWidthOverride(1511.0f);
+        Root->SetHeightOverride(77.0f);
+        Tree->RootWidget = Root;
+
+        UOverlay* Overlay = Tree->ConstructWidget<UOverlay>(
+            UOverlay::StaticClass(),
+            TEXT("HeaderOverlay")
+        );
+        Root->SetContent(Overlay);
+
+        UImage* ReferenceImage = Tree->ConstructWidget<UImage>(
+            UImage::StaticClass(),
+            TEXT("HeaderReferenceImage")
+        );
+        ReferenceImage->SetBrushFromTexture(HeaderReference, true);
+        ReferenceImage->SetVisibility(ESlateVisibility::HitTestInvisible);
+        UOverlaySlot* ReferenceSlot = Overlay->AddChildToOverlay(ReferenceImage);
+        ReferenceSlot->SetHorizontalAlignment(HAlign_Fill);
+        ReferenceSlot->SetVerticalAlignment(VAlign_Fill);
+
+        UButton* InputShield = Tree->ConstructWidget<UButton>(
+            UButton::StaticClass(),
+            TEXT("HeaderInputShield")
+        );
+        FButtonStyle ShieldStyle = InputShield->WidgetStyle;
+        const FSlateNoResource EmptyBrush;
+        ShieldStyle.SetNormal(EmptyBrush);
+        ShieldStyle.SetHovered(EmptyBrush);
+        ShieldStyle.SetPressed(EmptyBrush);
+        ShieldStyle.SetDisabled(EmptyBrush);
+        ShieldStyle.SetNormalPadding(FMargin(0.0f));
+        ShieldStyle.SetPressedPadding(FMargin(0.0f));
+        InputShield->SetStyle(ShieldStyle);
+        InputShield->SetBackgroundColor(FLinearColor::Transparent);
+        InputShield->IsFocusable = false;
+        UOverlaySlot* ShieldSlot = Overlay->AddChildToOverlay(InputShield);
+        ShieldSlot->SetHorizontalAlignment(HAlign_Fill);
+        ShieldSlot->SetVerticalAlignment(VAlign_Fill);
+
+        UCanvasPanel* Controls = Tree->ConstructWidget<UCanvasPanel>(
+            UCanvasPanel::StaticClass(),
+            TEXT("HeaderControlsCanvas")
+        );
+        UOverlaySlot* ControlsSlot = Overlay->AddChildToOverlay(Controls);
+        ControlsSlot->SetHorizontalAlignment(HAlign_Fill);
+        ControlsSlot->SetVerticalAlignment(VAlign_Fill);
+
+        UBorder* PlayerCountFrame = Tree->ConstructWidget<UBorder>(
+            UBorder::StaticClass(),
+            TEXT("HeaderActivePlayerFrame")
+        );
+        PlayerCountFrame->SetBrush(FSlateRoundedBoxBrush(
+            PixelTheme::FromSRGB(9, 31, 39, 0.995f),
+            6.0f,
+            PixelTheme::GoldMuted,
+            1.25f
+        ));
+        PlayerCountFrame->SetBrushColor(FLinearColor::White);
+        PlayerCountFrame->SetPadding(FMargin(8.0f, 5.0f));
+        PlayerCountFrame->SetVisibility(ESlateVisibility::HitTestInvisible);
+        UTextBlock* PlayerCountText = MakeText(
+            Tree,
+            TEXT("HeaderActivePlayerCountText"),
+            TEXT("Aktif oyuncu sayısı: 12"),
+            14
+        );
+        PlayerCountText->SetJustification(ETextJustify::Center);
+        PlayerCountText->SetColorAndOpacity(FSlateColor(PixelTheme::TextPrimary));
+        PlayerCountText->SetShadowOffset(FVector2D(1.0f, 1.0f));
+        PlayerCountText->SetShadowColorAndOpacity(FLinearColor(0, 0, 0, 0.9f));
+        PlayerCountFrame->SetContent(PlayerCountText);
+        UCanvasPanelSlot* PlayerCountSlot = Controls->AddChildToCanvas(PlayerCountFrame);
+        PlayerCountSlot->SetPosition(FVector2D(803.0f, 17.0f));
+        PlayerCountSlot->SetSize(FVector2D(169.0f, 42.0f));
+
+        UButton* NotificationsButton = Tree->ConstructWidget<UButton>(
+            UButton::StaticClass(),
+            TEXT("HeaderNotificationsButton")
+        );
+        FButtonStyle NotificationStyle = NotificationsButton->WidgetStyle;
+        NotificationStyle.SetNormal(FSlateRoundedBoxBrush(
+            FLinearColor::Transparent,
+            6.0f,
+            FLinearColor::Transparent,
+            0.0f
+        ));
+        NotificationStyle.SetHovered(FSlateRoundedBoxBrush(
+            PixelTheme::FromSRGB(40, 217, 237, 0.08f),
+            6.0f,
+            PixelTheme::Cyan,
+            1.25f
+        ));
+        NotificationStyle.SetPressed(FSlateRoundedBoxBrush(
+            PixelTheme::FromSRGB(198, 154, 72, 0.12f),
+            6.0f,
+            PixelTheme::Gold,
+            1.25f
+        ));
+        NotificationStyle.SetDisabled(FSlateNoResource());
+        NotificationStyle.SetNormalPadding(FMargin(0.0f));
+        NotificationStyle.SetPressedPadding(FMargin(0.0f));
+        NotificationsButton->SetStyle(NotificationStyle);
+        NotificationsButton->SetBackgroundColor(FLinearColor::White);
+        NotificationsButton->IsFocusable = false;
+        UCanvasPanelSlot* NotificationsSlot = Controls->AddChildToCanvas(NotificationsButton);
+        NotificationsSlot->SetPosition(FVector2D(1336.0f, 13.0f));
+        NotificationsSlot->SetSize(FVector2D(126.0f, 49.0f));
+
+        UButton* CloseButton = MakeTabButton(
+            Tree,
+            TEXT("HeaderCloseButton"),
+            TEXT("HeaderCloseButtonText"),
+            TEXT("X")
+        );
+        StyleButton(Tree, TEXT("HeaderCloseButton"), PixelTheme::FromSRGB(111, 43, 33, 0.99f));
+        CloseButton->IsFocusable = false;
+        UCanvasPanelSlot* CloseSlot = Controls->AddChildToCanvas(CloseButton);
+        CloseSlot->SetPosition(FVector2D(1465.0f, 13.0f));
+        CloseSlot->SetSize(FVector2D(38.0f, 49.0f));
+
+        FAssetRegistryModule::AssetCreated(Blueprint);
+        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
+        FKismetEditorUtilities::CompileBlueprint(Blueprint);
+        return Blueprint;
+    }
+
     UWidgetBlueprint* CreateManualDesignTemplate()
     {
         const FString PackageName = FString(AssetRoot)
@@ -5993,6 +6158,33 @@ UPalTRUIAssetBuilderCommandlet::UPalTRUIAssetBuilderCommandlet()
 int32 UPalTRUIAssetBuilderCommandlet::Main(const FString& Params)
 {
     using namespace PalTRUIAssetBuilder;
+
+    if (FParse::Param(*Params, TEXT("CreateHeaderDesignTemplate")))
+    {
+        const FString PackageName = FString(AssetRoot)
+            / TEXT("WBP_PalTRHeader_DesignTemplate");
+        if (FPackageName::DoesPackageExist(PackageName))
+        {
+            UE_LOG(
+                LogTemp,
+                Error,
+                TEXT("PalTRUI header design template refused: target already exists.")
+            );
+            return 31;
+        }
+        UWidgetBlueprint* HeaderTemplate = CreateHeaderDesignTemplate();
+        if (!HeaderTemplate || !SaveAsset(HeaderTemplate))
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI header design template creation failed."));
+            return 32;
+        }
+        UE_LOG(
+            LogTemp,
+            Display,
+            TEXT("PALTR_UI_HEADER_DESIGN_TEMPLATE_OK | asset=/Game/Mods/PalTRUI/WBP_PalTRHeader_DesignTemplate | reference=1511x77")
+        );
+        return 0;
+    }
 
     if (FParse::Param(*Params, TEXT("CreateManualDesignTemplate")))
     {
