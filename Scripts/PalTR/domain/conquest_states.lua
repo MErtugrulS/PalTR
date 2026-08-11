@@ -16,6 +16,11 @@ return {
         CAPITAL_DEFEATED = "CAPITAL_DEFEATED"
     },
 
+    FLAG = {
+        BOUND = "BOUND",
+        MISSING = "MISSING"
+    },
+
     CAMPAIGN = {
         ACTIVE = "ACTIVE",
         CEASEFIRE_PAUSED = "CEASEFIRE_PAUSED",

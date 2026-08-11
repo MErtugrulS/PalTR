@@ -31,6 +31,11 @@ equal(
     "next target parse"
 )
 equal(Parser.parse("!bayrakaday").value.action, "FLAG_CANDIDATE", "candidate parse")
+equal(
+    Parser.parse("!fetihbayragi").value.action,
+    "REBIND_CONQUERED_FLAG",
+    "captured flag parse"
+)
 
 local registry = { guilds = {}, runtime_players = {} }
 local conquest = {
@@ -51,6 +56,10 @@ function conquest:register_node(request)
     self.registered = request
     self.nodes[request.node_id] = request
     return Result.ok(request)
+end
+function conquest:rebind_conquered_flag(request)
+    self.rebound = request
+    return Result.ok({ node_id = "CAPTURED_B" })
 end
 function conquest:nodes_for_controller(guild_key)
     local result = {}
@@ -74,6 +83,7 @@ function conquest:status_for_guild(guild_key)
     return {
         capital_count = capital_count,
         outpost_count = outpost_count,
+        missing_flag_count = 0,
         campaigns = {},
         occupations = {}
     }
@@ -171,7 +181,7 @@ ok, message = service:_register_nearest_conquest_flag(
 equal(ok, false, "member cannot register")
 equal(
     message,
-    "Bu komut icin lider veya yardimci lider yetkisi gerekli",
+    "Bu komut icin yetkili klan rolu gerekli",
     "member denied"
 )
 
@@ -202,6 +212,23 @@ equal(ok, true, "deputy selects deterministic next target")
 equal(conquest.next_target.campaign_id, "WAR::A", "campaign forwarded")
 equal(conquest.next_target.role, "DEPUTY_LEADER", "target role forwarded")
 equal(message, "Yeni aktif fetih hedefi: OUTPOST_B_2", "target response")
+
+nearby.current = {
+    node_id = "NEW_FLAG",
+    flag_reference = "NEW_FLAG",
+    guild_key = "A",
+    name = "Klan Bayragi",
+    x = 15, y = 20, z = 30
+}
+ok, message = service:_rebind_conquered_flag(deputy)
+equal(ok, true, "deputy rebinds captured flag")
+equal(conquest.rebound.actor_role, "DEPUTY_LEADER", "rebind role forwarded")
+equal(conquest.rebound.flag.flag_reference, "NEW_FLAG", "new flag forwarded")
+equal(
+    message,
+    "Fethedilen karakola yeni Klan Bayragi baglandi: CAPTURED_B",
+    "rebind response"
+)
 
 os.remove("conquest_command_responses.tsv")
 print("conquest_command_spec: ok")

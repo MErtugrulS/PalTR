@@ -223,7 +223,7 @@ function CommandService:_conquest_role(player)
 
     if not role or self.conquest.config.operator_roles[role] ~= true then
         return nil,
-            "Bu komut icin lider veya yardimci lider yetkisi gerekli"
+            "Bu komut icin yetkili klan rolu gerekli"
     end
 
     return role
@@ -291,6 +291,29 @@ function CommandService:_register_nearest_conquest_flag(player, node_type)
         (camp.name ~= "" and camp.name or camp.node_id)
 end
 
+function CommandService:_rebind_conquered_flag(player)
+    local role, role_error = self:_conquest_role(player)
+    if not role then return false, role_error end
+
+    local nearby = self.conquest_flags:nearest_owned_flag(
+        player,
+        self.registry,
+        self.conquest.config
+    )
+    if not nearby.ok then return false, nearby.error.message end
+
+    local result = self.conquest:rebind_conquered_flag({
+        guild_key = player.guild_key,
+        actor_role = role,
+        flag = nearby.value,
+        now = Clock.now()
+    })
+    if not result.ok then return false, result.error.message end
+
+    return true, "Fethedilen karakola yeni Klan Bayragi baglandi: " ..
+        result.value.node_id
+end
+
 function CommandService:_conquest_status_message(player)
     local ok, error_message = self:_require_identity(player)
     if not ok then return false, error_message end
@@ -305,6 +328,13 @@ function CommandService:_conquest_status_message(player)
         "Karakol=" .. tostring(summary.outpost_count) ..
             "/" .. tostring(self.conquest.config.max_outposts_per_clan)
     }
+
+    if (tonumber(summary.missing_flag_count) or 0) > 0 then
+        table.insert(
+            parts,
+            "BayrakBekleyen=" .. tostring(summary.missing_flag_count)
+        )
+    end
 
     local campaign = summary.campaigns[1]
     if campaign then
@@ -607,6 +637,7 @@ function CommandService:on_chat(
             true,
             "!durum | !klanlar | !iliskiler | !yardim | " ..
             "!fetihdurum | !bayrakaday | !baskent | !karakol | " ..
+            "!fetihbayragi | " ..
             "!fetih KLAN | !kusatmakampi KLAN | !fetihedef KLAN | " ..
             "!savas KLAN | !ateskes KLAN | " ..
             "!ateskesboz KLAN | !baris KLAN | " ..
@@ -664,6 +695,12 @@ function CommandService:on_chat(
 
     if command.action == "FLAG_CANDIDATE" then
         local ok, response = self:_flag_candidate_message(player)
+        self:_respond(controller, player, command.raw, ok, response)
+        return
+    end
+
+    if command.action == "REBIND_CONQUERED_FLAG" then
+        local ok, response = self:_rebind_conquered_flag(player)
         self:_respond(controller, player, command.raw, ok, response)
         return
     end

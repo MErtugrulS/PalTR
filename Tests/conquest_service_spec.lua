@@ -45,6 +45,7 @@ local function make_config(maximum)
         },
         conquest = {
             max_outposts_per_clan = maximum or 10,
+            captured_flag_rebind_radius_meters = 30,
             raid_timezone = "Europe/Istanbul",
             raid_utc_offset_minutes = 180,
             raid_window_start = "00:00",
@@ -257,6 +258,8 @@ local runtime_result = service:process_runtime_events(22)
 equal(runtime_result.ok, true, "G runtime dispose event processed")
 equal(runtime_result.value, 1, "G one outpost occupied")
 equal(service.nodes.B_OUTPOST_1.state, States.NODE.OCCUPIED, "G node occupied")
+equal(service.nodes.B_OUTPOST_1.flag_state, States.FLAG.MISSING, "G fallen flag missing")
+equal(service.nodes.B_OUTPOST_1.legacy_flag_reference, "", "G disposed flag cleanup reference cleared")
 local occupied_status = service:status_for_guild("GUILD_B", 24)
 equal(occupied_status.capital_count, 1, "G status reports capital")
 equal(occupied_status.outpost_count, 1, "G status reports controlled outposts")
@@ -344,6 +347,19 @@ equal(
 equal(service.nodes.B_OUTPOST_1.current_controller, "GUILD_B", "H owner restored")
 equal(first_manifest.state, States.LOOT.RECOVERED, "H loot recovered")
 
+local defender_rebind = service:rebind_conquered_flag({
+    guild_key = "GUILD_B",
+    actor_role = "LEADER",
+    flag = {
+        flag_reference = "B_FLAG_1_REBUILT",
+        guild_key = "GUILD_B",
+        x = 0, y = 0, z = 0
+    },
+    now = 24
+})
+equal(defender_rebind.ok, true, "H restored owner plants replacement flag")
+equal(service.nodes.B_OUTPOST_1.flag_state, States.FLAG.BOUND, "H flag rebound")
+
 equal(
     service:select_target(
         campaign.campaign_id,
@@ -390,6 +406,7 @@ equal(service:tick(130).ok, true, "K rearm completes")
 equal(campaign.state, States.CAMPAIGN.ACTIVE, "K campaign resumes")
 equal(service:tick(135).ok, true, "I occupation finalizes")
 equal(service.nodes.B_OUTPOST_1.state, States.NODE.CONQUERED, "I node conquered")
+equal(service.nodes.B_OUTPOST_1.flag_state, States.FLAG.MISSING, "I conquered flag awaits replacement")
 
 equal(
     service:extract_loot(second_manifest.manifest_id, "GUILD_A", 136).ok,
@@ -397,6 +414,20 @@ equal(
     "loot extracts after resume"
 )
 
+equal(
+    service:rebind_conquered_flag({
+        guild_key = "GUILD_A",
+        actor_role = "COMMANDER",
+        flag = {
+            flag_reference = "A_CAPTURE_FLAG_1",
+            guild_key = "GUILD_A",
+            x = 0, y = 0, z = 0
+        },
+        now = 139
+    }).ok,
+    true,
+    "captor plants replacement flag before frontline advances"
+)
 equal(
     service:select_next_target(
         campaign.campaign_id,
@@ -420,6 +451,51 @@ equal(
 equal(campaign.state, States.CAMPAIGN.CAPITAL_DEFEATED, "capital result state")
 equal(service.nodes.B_OUTPOST_2.current_controller, "GUILD_A", "remaining node transferred")
 equal(service.nodes.B_CAPITAL.node_type, States.NODE_TYPE.OUTPOST, "captured capital demoted")
+equal(service.nodes.B_OUTPOST_2.flag_state, States.FLAG.MISSING, "transferred outpost needs new flag")
+equal(service.nodes.B_CAPITAL.flag_state, States.FLAG.MISSING, "captured capital needs new flag")
+equal(service.nodes.B_OUTPOST_2.legacy_flag_reference, "B_FLAG_2", "old transferred flag retained for cleanup")
+equal(service:write_damage_policy(142).ok, true, "captured cleanup policy written")
+local cleanup_policy_file = assert(io.open(paths.conquest_damage_policy, "r"))
+local cleanup_policy = cleanup_policy_file:read("*a")
+cleanup_policy_file:close()
+equal(
+    cleanup_policy:find("B_FLAG_2\tB_OUTPOST_2\tGUILD_B\tGUILD_A", 1, true)
+        ~= nil,
+    true,
+    "winner may remove transferred owner's old physical flag"
+)
+equal(
+    service:rebind_conquered_flag({
+        guild_key = "GUILD_A",
+        actor_role = "DEPUTY_LEADER",
+        flag = {
+            flag_reference = "A_CAPTURE_FLAG_2",
+            guild_key = "GUILD_A",
+            x = service.nodes.B_OUTPOST_2.x,
+            y = service.nodes.B_OUTPOST_2.y,
+            z = service.nodes.B_OUTPOST_2.z
+        },
+        now = 143
+    }).ok,
+    true,
+    "winner rebinds transferred outpost"
+)
+equal(service:write_damage_policy(144).ok, true, "rebound policy written")
+cleanup_policy_file = assert(io.open(paths.conquest_damage_policy, "r"))
+cleanup_policy = cleanup_policy_file:read("*a")
+cleanup_policy_file:close()
+equal(
+    cleanup_policy:find("A_CAPTURE_FLAG_2\tB_OUTPOST_2\tGUILD_A", 1, true)
+        ~= nil,
+    true,
+    "replacement flag receives normal controller policy"
+)
+equal(
+    cleanup_policy:find("B_FLAG_2\tB_OUTPOST_2\tGUILD_B\tGUILD_A", 1, true)
+        ~= nil,
+    true,
+    "replacement does not discard old flag cleanup policy"
+)
 equal(diplomacy.resolved_winner, "GUILD_A", "diplomacy receives winner")
 
 equal(
@@ -436,6 +512,8 @@ equal(
 
 local restored = Conquest.new(paths, config, diplomacy, nil)
 equal(restored.nodes.B_OUTPOST_2.current_controller, "GUILD_A", "M node restored")
+equal(restored.nodes.B_OUTPOST_2.flag_state, States.FLAG.BOUND, "M rebound flag restored")
+equal(restored.nodes.B_OUTPOST_2.legacy_flag_reference, "B_FLAG_2", "M cleanup flag restored")
 equal(
     restored.campaigns[campaign.campaign_id].state,
     States.CAMPAIGN.CAPITAL_DEFEATED,

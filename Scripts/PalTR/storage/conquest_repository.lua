@@ -46,6 +46,20 @@ end
 
 function Repository:load_nodes()
     return load_table(self.paths.conquest_nodes, function(c)
+        local flag_state = c[14]
+        if flag_state == nil or flag_state == "" then
+            local fallen = c[9] == "OCCUPIED"
+                or c[9] == "CONQUERED"
+                or c[9] == "RESTORED"
+            flag_state = fallen and "MISSING" or "BOUND"
+        end
+        local legacy_flag_reference = c[15] or ""
+        if legacy_flag_reference == ""
+            and flag_state == "MISSING"
+            and c[10] ~= c[11] then
+            legacy_flag_reference = c[4] or ""
+        end
+
         return {
             key = c[1],
             node_id = c[1],
@@ -60,7 +74,9 @@ function Repository:load_nodes()
             original_owner = c[10],
             current_controller = c[11],
             created_at = number(c[12]),
-            updated_at = number(c[13])
+            updated_at = number(c[13]),
+            flag_state = flag_state,
+            legacy_flag_reference = legacy_flag_reference
         }
     end)
 end
@@ -68,7 +84,7 @@ end
 function Repository:save_nodes(records)
     return save_table(
         self.paths.conquest_nodes,
-        "node_id\tguild_key\tnode_type\tflag_reference\tlocation_x\tlocation_y\tlocation_z\tparent_node_id\tstate\toriginal_owner\tcurrent_controller\tcreated_at\tupdated_at",
+        "node_id\tguild_key\tnode_type\tflag_reference\tlocation_x\tlocation_y\tlocation_z\tparent_node_id\tstate\toriginal_owner\tcurrent_controller\tcreated_at\tupdated_at\tflag_state\tlegacy_flag_reference",
         records,
         function(r)
             return {
@@ -76,7 +92,8 @@ function Repository:save_nodes(records)
                 r.flag_reference, r.x, r.y, r.z,
                 r.parent_node_id, r.state,
                 r.original_owner, r.current_controller,
-                r.created_at, r.updated_at
+                r.created_at, r.updated_at, r.flag_state,
+                r.legacy_flag_reference
             }
         end
     )

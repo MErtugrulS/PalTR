@@ -112,7 +112,7 @@ function App:_headers()
             "guild_key\tlast_hostile_at",
 
         [self.paths.conquest_nodes] =
-            "node_id\tguild_key\tnode_type\tflag_reference\tlocation_x\tlocation_y\tlocation_z\tparent_node_id\tstate\toriginal_owner\tcurrent_controller\tcreated_at\tupdated_at",
+            "node_id\tguild_key\tnode_type\tflag_reference\tlocation_x\tlocation_y\tlocation_z\tparent_node_id\tstate\toriginal_owner\tcurrent_controller\tcreated_at\tupdated_at\tflag_state\tlegacy_flag_reference",
 
         [self.paths.conquest_edges] =
             "edge_id\tnode_a\tnode_b\tcreated_at",

@@ -20,6 +20,10 @@ local function text(value)
     return tostring(value or "")
 end
 
+local function flag_bound(node)
+    return node ~= nil and node.flag_state == States.FLAG.BOUND
+end
+
 local function edge_id(first, second)
     first = text(first)
     second = text(second)
@@ -131,6 +135,7 @@ function Conquest:_capital_for(guild_key)
     for _, node in pairs(self.nodes) do
         if node.current_controller == guild_key
             and node.node_type == States.NODE_TYPE.CAPITAL
+            and flag_bound(node)
             and node.state ~= States.NODE.CAPITAL_DEFEATED then
             return node
         end
@@ -196,7 +201,8 @@ function Conquest:nearest_controlled_node(guild_key, location)
             or node.state == States.NODE.CONQUERED
         local current_distance = Rules.distance(node, location or {})
 
-        if expansion_ready and current_distance < nearest_distance then
+        if expansion_ready and flag_bound(node)
+            and current_distance < nearest_distance then
             nearest = node
             nearest_distance = current_distance
         end
@@ -229,11 +235,15 @@ function Conquest:status_for_guild(guild_key, now)
     local status = {
         capital_count = 0,
         outpost_count = 0,
+        missing_flag_count = 0,
         campaigns = {},
         occupations = {}
     }
 
     for _, node in ipairs(self:nodes_for_controller(guild_key)) do
+        if not flag_bound(node) then
+            status.missing_flag_count = status.missing_flag_count + 1
+        end
         if node.node_type == States.NODE_TYPE.CAPITAL then
             status.capital_count = status.capital_count + 1
         elseif node.node_type == States.NODE_TYPE.OUTPOST then
@@ -317,6 +327,7 @@ function Conquest:nearest_initial_target(defender_guild, camp)
     for _, node in pairs(self.nodes) do
         if node.node_type == States.NODE_TYPE.OUTPOST
             and node.current_controller == text(defender_guild)
+            and flag_bound(node)
             and (node.state == States.NODE.PROTECTED
                 or node.state == States.NODE.RESTORED) then
 
@@ -357,7 +368,10 @@ function Conquest:_flag_reference_exists(reference)
     if reference == "" then return false end
 
     for _, node in pairs(self.nodes) do
-        if node.flag_reference == reference then return true end
+        if node.flag_reference == reference
+            or node.legacy_flag_reference == reference then
+            return true
+        end
     end
 
     return false
@@ -397,6 +411,8 @@ function Conquest:register_node(request)
         guild_key = guild_key,
         node_type = node_type,
         flag_reference = flag_reference,
+        flag_state = States.FLAG.BOUND,
+        legacy_flag_reference = "",
         x = number(request.x),
         y = number(request.y),
         z = number(request.z),
@@ -450,6 +466,64 @@ function Conquest:register_node(request)
 
     self:_event("FAZ05_FLAG_REGISTERED", node_id .. "|" .. node_type)
     return Result.ok(node)
+end
+
+function Conquest:rebind_conquered_flag(request)
+    request = request or {}
+    local authorized = self:_authorized(request.actor_role)
+    if not authorized.ok then return authorized end
+
+    local guild_key = text(request.guild_key)
+    local flag = request.flag or {}
+    local reference = text(flag.flag_reference)
+    local now = self:_now(request.now)
+
+    if guild_key == "" or reference == "" then
+        return Result.err("FLAG_REBIND_IDENTITY_MISSING", "Klan veya bayrak kimligi yok")
+    end
+    if text(flag.guild_key) ~= guild_key then
+        return Result.err("FLAG_REBIND_OWNER_MISMATCH", "Yeni bayrak fetheden klana ait degil")
+    end
+    if self:_flag_reference_exists(reference) then
+        return Result.err("FLAG_ALREADY_REGISTERED", "Bu Klan Bayragi zaten kayitli")
+    end
+
+    local nearest = nil
+    local nearest_distance = math.huge
+    for _, node in pairs(self.nodes) do
+        local eligible = node.current_controller == guild_key
+            and node.flag_state == States.FLAG.MISSING
+            and (node.state == States.NODE.CONQUERED
+                or node.state == States.NODE.RESTORED)
+        if eligible then
+            local current = Rules.distance(node, flag)
+            if current < nearest_distance then
+                nearest = node
+                nearest_distance = current
+            end
+        end
+    end
+
+    local maximum = number(self.config.captured_flag_rebind_radius_meters)
+    if maximum <= 0 or not nearest or nearest_distance > maximum then
+        return Result.err(
+            "CONQUERED_NODE_NOT_NEAR",
+            "Yakinda yeniden bayrak bekleyen fethedilmis karakol yok"
+        )
+    end
+
+    nearest.flag_reference = reference
+    nearest.flag_state = States.FLAG.BOUND
+    nearest.x = number(flag.x)
+    nearest.y = number(flag.y)
+    nearest.z = number(flag.z)
+    nearest.updated_at = now
+
+    local saved = self.repository:save_nodes(self.nodes)
+    if not saved.ok then return saved end
+
+    self:_event("FAZ05_CAPTURED_FLAG_REBOUND", nearest.node_id .. "|" .. reference)
+    return Result.ok(nearest)
 end
 
 function Conquest:start_campaign(attacker, defender, actor_role, now)
@@ -507,6 +581,7 @@ function Conquest:_captured_frontline(campaign)
     for _, node in pairs(self.nodes) do
         if node.original_owner == campaign.defender_guild
             and node.current_controller == campaign.attacker_guild
+            and flag_bound(node)
             and node.state == States.NODE.CONQUERED then
             result[node.node_id] = true
         end
@@ -560,6 +635,10 @@ function Conquest:_set_target(campaign, target, now)
     if target.state ~= States.NODE.PROTECTED
         and target.state ~= States.NODE.RESTORED then
         return Result.err("TARGET_STATE_BLOCKED", "Node hedeflenebilir durumda degil")
+    end
+
+    if not flag_bound(target) then
+        return Result.err("TARGET_FLAG_MISSING", "Hedefin fiziksel Klan Bayragi eksik")
     end
 
     if not self:_reachable(campaign, target) then
@@ -771,7 +850,7 @@ function Conquest:write_damage_policy(now)
     end)
 
     for _, node in ipairs(nodes) do
-        if node.flag_reference ~= "" then
+        if node.flag_reference ~= "" and flag_bound(node) then
             local allowed = {}
 
             for _, campaign in pairs(self.campaigns) do
@@ -803,6 +882,17 @@ function Conquest:write_damage_policy(now)
                     attacker
                 }))
             end
+        end
+
+        local cleanup_reference = text(node.legacy_flag_reference)
+        if cleanup_reference ~= ""
+            and node.current_controller ~= node.original_owner then
+            table.insert(lines, TSV.encode({
+                cleanup_reference,
+                node.node_id,
+                node.original_owner,
+                node.current_controller
+            }))
         end
     end
 
@@ -843,6 +933,7 @@ function Conquest:process_runtime_events(now)
     if not loaded.ok then return loaded end
 
     local processed = 0
+    local cleared_legacy_reference = false
 
     for index, line in ipairs(loaded.value or {}) do
         if index > 1 and line ~= "" then
@@ -880,8 +971,21 @@ function Conquest:process_runtime_events(now)
                         end
                     end
                 end
+
+                for _, current in pairs(self.nodes) do
+                    if text(current.legacy_flag_reference) == reference then
+                        current.legacy_flag_reference = ""
+                        current.updated_at = event_at > 0 and event_at or now
+                        cleared_legacy_reference = true
+                    end
+                end
             end
         end
+    end
+
+    if cleared_legacy_reference then
+        local saved = self.repository:save_nodes(self.nodes)
+        if not saved.ok then return saved end
     end
 
     local removed = FileIO.remove(processing_path)
@@ -975,6 +1079,8 @@ function Conquest:_create_occupation(campaign, node, now)
 
     self.occupations[node.node_id] = occupation
     node.state = States.NODE.OCCUPIED
+    node.legacy_flag_reference = node.flag_reference
+    node.flag_state = States.FLAG.MISSING
     node.current_controller = campaign.attacker_guild
     node.guild_key = campaign.attacker_guild
     node.updated_at = now
@@ -1006,9 +1112,11 @@ function Conquest:_capital_defeated(campaign, capital, now)
 
     for _, node in pairs(self.nodes) do
         if node.current_controller == campaign.defender_guild then
+            node.legacy_flag_reference = node.flag_reference
             node.current_controller = campaign.attacker_guild
             node.guild_key = campaign.attacker_guild
             node.state = States.NODE.CONQUERED
+            node.flag_state = States.FLAG.MISSING
             node.updated_at = now
 
             if node.node_type == States.NODE_TYPE.CAPITAL then

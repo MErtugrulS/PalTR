@@ -40,13 +40,34 @@ local node = {
     original_owner = "GUILD_A",
     current_controller = "GUILD_A",
     created_at = 100,
-    updated_at = 100
+    updated_at = 100,
+    flag_state = "BOUND",
+    legacy_flag_reference = ""
 }
 
 equal(repository:save_nodes({ NODE_A = node }).ok, true, "nodes saved")
 local loaded_node = repository:load_nodes().NODE_A
 equal(loaded_node.current_controller, "GUILD_A", "node controller restored")
 equal(loaded_node.x, 10, "node location restored")
+equal(loaded_node.flag_state, "BOUND", "flag state restored")
+equal(loaded_node.legacy_flag_reference, "", "no legacy flag restored")
+
+local legacy = assert(io.open(paths.conquest_nodes, "w"))
+legacy:write(
+    "node_id\tguild_key\tnode_type\tflag_reference\tlocation_x\tlocation_y\tlocation_z\tparent_node_id\tstate\toriginal_owner\tcurrent_controller\tcreated_at\tupdated_at\n" ..
+    "LEGACY\tGUILD_B\tOUTPOST\tOLD_FLAG\t1\t2\t3\t\tCONQUERED\tGUILD_B\tGUILD_A\t1\t2\n"
+)
+legacy:close()
+equal(
+    repository:load_nodes().LEGACY.flag_state,
+    "MISSING",
+    "legacy transferred node requires replacement flag"
+)
+equal(
+    repository:load_nodes().LEGACY.legacy_flag_reference,
+    "OLD_FLAG",
+    "legacy transferred node keeps cleanup reference"
+)
 
 local edge = {
     edge_id = "NODE_A::NODE_B",

@@ -15,6 +15,7 @@ local aliases = {
     ["!kusatmakampi"] = "ESTABLISH_SIEGE",
     ["!fetihedef"] = "SELECT_CONQUEST_TARGET",
     ["!bayrakaday"] = "FLAG_CANDIDATE",
+    ["!fetihbayragi"] = "REBIND_CONQUERED_FLAG",
     ["!savas"] = "DECLARE_WAR",
     ["!ateskes"] = "CEASEFIRE",
     ["!ateskesboz"] = "BREAK_CEASEFIRE",
