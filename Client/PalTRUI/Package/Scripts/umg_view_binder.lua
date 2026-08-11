@@ -126,6 +126,11 @@ function UMGViewBinder:_set_text(controls, name, value)
     return true
 end
 
+function UMGViewBinder:_set_text_if_present(controls, name, value)
+    if controls[name] == nil then return true end
+    return self:_set_text(controls, name, value)
+end
+
 function UMGViewBinder:_set_enabled(controls, name, enabled)
     local control = controls[name]
     if control == nil then
@@ -194,13 +199,6 @@ function UMGViewBinder:bind(panel, model)
         { "ClanMembersStatusText", clan.members_status_text },
         { "ClanMembersText", clan.members_text },
         { "PendingOffersText", clan.pending_text },
-        { "DashboardPendingGuildText", dashboard.pending_guild_text },
-        { "DashboardPendingStateText", dashboard.pending_state_text },
-        { "DashboardClanRoleValueText", dashboard.clan_role_text },
-        { "DashboardClanMembersValueText", dashboard.clan_member_count_text },
-        { "DashboardDiplomacyWarValueText", dashboard.war_count_text },
-        { "DashboardDiplomacyAllianceValueText", dashboard.alliance_count_text },
-        { "DashboardDiplomacyPendingValueText", dashboard.pending_count_text },
         { "RelationListEmptyText", diplomacy.list_text },
         { "RelationTitleText", diplomacy.title_text },
         { "RelationStateText", diplomacy.state_text },
@@ -227,6 +225,32 @@ function UMGViewBinder:bind(panel, model)
         if not updated then return false, update_error end
     end
 
+    -- These fields belong to optional dashboard presentation components.
+    -- Keeping them optional lets the stable data contract bind to a manually
+    -- authored widget while the designer adds or removes decorative cards.
+    for _, binding in ipairs({
+        { "DashboardPendingGuildText", dashboard.pending_guild_text },
+        { "DashboardPendingStateText", dashboard.pending_state_text },
+        { "DashboardClanRoleValueText", dashboard.clan_role_text },
+        { "DashboardClanMembersValueText", dashboard.clan_member_count_text },
+        { "DashboardDiplomacyWarValueText", dashboard.war_count_text },
+        {
+            "DashboardDiplomacyAllianceValueText",
+            dashboard.alliance_count_text
+        },
+        {
+            "DashboardDiplomacyPendingValueText",
+            dashboard.pending_count_text
+        }
+    }) do
+        local updated, update_error = self:_set_text_if_present(
+            controls,
+            binding[1],
+            binding[2]
+        )
+        if not updated then return false, update_error end
+    end
+
     for _, relation_row in ipairs(
         table_or_empty(dashboard.relation_rows)
     ) do
@@ -241,7 +265,7 @@ function UMGViewBinder:bind(panel, model)
                 value = relation_row.state_label
             }
         }) do
-            local updated, update_error = self:_set_text(
+            local updated, update_error = self:_set_text_if_present(
                 controls,
                 text(field.control),
                 field.value

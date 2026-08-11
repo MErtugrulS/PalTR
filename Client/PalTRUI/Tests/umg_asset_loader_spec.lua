@@ -17,13 +17,13 @@ local invalid_class = {
 }
 equal(
     UMGAssetLoader.PANEL_ASSET_PATH,
-    "/Game/Mods/PalTRUI/WBP_PalTRPanel_SkinV2.WBP_PalTRPanel_SkinV2",
-    "SkinV2 primary panel asset path"
+    "/Game/Mods/PalTRUI/WBP_PalTRPanel.WBP_PalTRPanel",
+    "manual panel asset path"
 )
 equal(
     UMGAssetLoader.PANEL_ASSET_NAME,
-    "WBP_PalTRPanel_SkinV2_C",
-    "SkinV2 primary generated panel class asset name"
+    "WBP_PalTRPanel_C",
+    "manual panel generated class asset name"
 )
 local load_calls = {}
 local find_calls = 0
@@ -35,7 +35,7 @@ local loader = UMGAssetLoader.new({
         equal(
             path,
             UMGAssetLoader.PANEL_CLASS_PATH,
-            "SkinV2 panel class path"
+            "manual panel class path"
         )
         find_calls = find_calls + 1
         if find_calls == 1 then return invalid_class end
@@ -55,27 +55,6 @@ equal(
 )
 equal(find_calls, 2, "class checked before and after load")
 
-local legacy_candidate = UMGAssetLoader.PANEL_CANDIDATES[2]
-local legacy_load_calls = {}
-local legacy_loader = UMGAssetLoader.new({
-    load_asset = function(path)
-        table.insert(legacy_load_calls, path)
-    end,
-    find_object = function(path)
-        if path == legacy_candidate.class_path then return loaded_class end
-        return invalid_class
-    end
-})
-local legacy_loaded, legacy_class = legacy_loader:load_panel_class()
-equal(legacy_loaded, true, "legacy fallback loaded")
-equal(legacy_class, loaded_class, "legacy fallback class returned")
-equal(#legacy_load_calls, 1, "only SkinV2 load attempted before fallback")
-equal(
-    legacy_load_calls[1],
-    UMGAssetLoader.PANEL_ASSET_PATH,
-    "SkinV2 attempted before legacy fallback"
-)
-
 local fallback_find_calls = 0
 local fallback_calls = {}
 local registry_fallback = UMGAssetLoader.new({
@@ -89,7 +68,7 @@ local registry_fallback = UMGAssetLoader.new({
     end,
     find_object = function()
         fallback_find_calls = fallback_find_calls + 1
-        if fallback_find_calls < 3 then return invalid_class end
+        if fallback_find_calls < 2 then return invalid_class end
         return loaded_class
     end
 })
