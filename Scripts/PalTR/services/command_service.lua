@@ -5,6 +5,8 @@ local TSV = require("PalTR.storage.tsv")
 local Clock = require("PalTR.core.clock")
 local UE = require("PalTR.runtime.ue")
 local Announcer = require("PalTR.runtime.announcer")
+local BaseCampAdapter = require("PalTR.runtime.base_camp_adapter")
+local ConquestStates = require("PalTR.domain.conquest_states")
 
 local CommandService = {}
 CommandService.__index = CommandService
@@ -99,7 +101,9 @@ function CommandService.new(
     registry,
     diplomacy,
     status,
-    logger
+    logger,
+    conquest,
+    base_camps
 )
     return setmetatable({
         paths = paths,
@@ -107,9 +111,118 @@ function CommandService.new(
         diplomacy = diplomacy,
         status = status,
         logger = logger,
+        conquest = conquest,
+        base_camps = base_camps or BaseCampAdapter.new(),
         last_response_key = "",
         last_response_at = 0
     }, CommandService)
+end
+
+function CommandService:_conquest_role(player)
+    local ok, error_message = self:_require_identity(player)
+    if not ok then return nil, error_message end
+
+    if not self.conquest then
+        return nil, "Fetih servisi hazir degil"
+    end
+
+    local role_map = self.conquest.config.game_role_map or {}
+    local role = role_map[tonumber(player.role)]
+
+    if player.is_master then role = "LEADER" end
+
+    if not role or self.conquest.config.operator_roles[role] ~= true then
+        return nil,
+            "Bu komut icin lider veya yardimci lider yetkisi gerekli"
+    end
+
+    return role
+end
+
+function CommandService:_register_nearest_base_camp(player, node_type)
+    local role, role_error = self:_conquest_role(player)
+    if not role then return false, role_error end
+
+    local nearby = self.base_camps:nearest_owned(
+        player,
+        self.registry,
+        self.conquest.config
+    )
+
+    if not nearby.ok then
+        return false, nearby.error.message
+    end
+
+    local camp = nearby.value
+    local existing = self.conquest:get_node(camp.node_id)
+
+    if existing then
+        return false, "Bu Pal Kutusu zaten fetih sistemine kayitli"
+    end
+
+    local parent_node_id = ""
+
+    if node_type == ConquestStates.NODE_TYPE.OUTPOST then
+        local parent = self.conquest:nearest_controlled_node(
+            player.guild_key,
+            camp
+        )
+
+        if not parent then
+            return false,
+                "Karakol icin once baskent veya bagli bir karakol gerekli"
+        end
+
+        parent_node_id = parent.node_id
+    end
+
+    local result = self.conquest:register_node({
+        node_id = camp.node_id,
+        guild_key = player.guild_key,
+        node_type = node_type,
+        flag_reference = camp.flag_reference,
+        parent_node_id = parent_node_id,
+        actor_role = role,
+        x = camp.x,
+        y = camp.y,
+        z = camp.z,
+        now = Clock.now()
+    })
+
+    if not result.ok then
+        return false, result.error.message
+    end
+
+    local label = node_type == ConquestStates.NODE_TYPE.CAPITAL
+        and "Baskent" or "Karakol"
+
+    return true,
+        label .. " kaydedildi: " ..
+        (camp.name ~= "" and camp.name or camp.node_id)
+end
+
+function CommandService:_conquest_status_message(player)
+    local ok, error_message = self:_require_identity(player)
+    if not ok then return false, error_message end
+    if not self.conquest then return false, "Fetih servisi hazir degil" end
+
+    local capital_count = 0
+    local outpost_count = 0
+
+    for _, node in ipairs(
+        self.conquest:nodes_for_controller(player.guild_key)
+    ) do
+        if node.node_type == ConquestStates.NODE_TYPE.CAPITAL then
+            capital_count = capital_count + 1
+        elseif node.node_type == ConquestStates.NODE_TYPE.OUTPOST then
+            outpost_count = outpost_count + 1
+        end
+    end
+
+    return true,
+        "Fetih: Baskent=" .. tostring(capital_count) ..
+        " | Karakol=" .. tostring(outpost_count) ..
+        "/" .. tostring(self.conquest.config.max_outposts_per_clan)
 end
 
 function CommandService:_respond(
@@ -367,6 +480,7 @@ function CommandService:on_chat(
             command.raw,
             true,
             "!durum | !klanlar | !iliskiler | !yardim | " ..
+            "!fetihdurum | !baskent | !karakol | " ..
             "!savas KLAN | !ateskes KLAN | " ..
             "!ateskesboz KLAN | !baris KLAN | " ..
             "!ittifak KLAN | !kabul KLAN | " ..
@@ -412,6 +526,27 @@ function CommandService:on_chat(
             ok,
             response
         )
+        return
+    end
+
+    if command.action == "CONQUEST_STATUS" then
+        local ok, response = self:_conquest_status_message(player)
+        self:_respond(controller, player, command.raw, ok, response)
+        return
+    end
+
+    if command.action == "REGISTER_CAPITAL"
+        or command.action == "REGISTER_OUTPOST" then
+
+        local node_type = command.action == "REGISTER_CAPITAL"
+            and ConquestStates.NODE_TYPE.CAPITAL
+            or ConquestStates.NODE_TYPE.OUTPOST
+        local ok, response = self:_register_nearest_base_camp(
+            player,
+            node_type
+        )
+
+        self:_respond(controller, player, command.raw, ok, response)
         return
     end
 

@@ -170,6 +170,38 @@ function Conquest:linked_nodes(node_id)
     return result
 end
 
+function Conquest:nodes_for_controller(guild_key)
+    local result = {}
+
+    for _, node in pairs(self.nodes) do
+        if node.current_controller == text(guild_key) then
+            table.insert(result, node)
+        end
+    end
+
+    table.sort(result, function(first, second)
+        return first.node_id < second.node_id
+    end)
+
+    return result
+end
+
+function Conquest:nearest_controlled_node(guild_key, location)
+    local nearest = nil
+    local nearest_distance = math.huge
+
+    for _, node in ipairs(self:nodes_for_controller(guild_key)) do
+        local current_distance = Rules.distance(node, location or {})
+
+        if current_distance < nearest_distance then
+            nearest = node
+            nearest_distance = current_distance
+        end
+    end
+
+    return nearest, nearest_distance
+end
+
 function Conquest:_constructed_outpost_count(guild_key)
     local count = 0
 

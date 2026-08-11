@@ -8,6 +8,9 @@ local aliases = {
     ["!klanlar"] = "GUILDS",
     ["!iliskiler"] = "RELATIONS",
     ["!yardim"] = "HELP",
+    ["!fetihdurum"] = "CONQUEST_STATUS",
+    ["!baskent"] = "REGISTER_CAPITAL",
+    ["!karakol"] = "REGISTER_OUTPOST",
 
     ["!savas"] = "DECLARE_WAR",
     ["!ateskes"] = "CEASEFIRE",

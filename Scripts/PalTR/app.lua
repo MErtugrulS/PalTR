@@ -75,7 +75,8 @@ function App.new(config)
             registry,
             diplomacy,
             status,
-            Logger.new("Commands")
+            Logger.new("Commands"),
+            conquest
         ),
 
         damage = DamageObserver.new(
