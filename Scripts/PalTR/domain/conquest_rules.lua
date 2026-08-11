@@ -85,6 +85,23 @@ function Rules.validate_siege_location(target, nodes, camp, defender, config)
     return decision(true, "SIEGE_LOCATION_VALID")
 end
 
+function Rules.validate_conquest_zone(target, location, config)
+    if not target or not location then
+        return decision(false, "CONQUEST_ZONE_LOCATION_MISSING")
+    end
+
+    local radius = number(config and config.conquest_zone_radius_meters)
+    if radius <= 0 then
+        return decision(false, "INVALID_CONQUEST_ZONE_CONFIG")
+    end
+
+    if Rules.distance(target, location) > radius then
+        return decision(false, "OUTSIDE_ACTIVE_CONQUEST_ZONE")
+    end
+
+    return decision(true, "ACTIVE_CONQUEST_ZONE", true)
+end
+
 function Rules.is_effective_war(relation)
     if not relation then
         return false

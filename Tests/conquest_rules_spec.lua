@@ -25,7 +25,8 @@ local config = {
     outpost_link_max_distance_meters = 1500,
     siege_min_distance_from_target_meters = 250,
     siege_max_distance_from_target_meters = 600,
-    siege_min_distance_from_other_enemy_node_meters = 300
+    siege_min_distance_from_other_enemy_node_meters = 300,
+    conquest_zone_radius_meters = 150
 }
 
 equal(Rules.can_operate("LEADER", config), true, "leader authorized")
@@ -131,6 +132,25 @@ equal(
     ).reason,
     "SIEGE_TOO_CLOSE_TO_TARGET",
     "siege minimum enforced"
+)
+
+equal(
+    Rules.validate_conquest_zone(
+        target,
+        { x = 150, y = 0, z = 0 },
+        config
+    ).allow,
+    true,
+    "conquest zone boundary allowed"
+)
+equal(
+    Rules.validate_conquest_zone(
+        target,
+        { x = 151, y = 0, z = 0 },
+        config
+    ).reason,
+    "OUTSIDE_ACTIVE_CONQUEST_ZONE",
+    "outside conquest zone blocked"
 )
 
 print("conquest_rules_spec: ok")
