@@ -45,6 +45,11 @@ int main()
         "pair_key\tguild_a\tguild_b\tstate\n"
         "GUILD_A::GUILD_B\tGUILD_A\tGUILD_B\tALLIANCE\n"
         "GUILD_A::GUILD_C\tGUILD_A\tGUILD_C\tNEUTRAL\n");
+    write_file(
+        root / "guild_protection.tsv",
+        "guild_key\tonline_count\tlast_online_at\tlast_hostile_at\tprotected_at\tprotected\treason\n"
+        "GUILD_A\t0\t1000\t2000\t3200\ttrue\tOFFLINE_PROTECTED\n"
+        "GUILD_B\t1\t3200\t0\t0\tfalse\tONLINE\n");
 
     PalTR::PolicySnapshot snapshot(root);
     std::string error;
@@ -84,6 +89,12 @@ int main()
     ok &= expect(
         snapshot.guild_for_group_id("BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB") == "GUILD_B",
         "group id resolves guild");
+    ok &= expect(
+        snapshot.is_guild_offline_protected("GUILD_A"),
+        "offline protected guild loads");
+    ok &= expect(
+        !snapshot.is_guild_offline_protected("GUILD_B"),
+        "online guild remains unprotected");
 
     const auto neutral = snapshot.evaluate_alliance_structure_damage(
         "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
@@ -99,11 +110,18 @@ int main()
         root / "diplomacy_relations.tsv",
         "pair_key\tguild_a\tguild_b\tstate\n"
         "GUILD_A::GUILD_B\tGUILD_A\tGUILD_B\tNEUTRAL\n");
+    write_file(
+        root / "guild_protection.tsv",
+        "guild_key\tonline_count\tlast_online_at\tlast_hostile_at\tprotected_at\tprotected\treason\n"
+        "GUILD_A\t1\t3400\t2200\t0\tfalse\tONLINE\n");
     ok &= expect(snapshot.refresh_if_changed(error), "changed snapshot reloads");
     const auto ended = snapshot.evaluate_alliance_structure_damage(
         "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
         "BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB");
     ok &= expect(!ended.block, "ended alliance allows after reload");
+    ok &= expect(
+        !snapshot.is_guild_offline_protected("GUILD_A"),
+        "offline protection clears after reload");
 
     std::error_code cleanup_error;
     std::filesystem::remove_all(root, cleanup_error);

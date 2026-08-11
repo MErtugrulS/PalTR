@@ -90,6 +90,48 @@ namespace
 
         return true;
     }
+
+    bool read_protection_rows(
+        const std::filesystem::path& path,
+        std::vector<std::vector<std::string>>& rows,
+        std::string& error)
+    {
+        std::ifstream input(path);
+        if (!input)
+        {
+            return true;
+        }
+
+        std::string line;
+        if (!std::getline(input, line))
+        {
+            error = "empty protection snapshot " + path.string();
+            return false;
+        }
+        if (!line.empty() && line.back() == '\r')
+        {
+            line.pop_back();
+        }
+        if (line != "guild_key\tonline_count\tlast_online_at\tlast_hostile_at\tprotected_at\tprotected\treason")
+        {
+            error = "invalid protection snapshot header " + path.string();
+            return false;
+        }
+
+        while (std::getline(input, line))
+        {
+            if (!line.empty() && line.back() == '\r')
+            {
+                line.pop_back();
+            }
+            if (!line.empty())
+            {
+                rows.emplace_back(split_tsv(line));
+            }
+        }
+
+        return true;
+    }
 }
 
 namespace PalTR
@@ -109,10 +151,15 @@ namespace PalTR
         std::vector<std::vector<std::string>> player_rows;
         std::vector<std::vector<std::string>> guild_rows;
         std::vector<std::vector<std::string>> relation_rows;
+        std::vector<std::vector<std::string>> protection_rows;
 
         if (!read_rows(m_data_root / "player_registry.tsv", player_rows, error)
             || !read_rows(m_data_root / "guild_registry.tsv", guild_rows, error)
-            || !read_rows(m_data_root / "diplomacy_relations.tsv", relation_rows, error))
+            || !read_rows(m_data_root / "diplomacy_relations.tsv", relation_rows, error)
+            || !read_protection_rows(
+                m_data_root / "guild_protection.tsv",
+                protection_rows,
+                error))
         {
             return false;
         }
@@ -121,6 +168,7 @@ namespace PalTR
         std::unordered_map<std::string, std::string> player_guild_by_pawn_path;
         std::unordered_map<std::string, std::string> guild_key_by_group_id;
         std::unordered_set<std::string> alliance_pairs;
+        std::unordered_set<std::string> offline_protected_guilds;
 
         for (const auto& columns : player_rows)
         {
@@ -164,10 +212,21 @@ namespace PalTR
             }
         }
 
+        for (const auto& columns : protection_rows)
+        {
+            if (columns.size() >= 6
+                && !columns[0].empty()
+                && columns[5] == "true")
+            {
+                offline_protected_guilds.emplace(columns[0]);
+            }
+        }
+
         m_player_guild_by_uid = std::move(player_guild_by_uid);
         m_player_guild_by_pawn_path = std::move(player_guild_by_pawn_path);
         m_guild_key_by_group_id = std::move(guild_key_by_group_id);
         m_alliance_pairs = std::move(alliance_pairs);
+        m_offline_protected_guilds = std::move(offline_protected_guilds);
         error.clear();
         return true;
     }
@@ -232,5 +291,11 @@ namespace PalTR
     {
         const auto found = m_guild_key_by_group_id.find(normalize_guid(group_id));
         return found == m_guild_key_by_group_id.end() ? std::string{} : found->second;
+    }
+
+    bool PolicySnapshot::is_guild_offline_protected(const std::string& guild_key) const
+    {
+        return !guild_key.empty()
+            && m_offline_protected_guilds.contains(guild_key);
     }
 }

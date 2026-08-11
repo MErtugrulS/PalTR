@@ -33,6 +33,7 @@ namespace PalTR
         std::string guild_for_player_uid(const std::string& player_uid) const;
         std::string guild_for_pawn_path(const std::string& pawn_path) const;
         std::string guild_for_group_id(const std::string& group_id) const;
+        bool is_guild_offline_protected(const std::string& guild_key) const;
 
     private:
         bool reload(std::string& error);
@@ -42,5 +43,6 @@ namespace PalTR
         std::unordered_map<std::string, std::string> m_player_guild_by_pawn_path;
         std::unordered_map<std::string, std::string> m_guild_key_by_group_id;
         std::unordered_set<std::string> m_alliance_pairs;
+        std::unordered_set<std::string> m_offline_protected_guilds;
     };
 }
