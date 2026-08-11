@@ -25,5 +25,38 @@ return {
 
         -- Son dis saldiridan sonra offline koruma icin gereken sakin sure.
         combat_lock_seconds = 1200
+    },
+
+    conquest = {
+        max_outposts_per_clan = 10,
+        raid_timezone = "Europe/Istanbul",
+        raid_utc_offset_minutes = 180,
+        raid_window_start = "20:00",
+        raid_window_end = "00:00",
+        occupation_hold_seconds = 86400,
+        outpost_link_max_distance_meters = 1500,
+        conquest_zone_radius_meters = 150,
+        siege_min_distance_from_target_meters = 250,
+        siege_max_distance_from_target_meters = 600,
+        siege_min_distance_from_other_enemy_node_meters = 300,
+        peace_occupation_resolution = "OCCUPIER_WINS",
+        capital_defeat_resolution = "TRANSFER_ALL_NODES",
+        operator_roles = {
+            LEADER = true,
+            DEPUTY_LEADER = true,
+            COMMANDER = true
+        },
+        loot_table = {
+            {
+                item_id = "",
+                item_selector = "CAPTURE_SPHERE_LEVEL:Ancient_2",
+                enabled = true,
+                weight = 1,
+                min_quantity = 1,
+                max_quantity = 1,
+                tier = "ANCIENT_2",
+                category = "PAL_SPHERE"
+            }
+        }
     }
 }
