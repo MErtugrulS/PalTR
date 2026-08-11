@@ -6,5 +6,10 @@ return {
 
     runtime = {
         enable_damage_enforcement = false
+    },
+
+    protection = {
+        offline_grace_minutes = 5,
+        combat_lock_minutes = 20
     }
 }

@@ -68,7 +68,13 @@ function Registry:on_connected(context, pawn)
     local runtime = PlayerAdapter.from_connection(context, pawn)
     local existing = self.players[runtime.key]
 
-    if existing then runtime.first_seen = existing.first_seen end
+    if existing then
+        runtime.first_seen = existing.first_seen
+        runtime.uid = existing.uid
+        runtime.guild_key = existing.guild_key
+        runtime.role = existing.role
+        runtime.is_master = existing.is_master
+    end
 
     self.runtime_players[runtime.key] = runtime
     self.players[runtime.key] = runtime

@@ -11,6 +11,8 @@ function Paths.new(root)
         guilds = join(root, "guild_registry.tsv"),
         players = join(root, "player_registry.tsv"),
         online = join(root, "online_players.tsv"),
+        protection = join(root, "guild_protection.tsv"),
+        protection_activity = join(root, "guild_combat_activity.tsv"),
         relations = join(root, "diplomacy_relations.tsv"),
         events = join(root, "diplomacy_events.tsv"),
         responses = join(root, "command_responses.tsv"),

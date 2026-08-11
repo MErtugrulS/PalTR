@@ -24,8 +24,12 @@ return {
     },
 
     protection = {
-        offline_grace_minutes = 10,
-        minimum_online_defenders = 2,
+        -- Son klan uyesi ayrildiktan sonra offline koruma gecikmesi.
+        offline_grace_minutes = 5,
+
+        -- Son dis saldiridan sonra offline koruma icin gereken sakin sure.
+        combat_lock_minutes = 20,
+
         block_friendly_fire = false,
         block_non_war_damage = false
     }

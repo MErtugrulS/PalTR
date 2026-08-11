@@ -13,6 +13,7 @@ local StatusService = require("PalTR.services.status_service")
 local CommandService = require("PalTR.services.command_service")
 local DamageObserver = require("PalTR.services.damage_observer")
 local DamagePolicy = require("PalTR.services.damage_policy")
+local ProtectionService = require("PalTR.services.protection_service")
 local Scheduler = require("PalTR.services.scheduler")
 
 local App = {}
@@ -43,6 +44,13 @@ function App.new(config)
         diplomacy
     )
 
+    local protection = ProtectionService.new(
+        paths,
+        config,
+        registry,
+        Logger.new("Protection")
+    )
+
     return setmetatable({
         config = config,
         paths = paths,
@@ -52,6 +60,7 @@ function App.new(config)
         diplomacy = diplomacy,
         status = status,
         damage_policy = damage_policy,
+        protection = protection,
 
         commands = CommandService.new(
             paths,
@@ -86,6 +95,12 @@ function App:_headers()
 
         [self.paths.online] =
             "player_key\tplayer_name\tguild_key\tconnected_at\tlast_seen",
+
+        [self.paths.protection] =
+            "guild_key\tonline_count\tlast_online_at\tlast_hostile_at\tprotected_at\tprotected\treason",
+
+        [self.paths.protection_activity] =
+            "guild_key\tlast_hostile_at",
 
         [self.paths.relations] =
             "pair_key\tguild_a\tguild_b\tstate\tprevious_state\trequested_by\taccepted_by\tcreated_at\tupdated_at\tactive_at\texpires_at\tnote",
@@ -217,6 +232,7 @@ function App:_register_hooks()
                 )
 
             self.registry:scan_guilds()
+            self.protection:refresh()
 
             self.status:build(
                 player,
@@ -237,6 +253,8 @@ function App:_register_hooks()
                 )
 
             if player then
+                self.protection:refresh()
+
                 self.status:build(
                     player,
                     "Oyuncu-klan eslemesi guncellendi"
@@ -345,12 +363,15 @@ function App:_tick()
         self.registry:scan_guilds()
         self.last_guild_scan = now
     end
+
+    self.protection:refresh(now)
 end
 
 function App:start()
     self:_headers()
     self.registry:scan_guilds()
     self.last_guild_scan = Clock.now()
+    self.protection:refresh(self.last_guild_scan)
     self:_register_hooks()
 
     self.scheduler:start(
@@ -367,7 +388,7 @@ function App:start()
 
             TSV.encode({
                 Clock.now(),
-                "0.8.0-dev-faz04",
+                "0.9.0-dev-faz05",
                 "STARTED"
             })
         }
@@ -375,15 +396,15 @@ function App:start()
 
     self.status:build(
         nil,
-        "PalTR Faz-04 oyuncu hasar korumasi baslatildi"
+        "PalTR Faz-05 offline koruma baslatildi"
     )
 
     self.logger:info(
-        "Faz-04 oyuncu hasar korumasi baslatildi"
+        "Faz-05 offline koruma baslatildi"
     )
 
     self.logger:info(
-        "Oyuncu hasar korumasi aktif"
+        "Offline koruma snapshot servisi aktif"
     )
 end
 
