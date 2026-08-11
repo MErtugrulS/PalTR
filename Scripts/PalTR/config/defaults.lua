@@ -31,6 +31,10 @@ return {
         max_outposts_per_clan = 10,
         world_units_per_meter = 100,
         registration_interaction_radius_meters = 20,
+        siege_camp_interaction_radius_meters = 20,
+        siege_camp_actor_class_tokens = {
+            "BP_BuildObject_WorkBench_C"
+        },
         raid_timezone = "Europe/Istanbul",
         raid_utc_offset_minutes = 180,
         raid_window_start = "20:00",
