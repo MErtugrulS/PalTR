@@ -864,11 +864,9 @@ function Conquest:write_damage_policy(now)
     local zone_lines = {
         "node_id\towner_guild\tallowed_attacker_guild\tcenter_x_world\tcenter_y_world\tcenter_z_world\tradius_world"
     }
-    local units_per_meter = tonumber(
-        self.config.conquest.world_units_per_meter
-    ) or 100
+    local units_per_meter = tonumber(self.config.world_units_per_meter) or 100
     local zone_radius = tonumber(
-        self.config.conquest.conquest_zone_radius_meters
+        self.config.conquest_zone_radius_meters
     ) or 0
 
     local nodes = {}
