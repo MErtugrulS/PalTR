@@ -15,7 +15,7 @@ end
 
 function Status:build(player, response)
     local lines = {
-        "PalTR Modu — Pasif Diplomasi Alfa",
+        "PalTR Modu - Sunucu Durumu",
         "==================================",
         "Guncelleme: " .. os.date("%Y-%m-%d %H:%M:%S", Clock.now()),
         "",
@@ -28,7 +28,7 @@ function Status:build(player, response)
         "Rol: " .. tostring(player and player.role or ""),
         "Lider: " .. tostring(player and player.is_master or false),
         "",
-        "KLAnLAR"
+        "KLANLAR"
     }
 
     for _, key in ipairs(Tables.sorted_keys(self.registry.guilds)) do

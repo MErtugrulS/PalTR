@@ -9,11 +9,11 @@ package.path = root .. "?.lua;" .. root .. "?/init.lua;" .. package.path
 
 local ok, bootstrap = pcall(require, "PalTR.bootstrap")
 if not ok then
-    print("[PalTR v0.6.0-dev] BASLATMA_HATASI | " .. tostring(bootstrap))
+    print("[PalTR] BASLATMA_HATASI | " .. tostring(bootstrap))
     return
 end
 
 local started, error_message = pcall(bootstrap.start)
 if not started then
-    print("[PalTR v0.6.0-dev] BASLATMA_HATASI | " .. tostring(error_message))
+    print("[PalTR] BASLATMA_HATASI | " .. tostring(error_message))
 end

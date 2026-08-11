@@ -2,7 +2,7 @@
   "ModName": "PalTR Modu",
   "PackageName": "PalTR",
   "Thumbnail": "thumbnail.png",
-  "Version": "0.6.0-dev",
+  "Version": "0.10.0-dev-conquest",
   "DebugMode": true,
   "MinRevision": 101103,
   "Author": "PalTR",
@@ -13,7 +13,7 @@
     "UE4SS",
     "Server",
     "Diplomacy",
-    "Alpha"
+    "Conquest"
   ],
   "InstallRule": [
     {

@@ -7,6 +7,7 @@ package.path = table.concat({
 local Protection = require(
     "PalTR.services.protection_service"
 )
+local TempPath = dofile("Tests/support/temp_path.lua")
 
 local function equal(actual, expected, message)
     if actual ~= expected then
@@ -44,5 +45,36 @@ local protected = Protection.evaluate(
 )
 equal(protected.protected, true, "offline protected")
 equal(protected.reason, "OFFLINE_PROTECTED", "protected reason")
+
+local prefix = TempPath.prefix("paltr_protection")
+local snapshot_path = prefix .. "_snapshot.tsv"
+local activity_path = prefix .. "_activity.tsv"
+local service = Protection.new(
+    {
+        protection = snapshot_path,
+        protection_activity = activity_path
+    },
+    { protection = config },
+    {
+        guilds = { GUILD_A = { key = "GUILD_A" } },
+        players = {
+            PLAYER_A = {
+                guild_key = "GUILD_A",
+                last_seen = 1000
+            }
+        },
+        runtime_players = {}
+    },
+    { error = function() end }
+)
+
+equal(service:refresh(3400), true, "protection snapshot written")
+equal(os.remove(snapshot_path), true, "protection snapshot removed")
+equal(service:refresh(3400), true, "missing unchanged snapshot recreated")
+local recreated = io.open(snapshot_path, "r")
+equal(recreated ~= nil, true, "recreated protection snapshot exists")
+if recreated then recreated:close() end
+os.remove(snapshot_path)
+os.remove(activity_path)
 
 print("protection_service_spec: ok")

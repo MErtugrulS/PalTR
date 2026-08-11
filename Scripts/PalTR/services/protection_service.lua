@@ -191,7 +191,8 @@ function Protection:refresh(now)
     end
 
     local snapshot = table.concat(lines, "\n")
-    if snapshot == self.last_snapshot then
+    if snapshot == self.last_snapshot
+        and FileIO.exists(self.paths.protection) then
         return true
     end
 
