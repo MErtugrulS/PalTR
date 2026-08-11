@@ -40,4 +40,23 @@ local found = adapter:nearest_owned_flag(player, registry, config)
 equal(found.ok, true, "configured flag found")
 equal(found.value.flag_reference, "FLAG_A", "model id used")
 equal(found.value.distance_meters, 1, "meters used")
+
+actor.path = "OtherClass_C Instance"
+local missing_class = adapter:nearest_owned_candidate(player, registry, config)
+equal(missing_class.ok, false, "missing candidate class fails")
+equal(
+    missing_class.error.message,
+    "Ayarli Klan Bayragi sinifinda world aktoru bulunamadi",
+    "missing class detail"
+)
+
+actor.path = "VerifiedFlagClass_C Instance"
+actor.group = "UNKNOWN_GROUP"
+local missing_owner = adapter:nearest_owned_candidate(player, registry, config)
+equal(missing_owner.ok, false, "unresolved owner fails")
+equal(
+    missing_owner.error.message,
+    "Yapi bulundu fakat klan sahipligi cozumlenemedi",
+    "owner detail"
+)
 print("conquest_flag_adapter_spec: ok")
