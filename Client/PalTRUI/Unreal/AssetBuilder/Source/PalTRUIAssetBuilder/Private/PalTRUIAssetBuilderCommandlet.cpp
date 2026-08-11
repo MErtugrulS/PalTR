@@ -2618,7 +2618,7 @@ namespace PalTRUIAssetBuilder
         }
         if (!ProtectionAction && !ProtectionActionText && QuickActionsContent)
         {
-            ProtectionAction = MakeTabButton(Tree, TEXT("DashboardProtectionButton"), TEXT("DashboardProtectionButtonText"), TEXT("Koruma Durumu  |  YAKINDA"));
+            ProtectionAction = MakeTabButton(Tree, TEXT("DashboardProtectionButton"), TEXT("DashboardProtectionButtonText"), TEXT("Koruma Durumu"));
             ProtectionActionText = Cast<UTextBlock>(ProtectionAction->GetContent());
             UVerticalBoxSlot* ProtectionActionSlot = AddVertical(QuickActionsContent, ProtectionAction);
             ProtectionActionSlot->SetHorizontalAlignment(HAlign_Fill);
@@ -2630,7 +2630,7 @@ namespace PalTRUIAssetBuilder
             return false;
         }
         ProtectionAction->SetIsEnabled(false);
-        ProtectionActionText->SetText(FText::FromString(TEXT("Koruma Durumu  |  YAKINDA")));
+        ProtectionActionText->SetText(FText::FromString(TEXT("Koruma Durumu")));
         StyleButton(Tree, TEXT("DashboardProtectionButton"), FLinearColor(0.012f, 0.10f, 0.12f, 0.92f));
 
         if (UTextBlock* ClanHeading = Cast<UTextBlock>(Tree->FindWidget(TEXT("ClanHeadingText"))))
@@ -3943,12 +3943,23 @@ namespace PalTRUIAssetBuilder
         {
             const TCHAR* FrameName;
             const TCHAR* SizeName;
+            const TCHAR* OverlayName;
+            const TCHAR* TintName;
+            FLinearColor Tint;
         };
         const FStatusCardGeometry CardFrames[] = {
-            { TEXT("DashboardClanCardFrame"), TEXT("DashboardClanCardSize") },
-            { TEXT("DashboardDiplomacyCardFrame"), TEXT("DashboardDiplomacyCardSize") },
-            { TEXT("DashboardProtectionCardFrame"), TEXT("DashboardProtectionCardSize") },
-            { TEXT("DashboardBuildingsCardFrame"), TEXT("DashboardBuildingsCardSize") }
+            { TEXT("DashboardClanCardFrame"), TEXT("DashboardClanCardSize"),
+                TEXT("DashboardClanCardOverlay"), TEXT("DashboardClanCardTintFrame"),
+                PixelTheme::FromSRGB(8, 82, 77, 0.72f) },
+            { TEXT("DashboardDiplomacyCardFrame"), TEXT("DashboardDiplomacyCardSize"),
+                TEXT("DashboardDiplomacyCardOverlay"), TEXT("DashboardDiplomacyCardTintFrame"),
+                PixelTheme::FromSRGB(18, 67, 101, 0.72f) },
+            { TEXT("DashboardProtectionCardFrame"), TEXT("DashboardProtectionCardSize"),
+                TEXT("DashboardProtectionCardOverlay"), TEXT("DashboardProtectionCardTintFrame"),
+                PixelTheme::FromSRGB(115, 81, 25, 0.68f) },
+            { TEXT("DashboardBuildingsCardFrame"), TEXT("DashboardBuildingsCardSize"),
+                TEXT("DashboardBuildingsCardOverlay"), TEXT("DashboardBuildingsCardTintFrame"),
+                PixelTheme::FromSRGB(92, 48, 21, 0.68f) }
         };
         for (int32 Index = 0; Index < UE_ARRAY_COUNT(CardFrames); ++Index)
         {
@@ -3980,7 +3991,7 @@ namespace PalTRUIAssetBuilder
                     return false;
                 }
             }
-            else if (CardSize->GetContent() != Card || CardSize->GetParent() != StatusCards)
+            else if (CardSize->GetParent() != StatusCards)
             {
                 UE_LOG(LogTemp, Error, TEXT("PalTRUI pixel match update refused: partial status card size hierarchy: %s"), CardFrames[Index].FrameName);
                 return false;
@@ -3993,22 +4004,50 @@ namespace PalTRUIAssetBuilder
                     Index + 1 == UE_ARRAY_COUNT(CardFrames) ? 0.0f : 8.0f, 0));
                 Slot->SetVerticalAlignment(VAlign_Fill);
             }
-            if (USizeBoxSlot* CardContentSlot = Cast<USizeBoxSlot>(Card->Slot))
-            {
-                CardContentSlot->SetHorizontalAlignment(HAlign_Fill);
-                CardContentSlot->SetVerticalAlignment(VAlign_Fill);
-            }
-        }
 
-        const FLinearColor NoOutline = FLinearColor::Transparent;
-        StyleRoundedFrame(Tree, TEXT("DashboardClanCardFrame"), PixelTheme::FromSRGB(8, 82, 77, 0.72f),
-            NoOutline, 3.0f, 0.0f, FMargin(14.0f));
-        StyleRoundedFrame(Tree, TEXT("DashboardDiplomacyCardFrame"), PixelTheme::FromSRGB(18, 67, 101, 0.72f),
-            NoOutline, 3.0f, 0.0f, FMargin(14.0f));
-        StyleRoundedFrame(Tree, TEXT("DashboardProtectionCardFrame"), PixelTheme::FromSRGB(115, 81, 25, 0.68f),
-            NoOutline, 3.0f, 0.0f, FMargin(14.0f));
-        StyleRoundedFrame(Tree, TEXT("DashboardBuildingsCardFrame"), PixelTheme::FromSRGB(92, 48, 21, 0.68f),
-            NoOutline, 3.0f, 0.0f, FMargin(14.0f));
+            UOverlay* CardOverlay = Cast<UOverlay>(Tree->FindWidget(FName(CardFrames[Index].OverlayName)));
+            UBorder* CardTint = Cast<UBorder>(Tree->FindWidget(FName(CardFrames[Index].TintName)));
+            if (!CardOverlay && !CardTint)
+            {
+                if (CardSize->GetContent() != Card || !CardSize->RemoveChild(Card))
+                {
+                    UE_LOG(LogTemp, Error, TEXT("PalTRUI pixel match update failed: status card overlay source: %s"), CardFrames[Index].FrameName);
+                    return false;
+                }
+                CardOverlay = Tree->ConstructWidget<UOverlay>(UOverlay::StaticClass(), FName(CardFrames[Index].OverlayName));
+                CardTint = Tree->ConstructWidget<UBorder>(UBorder::StaticClass(), FName(CardFrames[Index].TintName));
+                CardSize->SetContent(CardOverlay);
+                CardOverlay->AddChild(CardTint);
+                CardOverlay->AddChild(Card);
+            }
+            else if (!CardOverlay || !CardTint
+                || CardSize->GetContent() != CardOverlay
+                || CardTint->GetParent() != CardOverlay
+                || Card->GetParent() != CardOverlay)
+            {
+                UE_LOG(LogTemp, Error, TEXT("PalTRUI pixel match update refused: partial status card overlay: %s"), CardFrames[Index].FrameName);
+                return false;
+            }
+            if (USizeBoxSlot* OverlaySlot = Cast<USizeBoxSlot>(CardOverlay->Slot))
+            {
+                OverlaySlot->SetHorizontalAlignment(HAlign_Fill);
+                OverlaySlot->SetVerticalAlignment(VAlign_Fill);
+            }
+            for (UWidget* OverlayChild : { static_cast<UWidget*>(CardTint), static_cast<UWidget*>(Card) })
+            {
+                if (UOverlaySlot* OverlayChildSlot = Cast<UOverlaySlot>(OverlayChild->Slot))
+                {
+                    OverlayChildSlot->SetHorizontalAlignment(HAlign_Fill);
+                    OverlayChildSlot->SetVerticalAlignment(VAlign_Fill);
+                }
+            }
+            StyleRoundedFrame(Tree, FName(CardFrames[Index].TintName), CardFrames[Index].Tint,
+                FLinearColor::Transparent, 3.0f, 0.0f, FMargin(0.0f));
+            CardTint->SetVisibility(ESlateVisibility::HitTestInvisible);
+            CardTint->SetRenderTransformPivot(FVector2D(0.5f, 0.0f));
+            CardTint->SetRenderScale(FVector2D(1.0f, 1.12f));
+            StyleTransparentFrame(Tree, FName(CardFrames[Index].FrameName), FMargin(14.0f));
+        }
         StyleTransparentFrame(Tree, TEXT("DashboardRecentEventsFrame"), FMargin(16.0f));
         StyleTransparentFrame(Tree, TEXT("DashboardQuickActionsFrame"), FMargin(14.0f));
         StyleTransparentFrame(Tree, TEXT("DashboardRelationsFrame"), FMargin(14.0f));
@@ -4067,7 +4106,15 @@ namespace PalTRUIAssetBuilder
         if (UTextBlock* QuickHeading = Cast<UTextBlock>(Tree->FindWidget(TEXT("DashboardQuickActionsHeadingText"))))
         {
             QuickHeading->SetText(FText::FromString(TEXT("Hızlı İşlemler")));
-            QuickHeading->SetRenderTranslation(FVector2D(0.0f, 22.0f));
+            QuickHeading->SetRenderTranslation(FVector2D::ZeroVector);
+            if (UVerticalBoxSlot* HeadingSlot = Cast<UVerticalBoxSlot>(QuickHeading->Slot))
+            {
+                HeadingSlot->SetPadding(FMargin(0.0f, 17.0f, 0.0f, 10.0f));
+            }
+        }
+        if (UTextBlock* ProtectionActionText = Cast<UTextBlock>(Tree->FindWidget(TEXT("DashboardProtectionButtonText"))))
+        {
+            ProtectionActionText->SetText(FText::FromString(TEXT("Koruma Durumu")));
         }
         if (UTextBlock* ProtectionTitle = Cast<UTextBlock>(Tree->FindWidget(TEXT("DashboardProtectionCardTitleText"))))
         {
@@ -4502,18 +4549,26 @@ namespace PalTRUIAssetBuilder
             TEXT("DashboardStatusCardsSize"),
             TEXT("DashboardStatusCardsFrame"),
             TEXT("DashboardClanCardSize"),
+            TEXT("DashboardClanCardOverlay"),
+            TEXT("DashboardClanCardTintFrame"),
             TEXT("DashboardClanCardFrame"),
             TEXT("DashboardClanCardContent"),
             TEXT("DashboardClanCardTitleText"),
             TEXT("DashboardClanCardValueText"),
             TEXT("DashboardClanCardDetailText"),
             TEXT("DashboardDiplomacyCardSize"),
+            TEXT("DashboardDiplomacyCardOverlay"),
+            TEXT("DashboardDiplomacyCardTintFrame"),
             TEXT("DashboardDiplomacyCardFrame"),
             TEXT("DashboardDiplomacyCardContent"),
             TEXT("DashboardDiplomacyCardTitleText"),
             TEXT("DashboardDiplomacyCardValueText"),
             TEXT("DashboardProtectionCardSize"),
+            TEXT("DashboardProtectionCardOverlay"),
+            TEXT("DashboardProtectionCardTintFrame"),
             TEXT("DashboardBuildingsCardSize"),
+            TEXT("DashboardBuildingsCardOverlay"),
+            TEXT("DashboardBuildingsCardTintFrame"),
             TEXT("DashboardDiplomacyCardDetailText"),
             TEXT("DashboardRelationsFrame"),
             TEXT("DashboardRelationsContent"),
@@ -4705,21 +4760,35 @@ namespace PalTRUIAssetBuilder
         {
             const TCHAR* FrameName;
             const TCHAR* SizeName;
+            const TCHAR* OverlayName;
+            const TCHAR* TintName;
         };
         const FVerifiedStatusCardGeometry VerifiedStatusCards[] = {
-            { TEXT("DashboardClanCardFrame"), TEXT("DashboardClanCardSize") },
-            { TEXT("DashboardDiplomacyCardFrame"), TEXT("DashboardDiplomacyCardSize") },
-            { TEXT("DashboardProtectionCardFrame"), TEXT("DashboardProtectionCardSize") },
-            { TEXT("DashboardBuildingsCardFrame"), TEXT("DashboardBuildingsCardSize") }
+            { TEXT("DashboardClanCardFrame"), TEXT("DashboardClanCardSize"),
+                TEXT("DashboardClanCardOverlay"), TEXT("DashboardClanCardTintFrame") },
+            { TEXT("DashboardDiplomacyCardFrame"), TEXT("DashboardDiplomacyCardSize"),
+                TEXT("DashboardDiplomacyCardOverlay"), TEXT("DashboardDiplomacyCardTintFrame") },
+            { TEXT("DashboardProtectionCardFrame"), TEXT("DashboardProtectionCardSize"),
+                TEXT("DashboardProtectionCardOverlay"), TEXT("DashboardProtectionCardTintFrame") },
+            { TEXT("DashboardBuildingsCardFrame"), TEXT("DashboardBuildingsCardSize"),
+                TEXT("DashboardBuildingsCardOverlay"), TEXT("DashboardBuildingsCardTintFrame") }
         };
         for (const FVerifiedStatusCardGeometry& StatusCard : VerifiedStatusCards)
         {
             UBorder* CardFrame = Cast<UBorder>(Panel->WidgetTree->FindWidget(FName(StatusCard.FrameName)));
             USizeBox* CardSize = Cast<USizeBox>(Panel->WidgetTree->FindWidget(FName(StatusCard.SizeName)));
+            UOverlay* CardOverlay = Cast<UOverlay>(Panel->WidgetTree->FindWidget(FName(StatusCard.OverlayName)));
+            UBorder* CardTint = Cast<UBorder>(Panel->WidgetTree->FindWidget(FName(StatusCard.TintName)));
             UHorizontalBoxSlot* CardSlot = CardSize ? Cast<UHorizontalBoxSlot>(CardSize->Slot) : nullptr;
             if (!CardFrame
                 || !CardSize
-                || CardSize->GetContent() != CardFrame
+                || !CardOverlay
+                || !CardTint
+                || CardSize->GetContent() != CardOverlay
+                || CardTint->GetParent() != CardOverlay
+                || CardFrame->GetParent() != CardOverlay
+                || CardOverlay->GetChildIndex(CardTint) != 0
+                || CardOverlay->GetChildIndex(CardFrame) != 1
                 || !FMath::IsNearlyEqual(CardSize->GetHeightOverride(), 288.0f)
                 || !CardSlot
                 || CardSlot->GetSize().SizeRule != ESlateSizeRule::Fill
