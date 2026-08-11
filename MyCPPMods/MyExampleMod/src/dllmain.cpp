@@ -8,9 +8,11 @@
 #include <Unreal/Hooks/Hooks.hpp>
 #include <Unreal/UObject.hpp>
 #include <Unreal/UObjectGlobals.hpp>
+#include <Unreal/Transform.hpp>
 #include <Unreal/UnrealCoreStructs.hpp>
 
 #include <chrono>
+#include <cmath>
 #include <iomanip>
 #include <exception>
 #include <fstream>
@@ -199,6 +201,15 @@ namespace PalTR
         }
 
     private:
+        struct ModelRecord
+        {
+            std::string build_player_uid;
+            double x{};
+            double y{};
+            double z{};
+            bool has_location{};
+        };
+
         bool resolve_contract()
         {
             m_damage_function = UObjectGlobals::StaticFindObject<UFunction*>(
@@ -307,6 +318,9 @@ namespace PalTR
                 FName(STR("InstanceId"), FNAME_Find));
             m_build_player_property = m_model_class->FindProperty(
                 FName(STR("BuildPlayerUId"), FNAME_Find));
+            m_model_transform_property = CastField<FStructProperty>(
+                m_model_class->FindProperty(
+                    FName(STR("InitialTransformCache"), FNAME_Find)));
             m_map_object_model_property = m_map_object_class->FindProperty(
                 FName(STR("MapObjectModel"), FNAME_Find));
             m_character_parameter_component_property = m_pal_character_class->FindProperty(
@@ -338,6 +352,7 @@ namespace PalTR
                 || m_nearest_enemy_build_return_parameter == nullptr
                 || m_model_instance_property == nullptr
                 || m_build_player_property == nullptr
+                || m_model_transform_property == nullptr
                 || m_map_object_model_property == nullptr
                 || m_character_parameter_component_property == nullptr
                 || m_trainer_property == nullptr
@@ -355,10 +370,13 @@ namespace PalTR
                 ToRawPtr(m_enemy_player_damage_info_parameter->GetStruct());
             auto* save_parameter_struct =
                 ToRawPtr(m_save_parameter_property->GetStruct());
+            auto* model_transform_struct =
+                ToRawPtr(m_model_transform_property->GetStruct());
             if (info_struct == nullptr
                 || npc_info_struct == nullptr
                 || enemy_player_info_struct == nullptr
-                || save_parameter_struct == nullptr)
+                || save_parameter_struct == nullptr
+                || model_transform_struct == nullptr)
             {
                 return false;
             }
@@ -366,6 +384,7 @@ namespace PalTR
             if (!is_guid_property(m_instance_id_parameter)
                 || !is_guid_property(m_model_instance_property)
                 || !is_guid_property(m_build_player_property)
+                || model_transform_struct->GetName() != STR("Transform")
                 || CastField<FObjectPropertyBase>(m_dispose_model_parameter) == nullptr
                 || CastField<FObjectPropertyBase>(m_npc_damage_defender_parameter) == nullptr
                 || CastField<FObjectPropertyBase>(m_enemy_player_damage_defender_parameter) == nullptr
@@ -584,7 +603,7 @@ namespace PalTR
 
         void rebuild_model_index()
         {
-            std::unordered_map<std::string, std::string> new_index;
+            std::unordered_map<std::string, ModelRecord> new_index;
 
             UObjectGlobals::ForEachUObject(
                 [this, &new_index](UObject* object, ...) -> LoopAction {
@@ -597,34 +616,49 @@ namespace PalTR
                         m_model_instance_property->ContainerPtrToValuePtr<FGuid>(object);
                     const auto* build_player_uid =
                         m_build_player_property->ContainerPtrToValuePtr<FGuid>(object);
+                    auto* transform =
+                        m_model_transform_property->ContainerPtrToValuePtr<FTransform>(object);
 
                     if (instance_id != nullptr
-                        && build_player_uid != nullptr
-                        && instance_id->is_valid()
-                        && build_player_uid->is_valid())
+                        && instance_id->is_valid())
                     {
-                        new_index[guid_text(*instance_id)] = guid_text(*build_player_uid);
+                        ModelRecord record{};
+                        if (build_player_uid != nullptr && build_player_uid->is_valid())
+                        {
+                            record.build_player_uid = guid_text(*build_player_uid);
+                        }
+                        if (transform != nullptr)
+                        {
+                            const auto& translation = transform->GetTranslation();
+                            record.x = translation.X();
+                            record.y = translation.Y();
+                            record.z = translation.Z();
+                            record.has_location = std::isfinite(record.x)
+                                && std::isfinite(record.y)
+                                && std::isfinite(record.z);
+                        }
+                        new_index[guid_text(*instance_id)] = std::move(record);
                     }
 
                     return LoopAction::Continue;
                 });
 
-            m_build_player_by_instance = std::move(new_index);
+            m_model_by_instance = std::move(new_index);
         }
 
-        std::string resolve_build_player(const FGuid& instance_id)
+        ModelRecord resolve_model_record(const FGuid& instance_id)
         {
             const auto key = guid_text(instance_id);
-            auto found = m_build_player_by_instance.find(key);
-            if (found != m_build_player_by_instance.end())
+            auto found = m_model_by_instance.find(key);
+            if (found != m_model_by_instance.end())
             {
                 return found->second;
             }
 
             rebuild_model_index();
-            found = m_build_player_by_instance.find(key);
-            return found == m_build_player_by_instance.end()
-                ? std::string{}
+            found = m_model_by_instance.find(key);
+            return found == m_model_by_instance.end()
+                ? ModelRecord{}
                 : found->second;
         }
 
@@ -879,14 +913,32 @@ namespace PalTR
                     return;
                 }
 
-                const auto build_player_uid = resolve_build_player(*instance_id);
-                if (build_player_uid.empty())
+                const auto model = resolve_model_record(*instance_id);
+                if (model.build_player_uid.empty())
                 {
                     return;
                 }
 
                 const auto target_guild =
-                    m_policy.guild_for_player_uid(build_player_uid);
+                    m_policy.guild_for_player_uid(model.build_player_uid);
+                if (model.has_location)
+                {
+                    const auto zone = m_policy.evaluate_conquest_zone_damage(
+                        target_guild,
+                        attacker_guild,
+                        model.x,
+                        model.y,
+                        model.z);
+                    if (zone.allow)
+                    {
+                        record_hostile_activity(
+                            attacker_guild,
+                            target_guild,
+                            true);
+                        return;
+                    }
+                }
+
                 const auto decision = m_policy.evaluate_protected_guilds(
                     target_guild,
                     attacker_guild,
@@ -1011,6 +1063,7 @@ namespace PalTR
         FProperty* m_override_network_owner_property{};
         FProperty* m_model_instance_property{};
         FProperty* m_build_player_property{};
+        FStructProperty* m_model_transform_property{};
         FProperty* m_map_object_model_property{};
         FProperty* m_character_parameter_component_property{};
         FProperty* m_trainer_property{};
@@ -1026,7 +1079,7 @@ namespace PalTR
         std::chrono::steady_clock::time_point m_last_policy_refresh{};
         std::string m_last_policy_error;
         std::string m_last_activity_error;
-        std::unordered_map<std::string, std::string> m_build_player_by_instance;
+        std::unordered_map<std::string, ModelRecord> m_model_by_instance;
     };
 }
 
