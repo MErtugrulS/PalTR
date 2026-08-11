@@ -17,5 +17,8 @@ target_link_libraries(${TARGET} PRIVATE UE4SS PalTRPolicy)
 add_executable(PalTRPolicyTests "tests/PolicySnapshotTests.cpp")
 target_link_libraries(PalTRPolicyTests PRIVATE PalTRPolicy)
 
+add_executable(PalTRLuaTestRunner "tests/LuaTestRunner.cpp")
+target_link_libraries(PalTRLuaTestRunner PRIVATE LuaRaw)
+
 enable_testing()
 add_test(NAME PalTRPolicyTests COMMAND PalTRPolicyTests)
