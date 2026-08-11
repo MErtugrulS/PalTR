@@ -1,13 +1,30 @@
 local UMGAssetLoader = {}
 UMGAssetLoader.__index = UMGAssetLoader
 
+UMGAssetLoader.PANEL_CANDIDATES = {
+    {
+        asset_path =
+            "/Game/Mods/PalTRUI/WBP_PalTRPanel_SkinV2.WBP_PalTRPanel_SkinV2",
+        class_path =
+            "/Game/Mods/PalTRUI/WBP_PalTRPanel_SkinV2.WBP_PalTRPanel_SkinV2_C",
+        package_name = "/Game/Mods/PalTRUI/WBP_PalTRPanel_SkinV2",
+        asset_name = "WBP_PalTRPanel_SkinV2_C"
+    },
+    {
+        asset_path = "/Game/Mods/PalTRUI/WBP_PalTRPanel.WBP_PalTRPanel",
+        class_path = "/Game/Mods/PalTRUI/WBP_PalTRPanel.WBP_PalTRPanel_C",
+        package_name = "/Game/Mods/PalTRUI/WBP_PalTRPanel",
+        asset_name = "WBP_PalTRPanel_C"
+    }
+}
 UMGAssetLoader.PANEL_ASSET_PATH =
-    "/Game/Mods/PalTRUI/WBP_PalTRPanel.WBP_PalTRPanel"
+    UMGAssetLoader.PANEL_CANDIDATES[1].asset_path
 UMGAssetLoader.PANEL_CLASS_PATH =
-    "/Game/Mods/PalTRUI/WBP_PalTRPanel.WBP_PalTRPanel_C"
+    UMGAssetLoader.PANEL_CANDIDATES[1].class_path
 UMGAssetLoader.PANEL_PACKAGE_NAME =
-    "/Game/Mods/PalTRUI/WBP_PalTRPanel"
-UMGAssetLoader.PANEL_ASSET_NAME = "WBP_PalTRPanel_C"
+    UMGAssetLoader.PANEL_CANDIDATES[1].package_name
+UMGAssetLoader.PANEL_ASSET_NAME =
+    UMGAssetLoader.PANEL_CANDIDATES[1].asset_name
 UMGAssetLoader.ASSET_REGISTRY_HELPERS_PATH =
     "/Script/AssetRegistry.Default__AssetRegistryHelpers"
 
@@ -65,14 +82,14 @@ function UMGAssetLoader.new(api)
     }, UMGAssetLoader)
 end
 
-function UMGAssetLoader:_find_panel_class()
+function UMGAssetLoader:_find_panel_class(candidate)
     if type(self.api.find_object) ~= "function" then
         return nil, "UE4SS StaticFindObject API bulunamadi."
     end
 
     local found, panel_class = pcall(
         self.api.find_object,
-        UMGAssetLoader.PANEL_CLASS_PATH
+        candidate.class_path
     )
     if not found then
         return nil, "Panel sinifi aranirken UE4SS hatasi olustu."
@@ -82,46 +99,50 @@ function UMGAssetLoader:_find_panel_class()
 end
 
 function UMGAssetLoader:load_panel_class()
-    local panel_class, find_error = self:_find_panel_class()
-    if find_error ~= nil then return false, nil, find_error end
-    if panel_class ~= nil then return true, panel_class end
+    if type(self.api.find_object) ~= "function" then
+        return false, nil, "UE4SS StaticFindObject API bulunamadi."
+    end
 
     if type(self.api.load_asset) ~= "function"
         and type(self.api.load_registered_asset) ~= "function" then
         return false, nil, "UE4SS LoadAsset API bulunamadi."
     end
 
-    if type(self.api.load_asset) == "function" then
-        local loaded = pcall(
-            self.api.load_asset,
-            UMGAssetLoader.PANEL_ASSET_PATH
-        )
-        if not loaded then
-            return false, nil, "Panel asseti yuklenirken UE4SS hatasi olustu."
-        end
-
-        panel_class, find_error = self:_find_panel_class()
+    local last_error = "Yuklenen panel sinifi bulunamadi."
+    for _, candidate in ipairs(UMGAssetLoader.PANEL_CANDIDATES) do
+        local panel_class, find_error = self:_find_panel_class(candidate)
         if find_error ~= nil then return false, nil, find_error end
         if panel_class ~= nil then return true, panel_class end
+
+        if type(self.api.load_asset) == "function" then
+            local loaded = pcall(self.api.load_asset, candidate.asset_path)
+            if loaded then
+                panel_class, find_error = self:_find_panel_class(candidate)
+                if find_error ~= nil then return false, nil, find_error end
+                if panel_class ~= nil then return true, panel_class end
+            else
+                last_error =
+                    "Panel asseti yuklenirken UE4SS hatasi olustu."
+            end
+        end
+
+        if type(self.api.load_registered_asset) == "function" then
+            local registered, registry_error =
+                self.api.load_registered_asset(
+                    candidate.package_name,
+                    candidate.asset_name
+                )
+            if registered == true then
+                panel_class, find_error = self:_find_panel_class(candidate)
+                if find_error ~= nil then return false, nil, find_error end
+                if panel_class ~= nil then return true, panel_class end
+            elseif registry_error ~= nil then
+                last_error = registry_error
+            end
+        end
     end
 
-    if type(self.api.load_registered_asset) ~= "function" then
-        return false, nil, "Yuklenen panel sinifi bulunamadi."
-    end
-
-    local registered, registry_error = self.api.load_registered_asset(
-        UMGAssetLoader.PANEL_PACKAGE_NAME,
-        UMGAssetLoader.PANEL_ASSET_NAME
-    )
-    if registered ~= true then return false, nil, registry_error end
-
-    panel_class, find_error = self:_find_panel_class()
-    if find_error ~= nil then return false, nil, find_error end
-    if panel_class == nil then
-        return false, nil,
-            "Asset Registry yuklemesinden sonra panel sinifi bulunamadi."
-    end
-    return true, panel_class
+    return false, nil, last_error
 end
 
 return UMGAssetLoader
