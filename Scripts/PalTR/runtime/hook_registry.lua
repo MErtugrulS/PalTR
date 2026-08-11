@@ -8,7 +8,23 @@ end
 function HookRegistry:register(name, path, callback)
     if self.hooks[path] then return true end
 
-    local ok, pre_id, post_id = pcall(RegisterHook, path, callback)
+    local function guarded_callback(...)
+        local results = table.pack(pcall(callback, ...))
+        if not results[1] then
+            self.logger:error(
+                "Hook calisma hatasi: " .. name .. " | " ..
+                tostring(results[2])
+            )
+            return nil
+        end
+        return table.unpack(results, 2, results.n)
+    end
+
+    local ok, pre_id, post_id = pcall(
+        RegisterHook,
+        path,
+        guarded_callback
+    )
     if not ok or (pre_id == nil and post_id == nil) then
         self.logger:warn("Hook kaydedilemedi: " .. name .. " | " .. path)
         return false
