@@ -5,6 +5,7 @@ package.path = table.concat({
 }, ";")
 
 local Repository = require("PalTR.storage.conquest_repository")
+local TempPath = dofile("Tests/support/temp_path.lua")
 
 local function equal(actual, expected, message)
     if actual ~= expected then
@@ -13,7 +14,7 @@ local function equal(actual, expected, message)
     end
 end
 
-local prefix = os.tmpname() .. "_paltr_conquest"
+local prefix = TempPath.prefix("paltr_conquest")
 local paths = {
     conquest_nodes = prefix .. "_nodes.tsv",
     conquest_edges = prefix .. "_edges.tsv",

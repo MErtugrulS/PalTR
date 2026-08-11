@@ -8,6 +8,7 @@ local Conquest = require("PalTR.services.conquest_service")
 local Result = require("PalTR.core.result")
 local DiplomacyStates = require("PalTR.domain.states")
 local States = require("PalTR.domain.conquest_states")
+local TempPath = dofile("Tests/support/temp_path.lua")
 
 local function equal(actual, expected, message)
     if actual ~= expected then
@@ -116,7 +117,7 @@ local function register(service, request)
     return result.value
 end
 
-local paths = make_paths(os.tmpname() .. "_paltr_conquest_service")
+local paths = make_paths(TempPath.prefix("paltr_conquest_service"))
 local config = make_config(2)
 local diplomacy, relation = make_diplomacy(config, "GUILD_A", "GUILD_B")
 local service = Conquest.new(
@@ -424,7 +425,7 @@ equal(
 cleanup(paths)
 
 -- Peace resolves an unfinished occupation in occupier's favor.
-local peace_paths = make_paths(os.tmpname() .. "_paltr_conquest_peace")
+local peace_paths = make_paths(TempPath.prefix("paltr_conquest_peace"))
 local peace_config = make_config(10)
 local peace_diplomacy, peace_relation = make_diplomacy(
     peace_config, "GUILD_C", "GUILD_D"
