@@ -396,10 +396,22 @@ namespace PalTR
             m_owner_player_uid_property = save_parameter_struct->FindProperty(
                 FName(STR("OwnerPlayerUId"), FNAME_Find));
 
+            m_dynamic_property = CastField<FStructProperty>(
+                save_parameter_struct->FindProperty(FName(STR("Dynamic"), FNAME_Find)));
+            auto* dynamic_struct = m_dynamic_property == nullptr
+                ? nullptr
+                : ToRawPtr(m_dynamic_property->GetStruct());
+            m_dynamic_group_id_property = dynamic_struct == nullptr
+                ? nullptr
+                : dynamic_struct->FindProperty(FName(STR("GroupId"), FNAME_Find));
+
             return is_guid_property(m_attacker_group_property)
                 && CastField<FObjectPropertyBase>(m_attacker_property) != nullptr
                 && CastField<FObjectPropertyBase>(m_override_network_owner_property) != nullptr
-                && is_guid_property(m_owner_player_uid_property);
+                && is_guid_property(m_owner_player_uid_property)
+                && dynamic_struct != nullptr
+                && dynamic_struct->GetName() == STR("PalIndividualCharacterCacheParameter")
+                && is_guid_property(m_dynamic_group_id_property);
         }
 
         bool ensure_policy_current(bool force = false)
@@ -499,6 +511,21 @@ namespace PalTR
 
             void* save_parameter =
                 m_save_parameter_property->ContainerPtrToValuePtr<void>(individual);
+            void* dynamic = save_parameter == nullptr
+                ? nullptr
+                : m_dynamic_property->ContainerPtrToValuePtr<void>(save_parameter);
+            const auto* group_id = dynamic == nullptr
+                ? nullptr
+                : m_dynamic_group_id_property->ContainerPtrToValuePtr<FGuid>(dynamic);
+            if (group_id != nullptr && group_id->is_valid())
+            {
+                guild = m_policy.guild_for_group_id(guid_text(*group_id));
+                if (!guild.empty())
+                {
+                    return guild;
+                }
+            }
+
             const auto* owner_player_uid = save_parameter == nullptr
                 ? nullptr
                 : m_owner_player_uid_property->ContainerPtrToValuePtr<FGuid>(save_parameter);
@@ -990,6 +1017,8 @@ namespace PalTR
         FProperty* m_individual_parameter_property{};
         FStructProperty* m_save_parameter_property{};
         FProperty* m_owner_player_uid_property{};
+        FStructProperty* m_dynamic_property{};
+        FProperty* m_dynamic_group_id_property{};
         FProperty* m_controller_pawn_property{};
         FProperty* m_controller_transmitter_property{};
         bool m_policy_refresh_attempted{};
