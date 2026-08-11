@@ -2,14 +2,15 @@ package.path = table.concat({ "Scripts/?.lua", "Scripts/?/init.lua", package.pat
 local Adapter = require("PalTR.runtime.test_kit_adapter")
 local function equal(a, b, m) if a ~= b then error(m) end end
 
-local cheat = { valid = true, calls = {} }
-local controller = { valid = true, cheat = cheat, calls = {} }
+local inventory = { valid = true, calls = {} }
+local player_state = { valid = true, inventory = inventory, calls = {} }
+local controller = { valid = true, player_state = player_state, calls = {} }
 local define = { valid = true, calls = {} }
 local ue = {}
 function ue.unwrap(value) return value end
 function ue.valid(value) return value and value.valid == true end
 function ue.read(object, field)
-    return field == "CheatManager" and object.cheat or nil
+    return field == "PlayerState" and object.player_state or nil
 end
 function ue.find_object(path)
     equal(path, "/Script/Pal.Default__PalDefine", "PalDefine path")
@@ -19,6 +20,9 @@ function ue.call(object, method, ...)
     table.insert(object.calls, { method = method, args = { ... } })
     if method == "StatusPointName_AddMaxInventoryWeight" then
         return true, "AddMaxInventoryWeight"
+    end
+    if method == "GetInventoryData" then
+        return true, object.inventory
     end
     return true, nil
 end
@@ -35,8 +39,10 @@ equal(controller.calls[1].method, "Debug_AddPlayerExp_ToServer", "player xp call
 equal(controller.calls[2].method, "Debug_SetStatusPoint_ToServer", "weight call")
 equal(controller.calls[2].args[1], "AddMaxInventoryWeight", "weight name")
 equal(controller.calls[2].args[2], 1000, "weight level")
-equal(cheat.calls[1].method, "SpawnMonsterForPlayer", "pal spawn call")
-equal(cheat.calls[2].args[1], "Weapon_RocketLauncher", "weapon id")
-equal(cheat.calls[3].args[1], "Ammo_Rocket", "ammo id")
-equal(cheat.calls[3].args[2], 5000, "ammo amount")
+equal(player_state.calls[1].method, "GetInventoryData", "inventory lookup")
+equal(player_state.calls[2].method, "RequestSpawnMonsterForPlayer", "pal spawn call")
+equal(inventory.calls[1].method, "AddItem_ServerInternal", "weapon add")
+equal(inventory.calls[1].args[1], "Weapon_RocketLauncher", "weapon id")
+equal(inventory.calls[2].args[1], "Ammo_Rocket", "ammo id")
+equal(inventory.calls[2].args[2], 5000, "ammo amount")
 print("test_kit_adapter_spec: ok")

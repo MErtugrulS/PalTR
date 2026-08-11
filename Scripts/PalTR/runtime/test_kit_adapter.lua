@@ -26,17 +26,20 @@ function Adapter:grant(controller, config)
         return Result.err("WEIGHT_STAT_UNAVAILABLE", "Agirlik stat adi cozumlenemedi")
     end
 
-    local cheat_manager = self.ue.unwrap(
-        self.ue.read(controller, "CheatManager")
+    local player_state = self.ue.unwrap(
+        self.ue.read(controller, "PlayerState")
     )
-    if not self.ue.valid(cheat_manager) then
-        self.ue.call(controller, "EnableCheats")
-        cheat_manager = self.ue.unwrap(
-            self.ue.read(controller, "CheatManager")
-        )
+    if not self.ue.valid(player_state) then
+        return Result.err("PLAYER_STATE_UNAVAILABLE", "Oyuncu durumu bulunamadi")
     end
-    if not self.ue.valid(cheat_manager) then
-        return Result.err("CHEAT_MANAGER_UNAVAILABLE", "Test kiti cheat yoneticisi acilamadi")
+
+    local ok_inventory, inventory = self.ue.call(
+        player_state,
+        "GetInventoryData"
+    )
+    inventory = self.ue.unwrap(inventory)
+    if not ok_inventory or not self.ue.valid(inventory) then
+        return Result.err("INVENTORY_UNAVAILABLE", "Oyuncu envanteri bulunamadi")
     end
 
     local ok_exp = self.ue.call(
@@ -51,23 +54,29 @@ function Adapter:grant(controller, config)
         tonumber(config.weight_status_level) or 0
     )
     local ok_pal = self.ue.call(
-        cheat_manager,
-        "SpawnMonsterForPlayer",
+        player_state,
+        "RequestSpawnMonsterForPlayer",
         tostring(config.pal_id or ""),
         tonumber(config.pal_count) or 1,
         tonumber(config.pal_level) or 1
     )
     local ok_weapon = self.ue.call(
-        cheat_manager,
-        "GetItem",
+        inventory,
+        "AddItem_ServerInternal",
         tostring(config.weapon_item_id or ""),
-        tonumber(config.weapon_count) or 1
+        tonumber(config.weapon_count) or 1,
+        false,
+        0.0,
+        true
     )
     local ok_ammo = self.ue.call(
-        cheat_manager,
-        "GetItem",
+        inventory,
+        "AddItem_ServerInternal",
         tostring(config.ammo_item_id or ""),
-        tonumber(config.ammo_count) or 1
+        tonumber(config.ammo_count) or 1,
+        false,
+        0.0,
+        true
     )
 
     if not ok_exp or not ok_weight or not ok_pal or not ok_weapon or not ok_ammo then
