@@ -116,4 +116,14 @@ presentation to navigation and recent-event rows, and tightens the shared
 header, footer, card, and typography hierarchy. It preserves all renderer,
 view-model, interaction, transport, and input control names.
 
+Run the commandlet once with `-CreateSkinV2` to create the parallel
+`WBP_PalTRPanel_SkinV2` production candidate. The command imports the cleaned
+1672x941 raster shell, duplicates the proven interaction widget tree, and makes
+the duplicated tree a dynamic text/input overlay. It refuses to overwrite an
+existing SkinV2 asset and never modifies `WBP_PalTRPanel`.
+
+Run the commandlet with `-VerifySkinV2` to verify the parallel panel, full-canvas
+shell geometry, and the minimum renderer/interaction controls without modifying
+either panel asset.
+
 Run the commandlet with `-Verify` to load both generated classes and check the renderer-facing widget names without modifying the assets.

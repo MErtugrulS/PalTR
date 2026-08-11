@@ -4587,6 +4587,206 @@ namespace PalTRUIAssetBuilder
         return true;
     }
 
+    bool CreateSkinV2Panel()
+    {
+        const FString SkinPackageName = FString(AssetRoot) / TEXT("WBP_PalTRPanel_SkinV2");
+        if (FPackageName::DoesPackageExist(SkinPackageName))
+        {
+            UE_LOG(
+                LogTemp,
+                Error,
+                TEXT("PalTRUI SkinV2 creation refused: target asset already exists.")
+            );
+            return false;
+        }
+
+        const FString ArtDirectory = FPaths::ConvertRelativePathToFull(
+            FPaths::ProjectPluginsDir() / TEXT("PalTRUIAssetBuilder/Resources")
+        );
+        UTexture2D* SkinTexture = ImportUITexture(
+            TEXT("/Game/Mods/PalTRUI/Art/T_PalTRSkinV2Shell"),
+            TEXT("T_PalTRSkinV2Shell"),
+            ArtDirectory / TEXT("paltr_skin_v2_shell.png")
+        );
+        if (!SkinTexture)
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI SkinV2 creation failed: shell texture missing."));
+            return false;
+        }
+        SkinTexture->Modify();
+        SkinTexture->CompressionSettings = TC_EditorIcon;
+        SkinTexture->MipGenSettings = TMGS_NoMipmaps;
+        SkinTexture->AddressX = TA_Clamp;
+        SkinTexture->AddressY = TA_Clamp;
+        SkinTexture->LODGroup = TEXTUREGROUP_UI;
+        SkinTexture->NeverStream = true;
+        SkinTexture->SRGB = true;
+        SkinTexture->UpdateResource();
+        if (!SaveAsset(SkinTexture))
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI SkinV2 creation failed while saving shell texture."));
+            return false;
+        }
+
+        UWidgetBlueprint* SourcePanel = LoadObject<UWidgetBlueprint>(
+            nullptr,
+            TEXT("/Game/Mods/PalTRUI/WBP_PalTRPanel.WBP_PalTRPanel")
+        );
+        if (!SourcePanel || !SourcePanel->WidgetTree)
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI SkinV2 creation failed: source panel missing."));
+            return false;
+        }
+
+        UPackage* SkinPackage = CreatePackage(*SkinPackageName);
+        UWidgetBlueprint* SkinPanel = Cast<UWidgetBlueprint>(StaticDuplicateObject(
+            SourcePanel,
+            SkinPackage,
+            TEXT("WBP_PalTRPanel_SkinV2")
+        ));
+        if (!SkinPanel || !SkinPanel->WidgetTree)
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI SkinV2 creation failed while duplicating source panel."));
+            return false;
+        }
+        SkinPanel->SetFlags(RF_Public | RF_Standalone);
+        FAssetRegistryModule::AssetCreated(SkinPanel);
+
+        UWidgetTree* Tree = SkinPanel->WidgetTree;
+        UCanvasPanel* Root = Cast<UCanvasPanel>(Tree->RootWidget);
+        if (!Root || Tree->FindWidget(TEXT("SkinV2BaseImage")))
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI SkinV2 creation failed: unexpected root hierarchy."));
+            return false;
+        }
+
+        UImage* BaseImage = Tree->ConstructWidget<UImage>(
+            UImage::StaticClass(),
+            TEXT("SkinV2BaseImage")
+        );
+        BaseImage->SetBrushFromTexture(SkinTexture, true);
+        BaseImage->SetColorAndOpacity(FLinearColor::White);
+        BaseImage->SetVisibility(ESlateVisibility::HitTestInvisible);
+        UCanvasPanelSlot* BaseSlot = Cast<UCanvasPanelSlot>(Root->InsertChildAt(0, BaseImage));
+        if (!BaseSlot)
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI SkinV2 creation failed: shell slot missing."));
+            return false;
+        }
+        BaseSlot->SetAnchors(FAnchors(0.0f, 0.0f, 1.0f, 1.0f));
+        BaseSlot->SetAlignment(FVector2D::ZeroVector);
+        BaseSlot->SetOffsets(FMargin(0.0f));
+        BaseSlot->SetZOrder(-100);
+
+        // SkinV2 owns all static chrome. The duplicated widget tree remains as
+        // the dynamic text, interaction, focus, and input layer only.
+        TArray<UWidget*> Widgets;
+        Tree->GetAllWidgets(Widgets);
+        for (UWidget* Widget : Widgets)
+        {
+            if (UBorder* Border = Cast<UBorder>(Widget))
+            {
+                Border->SetBrushColor(FLinearColor::Transparent);
+            }
+            if (UButton* Button = Cast<UButton>(Widget))
+            {
+                Button->SetBackgroundColor(FLinearColor::Transparent);
+            }
+            if (UImage* Image = Cast<UImage>(Widget))
+            {
+                if (Image != BaseImage)
+                {
+                    Image->SetVisibility(ESlateVisibility::Collapsed);
+                }
+            }
+        }
+
+        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(SkinPanel);
+        FKismetEditorUtilities::CompileBlueprint(SkinPanel);
+        if (!SaveAsset(SkinPanel))
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI SkinV2 creation failed while saving panel."));
+            return false;
+        }
+
+        UE_LOG(
+            LogTemp,
+            Display,
+            TEXT("PALTR_UI_SKIN_V2_CREATE_OK | panel=%s | shell=%s | mode=static_skin_dynamic_overlay"),
+            *SkinPanel->GetPathName(),
+            *SkinTexture->GetPathName()
+        );
+        return true;
+    }
+
+    bool VerifySkinV2Panel()
+    {
+        UWidgetBlueprint* Panel = LoadObject<UWidgetBlueprint>(
+            nullptr,
+            TEXT("/Game/Mods/PalTRUI/WBP_PalTRPanel_SkinV2.WBP_PalTRPanel_SkinV2")
+        );
+        UTexture2D* Texture = LoadObject<UTexture2D>(
+            nullptr,
+            TEXT("/Game/Mods/PalTRUI/Art/T_PalTRSkinV2Shell.T_PalTRSkinV2Shell")
+        );
+        if (!Panel || !Panel->GeneratedClass || !Panel->WidgetTree || !Texture)
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI SkinV2 verification failed: panel or texture missing."));
+            return false;
+        }
+
+        UCanvasPanel* Root = Cast<UCanvasPanel>(Panel->WidgetTree->RootWidget);
+        UImage* BaseImage = Cast<UImage>(Panel->WidgetTree->FindWidget(TEXT("SkinV2BaseImage")));
+        UCanvasPanelSlot* BaseSlot = BaseImage ? Cast<UCanvasPanelSlot>(BaseImage->Slot) : nullptr;
+        if (!Root
+            || !BaseImage
+            || Root->GetChildIndex(BaseImage) != 0
+            || BaseImage->GetVisibility() != ESlateVisibility::HitTestInvisible
+            || !BaseSlot
+            || !BaseSlot->GetAnchors().Minimum.Equals(FVector2D::ZeroVector, KINDA_SMALL_NUMBER)
+            || !BaseSlot->GetAnchors().Maximum.Equals(FVector2D(1.0f, 1.0f), KINDA_SMALL_NUMBER)
+            || !FMath::IsNearlyZero(BaseSlot->GetOffsets().Left)
+            || !FMath::IsNearlyZero(BaseSlot->GetOffsets().Top)
+            || !FMath::IsNearlyZero(BaseSlot->GetOffsets().Right)
+            || !FMath::IsNearlyZero(BaseSlot->GetOffsets().Bottom))
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI SkinV2 verification failed: shell geometry invalid."));
+            return false;
+        }
+
+        for (const FName WidgetName : {
+            FName(TEXT("PanelInputShield")),
+            FName(TEXT("ContentSwitcher")),
+            FName(TEXT("CloseButton")),
+            FName(TEXT("ClanTabButton")),
+            FName(TEXT("DiplomacyTabButton")),
+            FName(TEXT("AllianceTabButton")),
+            FName(TEXT("ChatTabButton")),
+            FName(TEXT("DashboardDiplomacyButton")),
+            FName(TEXT("DashboardGuildsButton"))
+        })
+        {
+            if (!Panel->WidgetTree->FindWidget(WidgetName))
+            {
+                UE_LOG(
+                    LogTemp,
+                    Error,
+                    TEXT("PalTRUI SkinV2 verification failed: interaction widget missing: %s."),
+                    *WidgetName.ToString()
+                );
+                return false;
+            }
+        }
+
+        UE_LOG(
+            LogTemp,
+            Display,
+            TEXT("PALTR_UI_SKIN_V2_VERIFY_OK | panel=%s | shell=1672x941 | fallback=preserved"),
+            *Panel->GeneratedClass->GetPathName()
+        );
+        return true;
+    }
+
     bool VerifyAssets()
     {
         UBlueprint* ModActor = LoadObject<UBlueprint>(
@@ -5236,6 +5436,16 @@ int32 UPalTRUIAssetBuilderCommandlet::Main(const FString& Params)
     if (FParse::Param(*Params, TEXT("UpdatePixelMatchVisual")))
     {
         return UpdatePixelMatchVisual() ? 0 : 26;
+    }
+
+    if (FParse::Param(*Params, TEXT("CreateSkinV2")))
+    {
+        return CreateSkinV2Panel() ? 0 : 27;
+    }
+
+    if (FParse::Param(*Params, TEXT("VerifySkinV2")))
+    {
+        return VerifySkinV2Panel() ? 0 : 28;
     }
 
     const FString ModActorPackage = FString(AssetRoot) / TEXT("ModActor");
