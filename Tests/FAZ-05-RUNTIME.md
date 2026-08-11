@@ -110,6 +110,9 @@ Asagidakiler oyun icinde henuz gecmis sayilmadi:
   icindeki normal yapilara hasar verebilmesi; ayni node yaricapi disindaki,
   baska node yakinindaki ve yanlis klanin vurdugu yapilarin korunmaya devam
   etmesi.
+- Karsi saldiri koruma suresi baskin penceresinin kalanina tam sigiyorsa
+  baslatilabilmeli; kapanisa kalan sure daha kisaysa komut
+  `COUNTER_HOLD_EXCEEDS_RAID_WINDOW` nedeniyle reddedilmeli.
 - Ganimet kaydinin gercek fiziksel sandik veya teslim adapteriyle oyuncuya
   verilmesi; su anda yalniz domain/persistence kaydi vardir.
 - Oyunun bu surumunde ayri `COMMANDER` rolu bulunmadigi icin komutan yetkisi.
