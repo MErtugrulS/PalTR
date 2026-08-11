@@ -66,8 +66,8 @@ Asagidakiler oyun icinde henuz gecmis sayilmadi:
 - Chat komutlarinin lider/yardimci lider yetkisiyle kayit olusturmasi.
 - Native hedef/hedef-disi Klan Bayragi hasar davranisi ve restart persistence.
 - Oyunun bu surumunde ayri `COMMANDER` rolu bulunmadigi icin komutan yetkisi.
-- `CAPTURE_SPHERE_LEVEL:Ancient_2` secicisini fiziksel item kimligine cevirip
-  sandiga/spawn noktasina koyacak dogrulanmis item adapteri.
+- PAK'ta statik kimligi `PalSphere_Ancient_2` olarak dogrulandi; bunu fiziksel
+  sandiga/spawn noktasina koyacak guvenli global item adapteri bulunmadi.
 
 Baskin saati `raid_utc_offset_minutes` ile hesaplanir. Lua runtime'inda IANA
 zaman dilimi veritabani olmadigi icin `Europe/Istanbul` etiketi aciklayicidir;

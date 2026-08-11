@@ -60,7 +60,7 @@ local function make_config(maximum)
             },
             loot_table = {
                 {
-                    item_id = "",
+                    item_id = "PalSphere_Ancient_2",
                     item_selector = "CAPTURE_SPHERE_LEVEL:Ancient_2",
                     enabled = true,
                     weight = 1,

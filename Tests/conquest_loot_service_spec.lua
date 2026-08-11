@@ -17,7 +17,7 @@ end
 local config = {
     loot_table = {
         {
-            item_id = "",
+            item_id = "PalSphere_Ancient_2",
             item_selector = "CAPTURE_SPHERE_LEVEL:Ancient_2",
             enabled = true,
             weight = 1,
@@ -38,12 +38,13 @@ local created = Loot.create(
 )
 
 equal(created.ok, true, "loot created")
-equal(created.value.physical_item_resolved, false, "item id remains unresolved")
+equal(created.value.physical_item_resolved, true, "static item id resolved")
 equal(created.value.manifest.state, States.LOOT.CREATED, "manifest state")
 
 local item
 for _, value in pairs(created.value.items) do item = value end
 equal(item.item_selector, "CAPTURE_SPHERE_LEVEL:Ancient_2", "highest sphere selector")
+equal(item.item_id, "PalSphere_Ancient_2", "verified static item id")
 equal(item.quantity, 1, "single sphere reward")
 
 equal(Loot.mark_in_transit(created.value.manifest).ok, true, "loot in transit")
