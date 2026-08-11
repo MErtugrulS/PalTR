@@ -9,6 +9,7 @@
 #include <Unreal/UObjectGlobals.hpp>
 #include <Unreal/UnrealCoreStructs.hpp>
 
+#include <chrono>
 #include <iomanip>
 #include <exception>
 #include <sstream>
@@ -19,7 +20,18 @@ namespace
 {
     constexpr auto damage_function_path =
         STR("/Script/Pal.PalNetworkMapObjectComponent:RequestDamageMapObject_ToServer");
+    constexpr auto npc_damage_function_path =
+        STR("/Script/Pal.PalPlayerController:DamageReactionComponent_ProcessDamage_ToServer_ToNPC");
+    constexpr auto enemy_player_damage_function_path =
+        STR("/Script/Pal.PalPlayerController:DamageReactionComponent_ProcessDamage_ToServer_ToEnemyPlayer");
+    constexpr auto is_enemy_function_path = STR("/Script/Pal.PalUtility:IsEnemy");
+    constexpr auto nearest_enemy_build_function_path =
+        STR("/Script/Pal.PalUtility:GetNearestEnemyBuildObject");
     constexpr auto model_class_path = STR("/Script/Pal.PalMapObjectModel");
+    constexpr auto map_object_class_path = STR("/Script/Pal.PalMapObject");
+    constexpr auto pal_character_class_path = STR("/Script/Pal.PalCharacter");
+    constexpr auto character_parameter_component_class_path =
+        STR("/Script/Pal.PalCharacterParameterComponent");
     constexpr auto player_controller_class_path = STR("/Script/Pal.PalPlayerController");
     constexpr auto network_transmitter_class_path = STR("/Script/Pal.PalNetworkTransmitter");
     constexpr auto controller_class_path = STR("/Script/Engine.Controller");
@@ -81,17 +93,21 @@ namespace PalTR
         StructureGuard()
             : m_policy(data_root)
         {
-            ModVersion = STR("0.1.0");
+            ModVersion = STR("0.2.0");
             ModName = STR("PalTRStructureGuard");
             ModAuthors = STR("PalTR");
-            ModDescription = STR("Blocks allied guild structure damage on the server");
+            ModDescription = STR("Blocks allied guild damage and Pal targeting on the server");
         }
 
         ~StructureGuard() override
         {
-            if (m_hook_id != Hook::ERROR_ID)
+            if (m_pre_hook_id != Hook::ERROR_ID)
             {
-                Hook::UnregisterCallback(m_hook_id);
+                Hook::UnregisterCallback(m_pre_hook_id);
+            }
+            if (m_post_hook_id != Hook::ERROR_ID)
+            {
+                Hook::UnregisterCallback(m_post_hook_id);
             }
         }
 
@@ -105,8 +121,9 @@ namespace PalTR
             }
 
             rebuild_model_index();
+            ensure_policy_current(true);
 
-            m_hook_id = Hook::RegisterProcessEventPreCallback(
+            m_pre_hook_id = Hook::RegisterProcessEventPreCallback(
                 [this](Hook::TCallbackIterationData<void>& hook,
                        UObject* context,
                        UFunction* function,
@@ -115,18 +132,59 @@ namespace PalTR
                     {
                         handle_damage_request(hook, context, parameters);
                     }
+                    else if (function == m_is_enemy_function)
+                    {
+                        handle_is_enemy(hook, parameters);
+                    }
+                    else if (function == m_npc_damage_function)
+                    {
+                        handle_character_damage(
+                            hook,
+                            parameters,
+                            m_npc_damage_info_parameter,
+                            m_npc_damage_defender_parameter);
+                    }
+                    else if (function == m_enemy_player_damage_function)
+                    {
+                        handle_character_damage(
+                            hook,
+                            parameters,
+                            m_enemy_player_damage_info_parameter,
+                            m_enemy_player_damage_defender_parameter);
+                    }
                 },
-                {false, false, STR("PalTRStructureGuard"), STR("AlliedStructureDamage")});
+                {false, false, STR("PalTRStructureGuard"), STR("AlliedDamagePre")});
 
-            if (m_hook_id == Hook::ERROR_ID)
+            if (m_pre_hook_id == Hook::ERROR_ID)
             {
                 Output::send<LogLevel::Error>(
                     STR("[PalTRStructureGuard] ProcessEvent pre-hook registration failed.\n"));
                 return;
             }
 
+            m_post_hook_id = Hook::RegisterProcessEventPostCallback(
+                [this](Hook::TCallbackIterationData<void>&,
+                       UObject*,
+                       UFunction* function,
+                       void* parameters) {
+                    if (function == m_nearest_enemy_build_function)
+                    {
+                        handle_nearest_enemy_build_result(parameters);
+                    }
+                },
+                {false, false, STR("PalTRStructureGuard"), STR("AlliedTargetingPost")});
+
+            if (m_post_hook_id == Hook::ERROR_ID)
+            {
+                Hook::UnregisterCallback(m_pre_hook_id);
+                m_pre_hook_id = Hook::ERROR_ID;
+                Output::send<LogLevel::Error>(
+                    STR("[PalTRStructureGuard] ProcessEvent post-hook registration failed.\n"));
+                return;
+            }
+
             Output::send<LogLevel::Warning>(
-                STR("[PalTRStructureGuard] Allied structure damage guard registered.\n"));
+                STR("[PalTRStructureGuard] Allied damage and Pal targeting guard registered.\n"));
         }
 
     private:
@@ -136,10 +194,38 @@ namespace PalTR
                 nullptr,
                 nullptr,
                 damage_function_path);
+            m_npc_damage_function = UObjectGlobals::StaticFindObject<UFunction*>(
+                nullptr,
+                nullptr,
+                npc_damage_function_path);
+            m_enemy_player_damage_function = UObjectGlobals::StaticFindObject<UFunction*>(
+                nullptr,
+                nullptr,
+                enemy_player_damage_function_path);
+            m_is_enemy_function = UObjectGlobals::StaticFindObject<UFunction*>(
+                nullptr,
+                nullptr,
+                is_enemy_function_path);
+            m_nearest_enemy_build_function = UObjectGlobals::StaticFindObject<UFunction*>(
+                nullptr,
+                nullptr,
+                nearest_enemy_build_function_path);
             m_model_class = UObjectGlobals::StaticFindObject<UClass*>(
                 nullptr,
                 nullptr,
                 model_class_path);
+            m_map_object_class = UObjectGlobals::StaticFindObject<UClass*>(
+                nullptr,
+                nullptr,
+                map_object_class_path);
+            m_pal_character_class = UObjectGlobals::StaticFindObject<UClass*>(
+                nullptr,
+                nullptr,
+                pal_character_class_path);
+            m_character_parameter_component_class = UObjectGlobals::StaticFindObject<UClass*>(
+                nullptr,
+                nullptr,
+                character_parameter_component_class_path);
             m_player_controller_class = UObjectGlobals::StaticFindObject<UClass*>(
                 nullptr,
                 nullptr,
@@ -154,7 +240,14 @@ namespace PalTR
                 controller_class_path);
 
             if (m_damage_function == nullptr
+                || m_npc_damage_function == nullptr
+                || m_enemy_player_damage_function == nullptr
+                || m_is_enemy_function == nullptr
+                || m_nearest_enemy_build_function == nullptr
                 || m_model_class == nullptr
+                || m_map_object_class == nullptr
+                || m_pal_character_class == nullptr
+                || m_character_parameter_component_class == nullptr
                 || m_player_controller_class == nullptr
                 || m_network_transmitter_class == nullptr
                 || m_controller_class == nullptr)
@@ -166,10 +259,37 @@ namespace PalTR
                 FName(STR("InstanceId"), FNAME_Find));
             m_info_parameter = CastField<FStructProperty>(
                 m_damage_function->FindProperty(FName(STR("Info"), FNAME_Find)));
+            m_npc_damage_info_parameter = CastField<FStructProperty>(
+                m_npc_damage_function->FindProperty(FName(STR("Info"), FNAME_Find)));
+            m_npc_damage_defender_parameter = m_npc_damage_function->FindProperty(
+                FName(STR("Defender"), FNAME_Find));
+            m_enemy_player_damage_info_parameter = CastField<FStructProperty>(
+                m_enemy_player_damage_function->FindProperty(FName(STR("Info"), FNAME_Find)));
+            m_enemy_player_damage_defender_parameter =
+                m_enemy_player_damage_function->FindProperty(
+                    FName(STR("Defender"), FNAME_Find));
+            m_is_enemy_actor_a_parameter = m_is_enemy_function->FindProperty(
+                FName(STR("ActorA"), FNAME_Find));
+            m_is_enemy_actor_b_parameter = m_is_enemy_function->FindProperty(
+                FName(STR("ActorB"), FNAME_Find));
+            m_is_enemy_return_parameter = CastField<FBoolProperty>(
+                m_is_enemy_function->FindProperty(FName(STR("ReturnValue"), FNAME_Find)));
+            m_nearest_enemy_build_character_parameter =
+                m_nearest_enemy_build_function->FindProperty(
+                    FName(STR("Character"), FNAME_Find));
+            m_nearest_enemy_build_return_parameter =
+                m_nearest_enemy_build_function->FindProperty(
+                    FName(STR("ReturnValue"), FNAME_Find));
             m_model_instance_property = m_model_class->FindProperty(
                 FName(STR("InstanceId"), FNAME_Find));
             m_build_player_property = m_model_class->FindProperty(
                 FName(STR("BuildPlayerUId"), FNAME_Find));
+            m_map_object_model_property = m_map_object_class->FindProperty(
+                FName(STR("MapObjectModel"), FNAME_Find));
+            m_character_parameter_component_property = m_pal_character_class->FindProperty(
+                FName(STR("CharacterParameterComponent"), FNAME_Find));
+            m_trainer_property = m_character_parameter_component_class->FindProperty(
+                FName(STR("Trainer"), FNAME_Find));
             m_controller_pawn_property = m_controller_class->FindProperty(
                 FName(STR("Pawn"), FNAME_Find));
             m_controller_transmitter_property = m_player_controller_class->FindProperty(
@@ -177,8 +297,20 @@ namespace PalTR
 
             if (m_instance_id_parameter == nullptr
                 || m_info_parameter == nullptr
+                || m_npc_damage_info_parameter == nullptr
+                || m_npc_damage_defender_parameter == nullptr
+                || m_enemy_player_damage_info_parameter == nullptr
+                || m_enemy_player_damage_defender_parameter == nullptr
+                || m_is_enemy_actor_a_parameter == nullptr
+                || m_is_enemy_actor_b_parameter == nullptr
+                || m_is_enemy_return_parameter == nullptr
+                || m_nearest_enemy_build_character_parameter == nullptr
+                || m_nearest_enemy_build_return_parameter == nullptr
                 || m_model_instance_property == nullptr
                 || m_build_player_property == nullptr
+                || m_map_object_model_property == nullptr
+                || m_character_parameter_component_property == nullptr
+                || m_trainer_property == nullptr
                 || m_controller_pawn_property == nullptr
                 || m_controller_transmitter_property == nullptr)
             {
@@ -186,7 +318,12 @@ namespace PalTR
             }
 
             auto* info_struct = ToRawPtr(m_info_parameter->GetStruct());
-            if (info_struct == nullptr)
+            auto* npc_info_struct = ToRawPtr(m_npc_damage_info_parameter->GetStruct());
+            auto* enemy_player_info_struct =
+                ToRawPtr(m_enemy_player_damage_info_parameter->GetStruct());
+            if (info_struct == nullptr
+                || npc_info_struct == nullptr
+                || enemy_player_info_struct == nullptr)
             {
                 return false;
             }
@@ -194,9 +331,20 @@ namespace PalTR
             if (!is_guid_property(m_instance_id_parameter)
                 || !is_guid_property(m_model_instance_property)
                 || !is_guid_property(m_build_player_property)
+                || CastField<FObjectPropertyBase>(m_npc_damage_defender_parameter) == nullptr
+                || CastField<FObjectPropertyBase>(m_enemy_player_damage_defender_parameter) == nullptr
+                || CastField<FObjectPropertyBase>(m_is_enemy_actor_a_parameter) == nullptr
+                || CastField<FObjectPropertyBase>(m_is_enemy_actor_b_parameter) == nullptr
+                || CastField<FObjectPropertyBase>(m_nearest_enemy_build_character_parameter) == nullptr
+                || CastField<FObjectPropertyBase>(m_nearest_enemy_build_return_parameter) == nullptr
+                || CastField<FObjectPropertyBase>(m_map_object_model_property) == nullptr
+                || CastField<FObjectPropertyBase>(m_character_parameter_component_property) == nullptr
+                || CastField<FObjectPropertyBase>(m_trainer_property) == nullptr
                 || CastField<FObjectPropertyBase>(m_controller_pawn_property) == nullptr
                 || CastField<FObjectPropertyBase>(m_controller_transmitter_property) == nullptr
-                || info_struct->GetName() != STR("PalDamageInfo"))
+                || info_struct->GetName() != STR("PalDamageInfo")
+                || npc_info_struct->GetName() != STR("PalDamageInfo")
+                || enemy_player_info_struct->GetName() != STR("PalDamageInfo"))
             {
                 return false;
             }
@@ -205,9 +353,112 @@ namespace PalTR
                 FName(STR("AttackerGroupID"), FNAME_Find));
             m_attacker_property = info_struct->FindProperty(
                 FName(STR("Attacker"), FNAME_Find));
+            m_override_network_owner_property = info_struct->FindProperty(
+                FName(STR("OverrideNetworkOwner"), FNAME_Find));
 
             return is_guid_property(m_attacker_group_property)
-                && CastField<FObjectPropertyBase>(m_attacker_property) != nullptr;
+                && CastField<FObjectPropertyBase>(m_attacker_property) != nullptr
+                && CastField<FObjectPropertyBase>(m_override_network_owner_property) != nullptr;
+        }
+
+        bool ensure_policy_current(bool force = false)
+        {
+            const auto now = std::chrono::steady_clock::now();
+            if (!force
+                && m_policy_refresh_attempted
+                && now - m_last_policy_refresh < std::chrono::seconds(1))
+            {
+                return m_policy_loaded;
+            }
+
+            m_policy_refresh_attempted = true;
+            m_last_policy_refresh = now;
+
+            std::string error;
+            if (!m_policy.refresh_if_changed(error))
+            {
+                m_policy_loaded = false;
+                if (error != m_last_policy_error)
+                {
+                    m_last_policy_error = error;
+                    Output::send<LogLevel::Error>(
+                        STR("[PalTRStructureGuard] Policy refresh failed; guard failing open: {}\n"),
+                        unreal_text(error));
+                }
+                return false;
+            }
+
+            m_policy_loaded = true;
+            m_last_policy_error.clear();
+            return true;
+        }
+
+        std::string resolve_actor_guild(UObject* actor)
+        {
+            if (actor == nullptr)
+            {
+                return {};
+            }
+
+            auto guild = m_policy.guild_for_pawn_path(ascii_text(actor->GetFullName()));
+            if (!guild.empty())
+            {
+                return guild;
+            }
+
+            if (actor->IsA(m_map_object_class))
+            {
+                auto* const* model_slot =
+                    m_map_object_model_property->ContainerPtrToValuePtr<UObject*>(actor);
+                UObject* model = model_slot == nullptr ? nullptr : *model_slot;
+                if (model == nullptr || !model->IsA(m_model_class))
+                {
+                    return {};
+                }
+
+                const auto* build_player_uid =
+                    m_build_player_property->ContainerPtrToValuePtr<FGuid>(model);
+                return build_player_uid != nullptr && build_player_uid->is_valid()
+                    ? m_policy.guild_for_player_uid(guid_text(*build_player_uid))
+                    : std::string{};
+            }
+
+            if (!actor->IsA(m_pal_character_class))
+            {
+                return {};
+            }
+
+            auto* const* component_slot =
+                m_character_parameter_component_property->ContainerPtrToValuePtr<UObject*>(actor);
+            UObject* component = component_slot == nullptr ? nullptr : *component_slot;
+            if (component == nullptr || !component->IsA(m_character_parameter_component_class))
+            {
+                return {};
+            }
+
+            auto* const* trainer_slot =
+                m_trainer_property->ContainerPtrToValuePtr<UObject*>(component);
+            UObject* trainer = trainer_slot == nullptr ? nullptr : *trainer_slot;
+            return trainer == nullptr
+                ? std::string{}
+                : m_policy.guild_for_pawn_path(ascii_text(trainer->GetFullName()));
+        }
+
+        AllianceDecision evaluate_actor_alliance(UObject* actor_a, UObject* actor_b)
+        {
+            if (!ensure_policy_current())
+            {
+                return {};
+            }
+
+            const auto guild_a = resolve_actor_guild(actor_a);
+            const auto guild_b = resolve_actor_guild(actor_b);
+            if (guild_a.empty() || guild_b.empty())
+            {
+                return {};
+            }
+
+            return m_policy.evaluate_alliance_guilds(guild_b, guild_a);
         }
 
         void rebuild_model_index()
@@ -287,6 +538,130 @@ namespace PalTR
             return matched_controller;
         }
 
+        void handle_is_enemy(
+            Hook::TCallbackIterationData<void>& hook,
+            void* parameters)
+        {
+            if (parameters == nullptr)
+            {
+                return;
+            }
+
+            try
+            {
+                auto* const* actor_a_slot =
+                    m_is_enemy_actor_a_parameter->ContainerPtrToValuePtr<UObject*>(parameters);
+                auto* const* actor_b_slot =
+                    m_is_enemy_actor_b_parameter->ContainerPtrToValuePtr<UObject*>(parameters);
+                UObject* actor_a = actor_a_slot == nullptr ? nullptr : *actor_a_slot;
+                UObject* actor_b = actor_b_slot == nullptr ? nullptr : *actor_b_slot;
+                const auto decision = evaluate_actor_alliance(actor_a, actor_b);
+                if (!decision.block)
+                {
+                    return;
+                }
+
+                void* return_value =
+                    m_is_enemy_return_parameter->ContainerPtrToValuePtr<void>(parameters);
+                if (return_value == nullptr)
+                {
+                    return;
+                }
+
+                m_is_enemy_return_parameter->SetPropertyValue(return_value, false);
+                hook.PreventOriginalFunctionCall();
+            }
+            catch (const std::exception& exception)
+            {
+                Output::send<LogLevel::Error>(
+                    STR("[PalTRStructureGuard] IsEnemy hook failed open: {}\n"),
+                    unreal_text(exception.what()));
+            }
+        }
+
+        void handle_nearest_enemy_build_result(void* parameters)
+        {
+            if (parameters == nullptr)
+            {
+                return;
+            }
+
+            try
+            {
+                auto* const* character_slot =
+                    m_nearest_enemy_build_character_parameter->ContainerPtrToValuePtr<UObject*>(
+                        parameters);
+                auto** return_slot =
+                    m_nearest_enemy_build_return_parameter->ContainerPtrToValuePtr<UObject*>(
+                        parameters);
+                UObject* character = character_slot == nullptr ? nullptr : *character_slot;
+                UObject* build_object = return_slot == nullptr ? nullptr : *return_slot;
+                if (return_slot != nullptr
+                    && evaluate_actor_alliance(character, build_object).block)
+                {
+                    *return_slot = nullptr;
+                }
+            }
+            catch (const std::exception& exception)
+            {
+                Output::send<LogLevel::Error>(
+                    STR("[PalTRStructureGuard] Build target hook failed open: {}\n"),
+                    unreal_text(exception.what()));
+            }
+        }
+
+        void handle_character_damage(
+            Hook::TCallbackIterationData<void>& hook,
+            void* parameters,
+            FStructProperty* info_parameter,
+            FProperty* defender_parameter)
+        {
+            if (parameters == nullptr || info_parameter == nullptr || defender_parameter == nullptr)
+            {
+                return;
+            }
+
+            try
+            {
+                void* info = info_parameter->ContainerPtrToValuePtr<void>(parameters);
+                auto* const* defender_slot =
+                    defender_parameter->ContainerPtrToValuePtr<UObject*>(parameters);
+                if (info == nullptr || defender_slot == nullptr || *defender_slot == nullptr)
+                {
+                    return;
+                }
+
+                auto* const* attacker_slot =
+                    m_attacker_property->ContainerPtrToValuePtr<UObject*>(info);
+                auto* const* owner_slot =
+                    m_override_network_owner_property->ContainerPtrToValuePtr<UObject*>(info);
+                UObject* attacker = attacker_slot == nullptr ? nullptr : *attacker_slot;
+                if (attacker == nullptr && owner_slot != nullptr)
+                {
+                    attacker = *owner_slot;
+                }
+
+                const auto decision = evaluate_actor_alliance(attacker, *defender_slot);
+                if (!decision.block)
+                {
+                    return;
+                }
+
+                hook.PreventOriginalFunctionCall();
+                Output::send<LogLevel::Warning>(
+                    STR("[PalTRStructureGuard] Blocked allied Pal damage: attacker={} target={} reason={}\n"),
+                    unreal_text(decision.attacker_guild_key),
+                    unreal_text(decision.target_guild_key),
+                    unreal_text(decision.reason));
+            }
+            catch (const std::exception& exception)
+            {
+                Output::send<LogLevel::Error>(
+                    STR("[PalTRStructureGuard] Character damage hook failed open: {}\n"),
+                    unreal_text(exception.what()));
+            }
+        }
+
         void handle_damage_request(
             Hook::TCallbackIterationData<void>& hook,
             UObject* context,
@@ -332,12 +707,8 @@ namespace PalTR
                     return;
                 }
 
-                std::string error;
-                if (!m_policy.refresh_if_changed(error))
+                if (!ensure_policy_current())
                 {
-                    Output::send<LogLevel::Error>(
-                        STR("[PalTRStructureGuard] Policy refresh failed: {}\n"),
-                        unreal_text(error));
                     return;
                 }
 
@@ -366,20 +737,45 @@ namespace PalTR
         }
 
         PolicySnapshot m_policy;
-        Hook::GlobalCallbackId m_hook_id{Hook::ERROR_ID};
+        Hook::GlobalCallbackId m_pre_hook_id{Hook::ERROR_ID};
+        Hook::GlobalCallbackId m_post_hook_id{Hook::ERROR_ID};
         UFunction* m_damage_function{};
+        UFunction* m_npc_damage_function{};
+        UFunction* m_enemy_player_damage_function{};
+        UFunction* m_is_enemy_function{};
+        UFunction* m_nearest_enemy_build_function{};
         UClass* m_model_class{};
+        UClass* m_map_object_class{};
+        UClass* m_pal_character_class{};
+        UClass* m_character_parameter_component_class{};
         UClass* m_player_controller_class{};
         UClass* m_network_transmitter_class{};
         UClass* m_controller_class{};
         FProperty* m_instance_id_parameter{};
         FStructProperty* m_info_parameter{};
+        FStructProperty* m_npc_damage_info_parameter{};
+        FProperty* m_npc_damage_defender_parameter{};
+        FStructProperty* m_enemy_player_damage_info_parameter{};
+        FProperty* m_enemy_player_damage_defender_parameter{};
+        FProperty* m_is_enemy_actor_a_parameter{};
+        FProperty* m_is_enemy_actor_b_parameter{};
+        FBoolProperty* m_is_enemy_return_parameter{};
+        FProperty* m_nearest_enemy_build_character_parameter{};
+        FProperty* m_nearest_enemy_build_return_parameter{};
         FProperty* m_attacker_group_property{};
         FProperty* m_attacker_property{};
+        FProperty* m_override_network_owner_property{};
         FProperty* m_model_instance_property{};
         FProperty* m_build_player_property{};
+        FProperty* m_map_object_model_property{};
+        FProperty* m_character_parameter_component_property{};
+        FProperty* m_trainer_property{};
         FProperty* m_controller_pawn_property{};
         FProperty* m_controller_transmitter_property{};
+        bool m_policy_refresh_attempted{};
+        bool m_policy_loaded{};
+        std::chrono::steady_clock::time_point m_last_policy_refresh{};
+        std::string m_last_policy_error;
         std::unordered_map<std::string, std::string> m_build_player_by_instance;
     };
 }
