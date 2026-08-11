@@ -4695,8 +4695,18 @@ namespace PalTRUIAssetBuilder
                 // being drawn over the raster skin in every interaction state.
                 FButtonStyle SkinStyle = Button->WidgetStyle;
                 SkinStyle.SetNormal(FSlateNoResource());
-                SkinStyle.SetHovered(FSlateNoResource());
-                SkinStyle.SetPressed(FSlateNoResource());
+                SkinStyle.SetHovered(FSlateRoundedBoxBrush(
+                    PixelTheme::FromSRGB(26, 151, 169, 0.18f),
+                    4.0f,
+                    PixelTheme::FromSRGB(58, 218, 232, 0.62f),
+                    1.0f
+                ));
+                SkinStyle.SetPressed(FSlateRoundedBoxBrush(
+                    PixelTheme::FromSRGB(28, 175, 190, 0.30f),
+                    4.0f,
+                    PixelTheme::FromSRGB(91, 235, 244, 0.82f),
+                    1.5f
+                ));
                 SkinStyle.SetDisabled(FSlateNoResource());
                 SkinStyle.SetNormalPadding(FMargin(0.0f));
                 SkinStyle.SetPressedPadding(FMargin(0.0f));
@@ -4708,15 +4718,21 @@ namespace PalTRUIAssetBuilder
                 if (Image != BaseImage)
                 {
                     const FName ImageName = Image->GetFName();
-                    const bool bRuntimeNavigationIcon =
+                    const bool bRuntimeOverlayIcon =
                         ImageName == TEXT("ClanNavIcon")
                         || ImageName == TEXT("DiplomacyNavIcon")
                         || ImageName == TEXT("AllianceNavIcon")
                         || ImageName == TEXT("GuildsNavIcon")
                         || ImageName == TEXT("ProtectionNavIcon")
-                        || ImageName == TEXT("StructuresNavIcon");
+                        || ImageName == TEXT("StructuresNavIcon")
+                        || ImageName == TEXT("DashboardPendingIcon")
+                        || ImageName == TEXT("DashboardRecentEvent1Icon")
+                        || ImageName == TEXT("DashboardRecentEvent2Icon")
+                        || ImageName == TEXT("DashboardRecentEvent3Icon")
+                        || ImageName == TEXT("DashboardRecentEvent4Icon")
+                        || ImageName == TEXT("DashboardRecentEvent5Icon");
                     Image->SetVisibility(
-                        bRuntimeNavigationIcon
+                        bRuntimeOverlayIcon
                             ? ESlateVisibility::HitTestInvisible
                             : ESlateVisibility::Collapsed
                     );
@@ -4732,6 +4748,64 @@ namespace PalTRUIAssetBuilder
             HeaderCrestImageSize->SetVisibility(ESlateVisibility::HitTestInvisible);
             HeaderCrestImageSize->SetWidthOverride(104.0f);
             HeaderCrestImageSize->SetHeightOverride(78.0f);
+        }
+
+        if (UTextBlock* Title = Cast<UTextBlock>(Tree->FindWidget(TEXT("TitleText"))))
+        {
+            Title->SetRenderTranslation(FVector2D(70.0f, 0.0f));
+        }
+        SetTextFontSize(Tree, TEXT("ConnectionStatusText"), 12);
+        if (UTextBlock* HeaderServerDot = Cast<UTextBlock>(Tree->FindWidget(TEXT("HeaderServerDotText"))))
+        {
+            // The dot is part of the raster shell. Keep its layout width but do
+            // not draw a second glyph over the baked status indicator.
+            HeaderServerDot->SetColorAndOpacity(FSlateColor(FLinearColor::Transparent));
+        }
+
+        struct FSkinIconPlaceholder
+        {
+            const TCHAR* Size;
+            float Width;
+            float Height;
+        };
+        const FSkinIconPlaceholder IconPlaceholders[] = {
+            { TEXT("DashboardClanIconSize"), 92.0f, 108.0f },
+            { TEXT("DashboardDiplomacyIconSize"), 92.0f, 108.0f },
+            { TEXT("DashboardProtectionIconSize"), 92.0f, 108.0f },
+            { TEXT("DashboardBuildingsIconSize"), 92.0f, 108.0f }
+        };
+        for (const FSkinIconPlaceholder& Spec : IconPlaceholders)
+        {
+            USizeBox* Size = Cast<USizeBox>(Tree->FindWidget(FName(Spec.Size)));
+            if (!Size)
+            {
+                UE_LOG(LogTemp, Error, TEXT("PalTRUI SkinV2 creation failed: card icon placeholder missing: %s"), Spec.Size);
+                return false;
+            }
+            Size->SetVisibility(ESlateVisibility::HitTestInvisible);
+            Size->SetWidthOverride(Spec.Width);
+            Size->SetHeightOverride(Spec.Height);
+            Size->SetMinDesiredHeight(Spec.Height);
+        }
+
+        for (const FName QuickIconSizeName : {
+            FName(TEXT("DashboardDiplomacyButtonIconSize")),
+            FName(TEXT("DashboardOffersButtonIconSize")),
+            FName(TEXT("DashboardGuildsButtonIconSize")),
+            FName(TEXT("DashboardProtectionButtonIconSize"))
+        })
+        {
+            USizeBox* Size = Cast<USizeBox>(Tree->FindWidget(QuickIconSizeName));
+            if (!Size)
+            {
+                UE_LOG(LogTemp, Error, TEXT("PalTRUI SkinV2 creation failed: quick action icon placeholder missing: %s"), *QuickIconSizeName.ToString());
+                return false;
+            }
+            Size->SetVisibility(ESlateVisibility::HitTestInvisible);
+            Size->SetWidthOverride(38.0f);
+            Size->SetHeightOverride(38.0f);
+            Size->SetMinDesiredWidth(38.0f);
+            Size->SetMinDesiredHeight(38.0f);
         }
 
         // Every navigation button uses the same fixed icon and label columns.
@@ -4765,6 +4839,10 @@ namespace PalTRUIAssetBuilder
                 UE_LOG(LogTemp, Error, TEXT("PalTRUI SkinV2 creation failed: navigation geometry missing: %s"), Spec.Button);
                 return false;
             }
+            if (UVerticalBoxSlot* ButtonSlot = Cast<UVerticalBoxSlot>(Button->Slot))
+            {
+                ButtonSlot->SetHorizontalAlignment(HAlign_Fill);
+            }
             if (UButtonSlot* ContentSlot = Cast<UButtonSlot>(Content->Slot))
             {
                 ContentSlot->SetHorizontalAlignment(HAlign_Fill);
@@ -4794,6 +4872,22 @@ namespace PalTRUIAssetBuilder
                 ArrowSlot->SetPadding(FMargin(10.0f, 0.0f, 0.0f, 0.0f));
                 ArrowSlot->SetVerticalAlignment(VAlign_Center);
             }
+        }
+
+        for (int32 Index = 1; Index <= 3; ++Index)
+        {
+            const FName SizeName(*FString::Printf(TEXT("DashboardRelationRow%dIconSize"), Index));
+            USizeBox* Size = Cast<USizeBox>(Tree->FindWidget(SizeName));
+            if (!Size)
+            {
+                UE_LOG(LogTemp, Error, TEXT("PalTRUI SkinV2 creation failed: relation icon placeholder missing: %d"), Index);
+                return false;
+            }
+            Size->SetVisibility(ESlateVisibility::HitTestInvisible);
+            Size->SetWidthOverride(72.0f);
+            Size->SetHeightOverride(72.0f);
+            Size->SetMinDesiredWidth(72.0f);
+            Size->SetMinDesiredHeight(72.0f);
         }
 
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(SkinPanel);
