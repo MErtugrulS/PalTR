@@ -62,14 +62,42 @@ UHT dump ve mevcut native hook sozlesmesiyle statik olarak dogrulananlar:
 - Oyun rol enumu `GuildMaster=1`, `SubMaster=2`, `Member=3`, `Guest=4` olarak
   dogrulandi. Lider ve yardimci lider eslemesi config'ten yapilir.
 
+## Fetih runtime dogrulamasi
+
+- Ayakli tabela `BP_BuildObject_Signboard_C` fiziksel Klan Bayragi olarak
+  runtime'da dogrulandi ve config'e eklendi.
+- NWO ve Exceed klanlari icin baskent/karakol chat komutlariyla kaydedildi;
+  kayitlar sunucu yeniden baslatmasindan sonra korundu.
+- Savas ilani, hazirlik suresi, fetih kampanyasi, kusatma kampi ve ilk hedef
+  secimi iki klanla oyun icinde dogrulandi.
+- Aktif Exceed karakolu native politikada hasar aldi. Ayni anda henuz cepheyle
+  acilmamis Exceed baskenti hasar almadi.
+- Ilk karakol ele gecirildikten sonra baskent cephe hedefi olarak acildi ve
+  native politikada hasar almaya basladi.
+- Test ekipmani bulunmadigi icin karakol ve baskentin tamamen yikilmasi fiziksel
+  vurusla tamamlanmadi. `FLAG_DISPOSED` girdileri acik kullanici onayi ile runtime
+  TSV'sine enjekte edilerek state gecisleri ayri olarak dogrulandi; bu sonuc
+  fiziksel dispose hook'unun runtime dogrulamasi sayilmaz.
+- Simule edilen karakol dususu isgal, bekleme, fetih, ganimet kaydi ve cephe
+  ilerlemesini olusturdu.
+- Simule edilen baskent dususu savunucunun dugumlerini NWO'ya devretti, eski
+  baskenti karakola dusurdu ve NWO-Exceed savasini tarafsiz iliskiyle sonlandirdi.
+
 ## Runtime'da bekleyenler
 
 Asagidakiler oyun icinde henuz gecmis sayilmadi:
 
-- Fiziksel Klan Bayragi Blueprint sinifinin runtime'da dogrulanmasi ve config'e
-  eklenmesi; bos sinif listesi fail-closed kaydi engeller.
-- Chat komutlarinin lider/yardimci lider yetkisiyle kayit olusturmasi.
-- Native hedef/hedef-disi Klan Bayragi hasar davranisi ve restart persistence.
+- Gercek fiziksel tabela tamamen yikildiginda native hook'un `FLAG_DISPOSED`
+  olayi uretmesi; karakol ve baskent icin ayri ayri denenmeli.
+- Fethedilen dugumlere yeni fetheden-klan tabelasi kurup `!fetihbayragi` ile
+  yeniden baglama; `BayrakBekleyen` sayacinin sifira inmesi ve sonraki cephenin
+  ancak baglamadan sonra acilmasi.
+- Devredilen eski dusman tabelasi sahada kalirsa fetheden klanin onu temizleme
+  izninin yeni tabela baglandiktan sonra da korunmasi.
+- Ateskes, ateskes bozma, yeniden silahlanma, karsi saldiri ve geri alma
+  dongulerinin iki oyuncuyla runtime dogrulamasi.
+- Ganimet kaydinin gercek fiziksel sandik veya teslim adapteriyle oyuncuya
+  verilmesi; su anda yalniz domain/persistence kaydi vardir.
 - Oyunun bu surumunde ayri `COMMANDER` rolu bulunmadigi icin komutan yetkisi.
 - PAK'ta statik kimligi `PalSphere_Ancient_2` olarak dogrulandi; bunu fiziksel
   sandiga/spawn noktasina koyacak guvenli global item adapteri bulunmadi.
