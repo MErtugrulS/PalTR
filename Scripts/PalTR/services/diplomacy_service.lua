@@ -297,6 +297,28 @@ function Diplomacy:return_neutral(own, target, actor)
     return result
 end
 
+function Diplomacy:resolve_capital_defeat(winner, loser, actor)
+    local relation, error_message = self:get(winner, loser)
+
+    if not relation then
+        return Result.err("RELATION", error_message)
+    end
+
+    local result = Rules.resolve_capital_defeat(relation)
+
+    if result.ok then
+        relation.note = "Baskent yenilgisi: " .. tostring(actor or winner)
+        self:_save()
+        self:_event(
+            "CAPITAL_DEFEATED",
+            relation,
+            tostring(winner) .. ">" .. tostring(loser)
+        )
+    end
+
+    return result
+end
+
 function Diplomacy:tick()
     local changed = 0
     local events = {}

@@ -279,6 +279,32 @@ function Rules.return_neutral(relation)
     return Result.ok(relation)
 end
 
+function Rules.resolve_capital_defeat(relation)
+    local active_war =
+        relation.state == States.WAR
+        or relation.state == States.CEASEFIRE_PENDING
+        or (
+            relation.state == States.PEACE_PENDING
+            and relation.previous_state == States.WAR
+        )
+
+    if not active_war then
+        return Result.err(
+            "NO_ACTIVE_WAR",
+            "Baskent yenilgisi yalnizca aktif savasta uygulanabilir"
+        )
+    end
+
+    relation.previous_state = relation.state
+    relation.state = States.NEUTRAL
+    reset_request(relation)
+    relation.active_at = 0
+    relation.expires_at = 0
+    relation.updated_at = Clock.now()
+
+    return Result.ok(relation)
+end
+
 function Rules.tick(relation, config)
     local now = Clock.now()
 

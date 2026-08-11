@@ -77,4 +77,22 @@ equal(peace.state, States.CEASEFIRE, "ceasefire restored")
 equal(peace.active_at, 1234, "ceasefire start preserved")
 equal(peace.expires_at, 0, "restored ceasefire remains indefinite")
 
+local defeated = {
+    state = States.WAR,
+    previous_state = States.NEUTRAL,
+    requested_by = "GUILD_A",
+    accepted_by = "",
+    active_at = 100,
+    expires_at = 0,
+    updated_at = 100
+}
+
+equal(
+    Rules.resolve_capital_defeat(defeated).ok,
+    true,
+    "capital defeat resolves war"
+)
+equal(defeated.state, States.NEUTRAL, "capital defeat returns neutral")
+equal(defeated.active_at, 0, "capital defeat clears war clock")
+
 print("relation_rules_spec: ok")
