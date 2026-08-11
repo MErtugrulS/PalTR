@@ -3686,6 +3686,9 @@ namespace PalTRUIAssetBuilder
         UBorder* ContentFrame = Cast<UBorder>(Tree->FindWidget(TEXT("ContentFrame")));
         UBorder* FooterFrame = Cast<UBorder>(Tree->FindWidget(TEXT("FooterFrame")));
         UTextBlock* FooterHint = Cast<UTextBlock>(Tree->FindWidget(TEXT("FooterHintText")));
+        UHorizontalBox* FooterHintRow = Cast<UHorizontalBox>(Tree->FindWidget(TEXT("FooterHintRow")));
+        UBorder* FooterF6KeyFrame = Cast<UBorder>(Tree->FindWidget(TEXT("FooterF6KeyFrame")));
+        UBorder* FooterEscKeyFrame = Cast<UBorder>(Tree->FindWidget(TEXT("FooterEscKeyFrame")));
         UHorizontalBox* BodyRow = Cast<UHorizontalBox>(Tree->FindWidget(TEXT("PanelBodyRow")));
         USizeBox* NavigationSize = Cast<USizeBox>(Tree->FindWidget(TEXT("LeftNavigationSize")));
         UBorder* NavigationFrame = Cast<UBorder>(Tree->FindWidget(TEXT("LeftNavigationFrame")));
@@ -3701,7 +3704,7 @@ namespace PalTRUIAssetBuilder
         UVerticalBox* ClanPage = Cast<UVerticalBox>(Tree->FindWidget(TEXT("ClanPage")));
         UTextBlock* ClanHeading = Cast<UTextBlock>(Tree->FindWidget(TEXT("ClanHeadingText")));
         UTextBlock* ClanSubtitle = Cast<UTextBlock>(Tree->FindWidget(TEXT("ClanSubtitleText")));
-        if (!Background || !ArtContentPadding || !HeaderFrame || !ContentFrame || !FooterFrame || !FooterHint
+        if (!Background || !ArtContentPadding || !HeaderFrame || !ContentFrame || !FooterFrame
             || !BodyRow || !NavigationSize || !NavigationFrame || !HeaderCrestSize
             || !StatusCards || !DashboardColumns || !MainColumn || !SidebarColumn
             || !LowerRow || !RecentFrame || !QuickFrame || !DashboardSize
@@ -3813,10 +3816,53 @@ namespace PalTRUIAssetBuilder
             NavigationSlot->SetPadding(FMargin(0.0f));
             NavigationSlot->SetVerticalAlignment(VAlign_Fill);
         }
+        if (!FooterHintRow && !FooterF6KeyFrame && !FooterEscKeyFrame)
+        {
+            if (!FooterHint || FooterHint->GetParent() != FooterFrame || !FooterFrame->RemoveChild(FooterHint))
+            {
+                UE_LOG(LogTemp, Error, TEXT("PalTRUI pixel match update failed: footer source hierarchy."));
+                return false;
+            }
+            FooterHint->SetVisibility(ESlateVisibility::Collapsed);
+            FooterHintRow = Tree->ConstructWidget<UHorizontalBox>(UHorizontalBox::StaticClass(), TEXT("FooterHintRow"));
+            FooterF6KeyFrame = Tree->ConstructWidget<UBorder>(UBorder::StaticClass(), TEXT("FooterF6KeyFrame"));
+            FooterF6KeyFrame->SetContent(MakeText(Tree, TEXT("FooterF6KeyText"), TEXT("F6"), 15));
+            AddHorizontal(FooterHintRow, FooterF6KeyFrame, FMargin(0, 0, 10, 0));
+            AddHorizontal(FooterHintRow, MakeText(Tree, TEXT("FooterPanelLabelText"), TEXT("Panel"), 15), FMargin(0, 0, 18, 0));
+            AddHorizontal(FooterHintRow, MakeText(Tree, TEXT("FooterSeparatorText"), TEXT("|"), 15), FMargin(0, 0, 18, 0));
+            FooterEscKeyFrame = Tree->ConstructWidget<UBorder>(UBorder::StaticClass(), TEXT("FooterEscKeyFrame"));
+            FooterEscKeyFrame->SetContent(MakeText(Tree, TEXT("FooterEscKeyText"), TEXT("Esc"), 15));
+            AddHorizontal(FooterHintRow, FooterEscKeyFrame, FMargin(0, 0, 10, 0));
+            AddHorizontal(FooterHintRow, MakeText(Tree, TEXT("FooterCloseLabelText"), TEXT("Kapat"), 15));
+            AddHorizontal(FooterHintRow, FooterHint);
+            FooterFrame->SetContent(FooterHintRow);
+        }
+        else if (!FooterHintRow || !FooterF6KeyFrame || !FooterEscKeyFrame
+            || FooterHintRow->GetParent() != FooterFrame)
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI pixel match update refused: partial footer keycap hierarchy."));
+            return false;
+        }
+        if (!FooterHint)
+        {
+            FooterHint = MakeText(Tree, TEXT("FooterHintText"), TEXT("F6  Panel     |     Esc  Kapat"), 16);
+            FooterHint->SetVisibility(ESlateVisibility::Collapsed);
+            AddHorizontal(FooterHintRow, FooterHint);
+        }
         FooterHint->SetText(FText::FromString(TEXT("F6  Panel     |     Esc  Kapat")));
         FooterHint->SetJustification(ETextJustify::Center);
         FooterHint->SetColorAndOpacity(FSlateColor(PixelTheme::TextPrimary));
+        FooterHint->SetVisibility(ESlateVisibility::Collapsed);
         SetTextFontSize(Tree, TEXT("FooterHintText"), 16);
+        if (UBorderSlot* FooterContentSlot = Cast<UBorderSlot>(FooterHintRow->Slot))
+        {
+            FooterContentSlot->SetHorizontalAlignment(HAlign_Center);
+            FooterContentSlot->SetVerticalAlignment(VAlign_Center);
+        }
+        StyleRoundedFrame(Tree, TEXT("FooterF6KeyFrame"), PixelTheme::FromSRGB(12, 22, 29, 0.98f),
+            PixelTheme::FromSRGB(107, 105, 94, 0.96f), 3.0f, 1.0f, FMargin(7.0f, 3.0f));
+        StyleRoundedFrame(Tree, TEXT("FooterEscKeyFrame"), PixelTheme::FromSRGB(12, 22, 29, 0.98f),
+            PixelTheme::FromSRGB(107, 105, 94, 0.96f), 3.0f, 1.0f, FMargin(7.0f, 3.0f));
 
         if (UHorizontalBoxSlot* MainSlot = Cast<UHorizontalBoxSlot>(MainColumn->Slot))
         {
@@ -4057,14 +4103,26 @@ namespace PalTRUIAssetBuilder
                 FName(*FString::Printf(TEXT("DashboardRelation%dIconSize"), Index)))))
             {
                 IconSize->SetWidthOverride(64.0f);
-                IconSize->SetHeightOverride(64.0f);
+                IconSize->SetHeightOverride(72.0f);
+                IconSize->SetWidthOverride(72.0f);
             }
+            StyleTransparentFrame(Tree,
+                FName(*FString::Printf(TEXT("DashboardRelationRow%dFrame"), Index)),
+                FMargin(4.0f, 6.0f));
+            SetTextFontSize(Tree,
+                FName(*FString::Printf(TEXT("DashboardRelationRow%dNameText"), Index)), 16);
+            SetTextFontSize(Tree,
+                FName(*FString::Printf(TEXT("DashboardRelationRow%dStateText"), Index)), 12);
         }
         if (USizeBox* PendingIconSize = Cast<USizeBox>(Tree->FindWidget(TEXT("DashboardPendingIconSize"))))
         {
             PendingIconSize->SetWidthOverride(74.0f);
             PendingIconSize->SetHeightOverride(74.0f);
         }
+        StyleTransparentFrame(Tree, TEXT("DashboardPendingCardFrame"), FMargin(12.0f, 10.0f));
+        SetTextFontSize(Tree, TEXT("PendingOffersHeadingText"), 18);
+        SetTextFontSize(Tree, TEXT("DashboardPendingGuildText"), 17);
+        SetTextFontSize(Tree, TEXT("DashboardPendingStateText"), 14);
         for (const FName QuickIconSizeName : {
             FName(TEXT("DashboardDiplomacyButtonIconSize")),
             FName(TEXT("DashboardOffersButtonIconSize")),
