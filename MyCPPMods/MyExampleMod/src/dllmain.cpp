@@ -21,6 +21,7 @@ namespace
         STR("/Script/Pal.PalNetworkMapObjectComponent:RequestDamageMapObject_ToServer");
     constexpr auto model_class_path = STR("/Script/Pal.PalMapObjectModel");
     constexpr auto player_controller_class_path = STR("/Script/Pal.PalPlayerController");
+    constexpr auto network_transmitter_class_path = STR("/Script/Pal.PalNetworkTransmitter");
     constexpr auto controller_class_path = STR("/Script/Engine.Controller");
     constexpr auto data_root = "C:/PalTR-Dev/Data";
 
@@ -143,6 +144,10 @@ namespace PalTR
                 nullptr,
                 nullptr,
                 player_controller_class_path);
+            m_network_transmitter_class = UObjectGlobals::StaticFindObject<UClass*>(
+                nullptr,
+                nullptr,
+                network_transmitter_class_path);
             m_controller_class = UObjectGlobals::StaticFindObject<UClass*>(
                 nullptr,
                 nullptr,
@@ -151,6 +156,7 @@ namespace PalTR
             if (m_damage_function == nullptr
                 || m_model_class == nullptr
                 || m_player_controller_class == nullptr
+                || m_network_transmitter_class == nullptr
                 || m_controller_class == nullptr)
             {
                 return false;
@@ -166,12 +172,15 @@ namespace PalTR
                 FName(STR("BuildPlayerUId"), FNAME_Find));
             m_controller_pawn_property = m_controller_class->FindProperty(
                 FName(STR("Pawn"), FNAME_Find));
+            m_controller_transmitter_property = m_player_controller_class->FindProperty(
+                FName(STR("Transmitter"), FNAME_Find));
 
             if (m_instance_id_parameter == nullptr
                 || m_info_parameter == nullptr
                 || m_model_instance_property == nullptr
                 || m_build_player_property == nullptr
-                || m_controller_pawn_property == nullptr)
+                || m_controller_pawn_property == nullptr
+                || m_controller_transmitter_property == nullptr)
             {
                 return false;
             }
@@ -186,6 +195,7 @@ namespace PalTR
                 || !is_guid_property(m_model_instance_property)
                 || !is_guid_property(m_build_player_property)
                 || CastField<FObjectPropertyBase>(m_controller_pawn_property) == nullptr
+                || CastField<FObjectPropertyBase>(m_controller_transmitter_property) == nullptr
                 || info_struct->GetName() != STR("PalDamageInfo"))
             {
                 return false;
@@ -246,6 +256,37 @@ namespace PalTR
                 : found->second;
         }
 
+        UObject* resolve_request_controller(UObject* context)
+        {
+            UObject* transmitter = context == nullptr
+                ? nullptr
+                : context->GetTypedOuter(m_network_transmitter_class);
+            if (transmitter == nullptr)
+            {
+                return nullptr;
+            }
+
+            UObject* matched_controller = nullptr;
+            UObjectGlobals::ForEachUObject(
+                [this, transmitter, &matched_controller](UObject* object, ...) -> LoopAction {
+                    if (object == nullptr || !object->IsA(m_player_controller_class))
+                    {
+                        return LoopAction::Continue;
+                    }
+
+                    auto* const* transmitter_slot =
+                        m_controller_transmitter_property->ContainerPtrToValuePtr<UObject*>(object);
+                    if (transmitter_slot != nullptr && *transmitter_slot == transmitter)
+                    {
+                        matched_controller = object;
+                        return LoopAction::Break;
+                    }
+
+                    return LoopAction::Continue;
+                });
+            return matched_controller;
+        }
+
         void handle_damage_request(
             Hook::TCallbackIterationData<void>& hook,
             UObject* context,
@@ -271,7 +312,7 @@ namespace PalTR
                     return;
                 }
 
-                UObject* controller = context->GetTypedOuter(m_player_controller_class);
+                UObject* controller = resolve_request_controller(context);
                 if (controller == nullptr)
                 {
                     return;
@@ -329,6 +370,7 @@ namespace PalTR
         UFunction* m_damage_function{};
         UClass* m_model_class{};
         UClass* m_player_controller_class{};
+        UClass* m_network_transmitter_class{};
         UClass* m_controller_class{};
         FProperty* m_instance_id_parameter{};
         FStructProperty* m_info_parameter{};
@@ -337,6 +379,7 @@ namespace PalTR
         FProperty* m_model_instance_property{};
         FProperty* m_build_player_property{};
         FProperty* m_controller_pawn_property{};
+        FProperty* m_controller_transmitter_property{};
         std::unordered_map<std::string, std::string> m_build_player_by_instance;
     };
 }
