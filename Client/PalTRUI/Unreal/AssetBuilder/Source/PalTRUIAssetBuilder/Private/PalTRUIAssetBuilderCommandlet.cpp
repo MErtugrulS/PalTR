@@ -4271,8 +4271,11 @@ namespace PalTRUIAssetBuilder
         StyleRoundedFrame(Tree, TEXT("DashboardRecentEventsAllFrame"),
             PixelTheme::FromSRGB(7, 27, 37, 0.96f), PixelTheme::GoldMuted, 4.0f, 1.0f, FMargin(14.0f, 6.0f));
 
-        StyleTransparentFrame(Tree, TEXT("DashboardRecentEventsFrame"), FMargin(16.0f));
-        StyleTransparentFrame(Tree, TEXT("DashboardQuickActionsFrame"), FMargin(14.0f));
+        // The lower panel chrome reserves its upper strip for the section title.
+        // Keep the live widgets inside that strip instead of drawing over the
+        // ornamental top edge baked into the dashboard texture.
+        StyleTransparentFrame(Tree, TEXT("DashboardRecentEventsFrame"), FMargin(16.0f, 31.0f, 16.0f, 14.0f));
+        StyleTransparentFrame(Tree, TEXT("DashboardQuickActionsFrame"), FMargin(14.0f, 31.0f, 14.0f, 14.0f));
         StyleTransparentFrame(Tree, TEXT("DashboardRelationsFrame"), FMargin(14.0f));
         StyleTransparentFrame(Tree, TEXT("PendingOffersFrame"), FMargin(14.0f));
 
@@ -4282,7 +4285,7 @@ namespace PalTRUIAssetBuilder
         };
         for (const FName FrameName : DashboardChromeTitleFrames)
         {
-            StyleTransparentFrame(Tree, FrameName, FMargin(16.0f, 9.0f));
+            StyleTransparentFrame(Tree, FrameName, FMargin(16.0f, 22.0f, 16.0f, 8.0f));
         }
         const FName SecondaryParchmentFrames[] = {
             TEXT("ReferenceDiplomacyListTitleFrame"),
