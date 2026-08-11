@@ -392,6 +392,29 @@ equal(
     "H distant flag cannot start counter attack"
 )
 
+service.config.raid_window_start = "00:00"
+service.config.raid_window_end = "00:01"
+service.config.raid_utc_offset_minutes = 0
+service.config.counter_attack_hold_seconds = 60
+equal(
+    service:start_counter_attack(
+        "B_OUTPOST_1",
+        "GUILD_B",
+        "LEADER",
+        {
+            flag_reference = "LATE_COUNTER_FLAG",
+            guild_key = "GUILD_B",
+            x = 0, y = 0, z = 0
+        },
+        23
+    ).error.code,
+    "COUNTER_HOLD_EXCEEDS_RAID_WINDOW",
+    "H counter attack must fit remaining raid window"
+)
+service.config.raid_window_start = "00:00"
+service.config.raid_window_end = "00:00"
+service.config.counter_attack_hold_seconds = 1
+
 equal(
     service:start_counter_attack(
         "B_OUTPOST_1",

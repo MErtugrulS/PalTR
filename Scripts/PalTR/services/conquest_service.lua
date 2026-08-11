@@ -1532,6 +1532,16 @@ function Conquest:start_counter_attack(node_id, guild_key, actor_role, flag, now
             "Karsi saldiri koruma suresi gecersiz"
         )
     end
+    local raid_remaining = RaidWindow.remaining_open_seconds(
+        now,
+        self.config
+    )
+    if raid_remaining < hold_seconds then
+        return Result.err(
+            "COUNTER_HOLD_EXCEEDS_RAID_WINDOW",
+            "Karsi saldiri suresi kalan baskin penceresine sigmiyor"
+        )
+    end
 
     occupation.state = States.OCCUPATION.COUNTER_ATTACK
     occupation.frontline_state = "COUNTER_ATTACK"

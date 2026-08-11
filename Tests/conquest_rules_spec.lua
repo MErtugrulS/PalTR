@@ -37,6 +37,40 @@ equal(Rules.can_operate("MEMBER", config), false, "member blocked")
 equal(RaidWindow.is_open_minutes(21 * 60, "20:00", "00:00"), true, "raid open")
 equal(RaidWindow.is_open_minutes(1 * 60, "20:00", "00:00"), false, "raid closed")
 equal(RaidWindow.is_open_minutes(60, "22:00", "02:00"), true, "cross midnight open")
+equal(
+    RaidWindow.remaining_open_seconds_at(21 * 3600, "20:00", "00:00"),
+    3 * 3600,
+    "raid remaining before midnight"
+)
+equal(
+    RaidWindow.remaining_open_seconds_at(
+        23 * 3600 + 59 * 60 + 30,
+        "20:00",
+        "00:00"
+    ),
+    30,
+    "raid remaining keeps seconds"
+)
+equal(
+    RaidWindow.remaining_open_seconds_at(23 * 3600, "22:00", "02:00"),
+    3 * 3600,
+    "cross-midnight remaining before midnight"
+)
+equal(
+    RaidWindow.remaining_open_seconds_at(90 * 60, "22:00", "02:00"),
+    30 * 60,
+    "cross-midnight remaining after midnight"
+)
+equal(
+    RaidWindow.remaining_open_seconds_at(12 * 3600, "20:00", "00:00"),
+    0,
+    "closed raid has no remaining time"
+)
+equal(
+    RaidWindow.remaining_open_seconds_at(12 * 3600, "00:00", "00:00"),
+    math.huge,
+    "all-day raid has unlimited remaining time"
+)
 
 local target = {
     node_id = "B_OUTPOST_1",
