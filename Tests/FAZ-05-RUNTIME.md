@@ -17,15 +17,12 @@
 - Offline korunan us Pal'inin bolge savunmasi dis oyuncuyu hedeflemeye ve ona
   hasar vermeye devam etti. Bu tek yonlu davranis bilincli oyun kurali olarak
   kabul edildi: Pal korunur, ancak base savunmasi pasiflestirilmez.
+- Combat-lock ayri runtime penceresinde dogrulandi: grace bittikten sonra koruma
+  baslamadan once yapi hasar aldi; bu izin verilen vurus `last_hostile_at`
+  zamanini ve koruma baslangicini ileri tasidi. Son vurusun combat-lock suresi
+  doldugunda snapshot `OFFLINE_PROTECTED` oldu ve ayni yapi hasar almadi.
 
-## Ertelenen
-
-- Son izin verilen dis saldiridan sonra combat-lock suresi dolmadan koruma baslamamali.
-
-Combat-lock testi, oyuncu cikis algilama gecikmesi ile kisa grace suresinin
-birbirine girmesi nedeniyle ayri ve kesin bir runtime sonucu uretmedi.
-
-Runtime hizli test ayarlari: offline grace 15 saniye, combat lock 30 saniye.
+Runtime combat-lock testi: offline grace 15 saniye, combat lock 60 saniye.
 Uretim ayarlari: offline grace 10 dakika, combat lock 20 dakika.
 
 ## Fetih domain dogrulamasi
