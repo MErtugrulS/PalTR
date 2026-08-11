@@ -296,23 +296,43 @@ function CommandService:_conquest_status_message(player)
     if not ok then return false, error_message end
     if not self.conquest then return false, "Fetih servisi hazir degil" end
 
-    local capital_count = 0
-    local outpost_count = 0
+    local summary = self.conquest:status_for_guild(
+        player.guild_key,
+        Clock.now()
+    )
+    local parts = {
+        "Fetih: Baskent=" .. tostring(summary.capital_count),
+        "Karakol=" .. tostring(summary.outpost_count) ..
+            "/" .. tostring(self.conquest.config.max_outposts_per_clan)
+    }
 
-    for _, node in ipairs(
-        self.conquest:nodes_for_controller(player.guild_key)
-    ) do
-        if node.node_type == ConquestStates.NODE_TYPE.CAPITAL then
-            capital_count = capital_count + 1
-        elseif node.node_type == ConquestStates.NODE_TYPE.OUTPOST then
-            outpost_count = outpost_count + 1
-        end
+    local campaign = summary.campaigns[1]
+    if campaign then
+        local direction = campaign.direction == "ATTACK"
+            and "Saldiri" or "Savunma"
+        table.insert(
+            parts,
+            direction .. "=" .. guild_name(self.registry, campaign.opponent_guild) ..
+                "(" .. campaign.state .. ")"
+        )
+        table.insert(
+            parts,
+            "Hedef=" .. (campaign.active_target_node_id ~= ""
+                and campaign.active_target_node_id or "Bekliyor")
+        )
     end
 
-    return true,
-        "Fetih: Baskent=" .. tostring(capital_count) ..
-        " | Karakol=" .. tostring(outpost_count) ..
-        "/" .. tostring(self.conquest.config.max_outposts_per_clan)
+    local occupation = summary.occupations[1]
+    if occupation then
+        table.insert(
+            parts,
+            "Isgal=" .. occupation.node_id ..
+                "(" .. occupation.state .. ", " ..
+                format_duration(occupation.remaining_seconds) .. ")"
+        )
+    end
+
+    return true, table.concat(parts, " | ")
 end
 
 function CommandService:_flag_candidate_message(player)

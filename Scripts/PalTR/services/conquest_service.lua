@@ -220,6 +220,93 @@ function Conquest:active_campaign(attacker_guild, defender_guild)
     return selected
 end
 
+function Conquest:status_for_guild(guild_key, now)
+    guild_key = text(guild_key)
+    now = self:_now(now)
+    local status = {
+        capital_count = 0,
+        outpost_count = 0,
+        campaigns = {},
+        occupations = {}
+    }
+
+    for _, node in ipairs(self:nodes_for_controller(guild_key)) do
+        if node.node_type == States.NODE_TYPE.CAPITAL then
+            status.capital_count = status.capital_count + 1
+        elseif node.node_type == States.NODE_TYPE.OUTPOST then
+            status.outpost_count = status.outpost_count + 1
+        end
+    end
+
+    for _, campaign in pairs(self.campaigns) do
+        local direction = nil
+        local opponent = nil
+        if campaign.attacker_guild == guild_key then
+            direction = "ATTACK"
+            opponent = campaign.defender_guild
+        elseif campaign.defender_guild == guild_key then
+            direction = "DEFENSE"
+            opponent = campaign.attacker_guild
+        end
+
+        if direction ~= nil
+            and campaign.state ~= States.CAMPAIGN.PEACE_RESOLVED
+            and campaign.state ~= States.CAMPAIGN.CAPITAL_DEFEATED then
+            table.insert(status.campaigns, {
+                campaign_id = campaign.campaign_id,
+                direction = direction,
+                opponent_guild = opponent,
+                state = campaign.state,
+                active_target_node_id = campaign.active_target_node_id,
+                created_at = campaign.created_at
+            })
+        end
+    end
+
+    table.sort(status.campaigns, function(first, second)
+        if first.created_at ~= second.created_at then
+            return first.created_at > second.created_at
+        end
+        return first.campaign_id < second.campaign_id
+    end)
+
+    for _, occupation in pairs(self.occupations) do
+        local ongoing = occupation.state == States.OCCUPATION.OCCUPIED
+            or occupation.state == States.OCCUPATION.COUNTER_ATTACK
+            or occupation.state == States.OCCUPATION.PAUSED
+        if ongoing and (occupation.original_owner == guild_key
+            or occupation.occupying_guild == guild_key) then
+            local remaining = occupation.remaining_seconds
+            if (occupation.state == States.OCCUPATION.OCCUPIED
+                or occupation.state == States.OCCUPATION.COUNTER_ATTACK)
+                and occupation.last_resumed_at > 0 then
+                remaining = math.max(
+                    0,
+                    remaining - math.max(0, now - occupation.last_resumed_at)
+                )
+            end
+
+            table.insert(status.occupations, {
+                node_id = occupation.node_id,
+                state = occupation.state,
+                remaining_seconds = remaining,
+                original_owner = occupation.original_owner,
+                occupying_guild = occupation.occupying_guild,
+                updated_at = occupation.updated_at
+            })
+        end
+    end
+
+    table.sort(status.occupations, function(first, second)
+        if first.updated_at ~= second.updated_at then
+            return first.updated_at > second.updated_at
+        end
+        return first.node_id < second.node_id
+    end)
+
+    return status
+end
+
 function Conquest:nearest_initial_target(defender_guild, camp)
     local selected = nil
     local selected_distance = math.huge

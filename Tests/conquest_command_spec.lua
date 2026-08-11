@@ -59,6 +59,25 @@ function conquest:nodes_for_controller(guild_key)
     end
     return result
 end
+function conquest:status_for_guild(guild_key)
+    local capital_count = 0
+    local outpost_count = 0
+    for _, node in pairs(self.nodes) do
+        if node.guild_key == guild_key then
+            if node.node_type == States.NODE_TYPE.CAPITAL then
+                capital_count = capital_count + 1
+            elseif node.node_type == States.NODE_TYPE.OUTPOST then
+                outpost_count = outpost_count + 1
+            end
+        end
+    end
+    return {
+        capital_count = capital_count,
+        outpost_count = outpost_count,
+        campaigns = {},
+        occupations = {}
+    }
+end
 function conquest:start_campaign(attacker, defender, role)
     self.started = { attacker = attacker, defender = defender, role = role }
     return Result.ok({ campaign_id = "WAR::A" })
