@@ -25,6 +25,15 @@ local function flag_bound(node)
     return node ~= nil and node.flag_state == States.FLAG.BOUND
 end
 
+local function set_controller(node, guild_key)
+    guild_key = text(guild_key)
+    if node.current_controller ~= guild_key then
+        node.display_name = ""
+    end
+    node.current_controller = guild_key
+    node.guild_key = guild_key
+end
+
 local function edge_id(first, second)
     first = text(first)
     second = text(second)
@@ -1270,8 +1279,7 @@ function Conquest:_create_occupation(campaign, node, now)
     node.state = States.NODE.OCCUPIED
     node.legacy_flag_reference = node.flag_reference
     node.flag_state = States.FLAG.MISSING
-    node.current_controller = campaign.attacker_guild
-    node.guild_key = campaign.attacker_guild
+    set_controller(node, campaign.attacker_guild)
     node.updated_at = now
     campaign.active_target_node_id = ""
     campaign.updated_at = now
@@ -1302,8 +1310,7 @@ function Conquest:_capital_defeated(campaign, capital, now)
     for _, node in pairs(self.nodes) do
         if node.current_controller == campaign.defender_guild then
             node.legacy_flag_reference = node.flag_reference
-            node.current_controller = campaign.attacker_guild
-            node.guild_key = campaign.attacker_guild
+            set_controller(node, campaign.attacker_guild)
             node.state = States.NODE.CONQUERED
             node.flag_state = States.FLAG.MISSING
             node.updated_at = now
@@ -1451,8 +1458,7 @@ function Conquest:_finalize_occupation(occupation, now)
     occupation.counter_flag_y = 0
     occupation.counter_flag_z = 0
     node.state = States.NODE.CONQUERED
-    node.current_controller = occupation.occupying_guild
-    node.guild_key = occupation.occupying_guild
+    set_controller(node, occupation.occupying_guild)
     node.updated_at = now
 
     self:_event("FAZ05_CONQUEST_FINALIZED", node.node_id)
@@ -1470,8 +1476,7 @@ function Conquest:_resolve_peace(campaign, now)
             else
                 local node = self.nodes[occupation.node_id]
                 if node then
-                    node.current_controller = occupation.original_owner
-                    node.guild_key = occupation.original_owner
+                    set_controller(node, occupation.original_owner)
                     node.state = States.NODE.RESTORED
                     if text(occupation.counter_flag_reference) ~= "" then
                         node.flag_reference = occupation.counter_flag_reference
@@ -1645,8 +1650,7 @@ function Conquest:_apply_occupation_restore(occupation, now)
     if not node then return Result.err("NODE_NOT_FOUND", "Isgal node'u yok") end
 
     local replacement = text(occupation.counter_flag_reference)
-    node.current_controller = occupation.original_owner
-    node.guild_key = occupation.original_owner
+    set_controller(node, occupation.original_owner)
     node.state = States.NODE.RESTORED
     node.flag_reference = replacement
     node.flag_state = States.FLAG.BOUND

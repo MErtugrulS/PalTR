@@ -345,6 +345,8 @@ local runtime_result = service:process_runtime_events(22)
 equal(runtime_result.ok, true, "G runtime dispose event processed")
 equal(runtime_result.value, 1, "G one outpost occupied")
 equal(service.nodes.B_OUTPOST_1.state, States.NODE.OCCUPIED, "G node occupied")
+equal(service.nodes.B_OUTPOST_1.display_name, "",
+    "G captured territory drops previous controller name")
 equal(service.nodes.B_OUTPOST_1.flag_state, States.FLAG.MISSING, "G fallen flag missing")
 equal(service.nodes.B_OUTPOST_1.legacy_flag_reference, "", "G disposed flag cleanup reference cleared")
 local occupied_status = service:status_for_guild("GUILD_B", 24)

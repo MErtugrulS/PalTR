@@ -68,13 +68,21 @@ service:refresh()
 equal(messages[2], "Exceed Kuzey Karakolu bolgesine girdiniz.",
     "manual outpost name announced")
 
-local snapshot = assert(io.open(path, "r")):read("*a")
+local snapshot_file = assert(io.open(path, "r"))
+local snapshot = snapshot_file:read("*a")
+snapshot_file:close()
 equal(snapshot:find("Exceed Kuzey Karakolu", 1, true) ~= nil, true,
     "snapshot includes display name")
 equal(snapshot:find("\t125\t", 1, true) ~= nil, true,
     "snapshot includes per-node radius")
 equal(snapshot:find("\tMISSING", 1, true) ~= nil, true,
     "missing flag territory remains visible")
+
+equal(os.remove(path), true, "snapshot removed for recreation test")
+equal(service:refresh().ok, true, "missing unchanged snapshot recreated")
+local recreated = io.open(path, "r")
+equal(recreated ~= nil, true, "recreated snapshot exists")
+if recreated then recreated:close() end
 
 player.online = false
 service:refresh()

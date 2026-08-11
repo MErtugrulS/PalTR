@@ -105,7 +105,10 @@ end
 function Territory:write_snapshot()
     local lines = self:_snapshot_lines()
     local signature = table.concat(lines, "\n")
-    if signature == self.snapshot_signature then return { ok = true } end
+    if signature == self.snapshot_signature
+        and FileIO.exists(self.paths.territory_snapshot) then
+        return { ok = true }
+    end
 
     local result = FileIO.overwrite(self.paths.territory_snapshot, lines)
     if result.ok then self.snapshot_signature = signature end
