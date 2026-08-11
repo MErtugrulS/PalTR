@@ -186,6 +186,28 @@ function CommandService:_establish_nearest_siege(player, defender_guild)
         "Kusatma kampi kaydedildi. Aktif hedef: " .. target.node_id
 end
 
+function CommandService:_select_next_conquest_target(player, defender_guild)
+    local role, role_error = self:_conquest_role(player)
+    if not role then return false, role_error end
+
+    local campaign = self.conquest:active_campaign(
+        player.guild_key,
+        defender_guild
+    )
+    if not campaign then
+        return false, "Bu klana karsi aktif fetih kampanyasi yok"
+    end
+
+    local result = self.conquest:select_next_target(
+        campaign.campaign_id,
+        role,
+        Clock.now()
+    )
+    if not result.ok then return false, result.error.message end
+
+    return true, "Yeni aktif fetih hedefi: " .. result.value.node_id
+end
+
 function CommandService:_conquest_role(player)
     local ok, error_message = self:_require_identity(player)
     if not ok then return nil, error_message end
@@ -565,7 +587,7 @@ function CommandService:on_chat(
             true,
             "!durum | !klanlar | !iliskiler | !yardim | " ..
             "!fetihdurum | !bayrakaday | !baskent | !karakol | " ..
-            "!fetih KLAN | !kusatmakampi KLAN | " ..
+            "!fetih KLAN | !kusatmakampi KLAN | !fetihedef KLAN | " ..
             "!savas KLAN | !ateskes KLAN | " ..
             "!ateskesboz KLAN | !baris KLAN | " ..
             "!ittifak KLAN | !kabul KLAN | " ..
@@ -643,7 +665,8 @@ function CommandService:on_chat(
 
 
     if command.action == "START_CONQUEST"
-        or command.action == "ESTABLISH_SIEGE" then
+        or command.action == "ESTABLISH_SIEGE"
+        or command.action == "SELECT_CONQUEST_TARGET" then
 
         local identified, identity_error = self:_require_identity(player)
 
@@ -675,8 +698,13 @@ function CommandService:on_chat(
 
         if command.action == "START_CONQUEST" then
             ok, response = self:_start_conquest_campaign(player, target.key)
-        else
+        elseif command.action == "ESTABLISH_SIEGE" then
             ok, response = self:_establish_nearest_siege(player, target.key)
+        else
+            ok, response = self:_select_next_conquest_target(
+                player,
+                target.key
+            )
         end
 
         self:_respond(controller, player, command.raw, ok, response)

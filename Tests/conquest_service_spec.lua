@@ -367,15 +367,15 @@ equal(
 )
 
 equal(
-    service:select_target(
+    service:select_next_target(
         campaign.campaign_id,
         "COMMANDER",
-        "B_CAPITAL",
         140
     ).ok,
     true,
-    "capital unlocked through conquered edge"
+    "nearest frontline target selected"
 )
+equal(campaign.active_target_node_id, "B_CAPITAL", "capital unlocked through edge")
 equal(
     service:flag_fallen(
         campaign.campaign_id,

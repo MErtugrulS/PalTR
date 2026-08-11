@@ -25,6 +25,11 @@ equal(
     "ESTABLISH_SIEGE",
     "siege parse"
 )
+equal(
+    Parser.parse("!fetihedef B").value.action,
+    "SELECT_CONQUEST_TARGET",
+    "next target parse"
+)
 equal(Parser.parse("!bayrakaday").value.action, "FLAG_CANDIDATE", "candidate parse")
 
 local registry = { guilds = {}, runtime_players = {} }
@@ -73,11 +78,15 @@ function conquest:establish_siege(campaign_id, role, target_id, camp)
     }
     return Result.ok({ node_id = target_id })
 end
+function conquest:select_next_target(campaign_id, role)
+    self.next_target = { campaign_id = campaign_id, role = role }
+    return Result.ok({ node_id = "OUTPOST_B_2" })
+end
 
 local nearby = {
     current = {
         node_id = "BASE_A",
-        flag_reference = "PALBOX_A",
+        flag_reference = "FLAG_A",
         guild_key = "A",
         name = "Alpha",
         x = 10, y = 20, z = 30
@@ -115,12 +124,12 @@ local ok, message = service:_register_nearest_conquest_flag(
 )
 equal(ok, true, "leader registers capital")
 equal(conquest.registered.actor_role, "LEADER", "leader role mapped")
-equal(conquest.registered.flag_reference, "PALBOX_A", "Pal Box reference used")
+equal(conquest.registered.flag_reference, "FLAG_A", "clan flag reference used")
 equal(message, "Baskent kaydedildi: Alpha", "capital response")
 
 nearby.current = {
     node_id = "BASE_B",
-    flag_reference = "PALBOX_B",
+    flag_reference = "FLAG_B",
     guild_key = "A",
     name = "Bravo",
     x = 100, y = 0, z = 0
@@ -168,6 +177,12 @@ equal(ok, true, "deputy establishes siege")
 equal(conquest.siege.campaign_id, "WAR::A", "active campaign used")
 equal(conquest.siege.target_id, "OUTPOST_B", "nearest valid target used")
 equal(conquest.siege.camp.reference, "WORKBENCH_A", "physical camp used")
+
+ok, message = service:_select_next_conquest_target(deputy, "B")
+equal(ok, true, "deputy selects deterministic next target")
+equal(conquest.next_target.campaign_id, "WAR::A", "campaign forwarded")
+equal(conquest.next_target.role, "DEPUTY_LEADER", "target role forwarded")
+equal(message, "Yeni aktif fetih hedefi: OUTPOST_B_2", "target response")
 
 os.remove("conquest_command_responses.tsv")
 print("conquest_command_spec: ok")

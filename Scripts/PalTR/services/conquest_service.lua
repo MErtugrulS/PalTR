@@ -571,6 +571,77 @@ function Conquest:select_target(campaign_id, actor_role, target_node_id, now)
     return self:_set_target(campaign, target, self:_now(now))
 end
 
+function Conquest:select_next_target(campaign_id, actor_role, now)
+    local authorized = self:_authorized(actor_role)
+    if not authorized.ok then return authorized end
+
+    local campaign = self.campaigns[text(campaign_id)]
+    if not campaign or campaign.state ~= States.CAMPAIGN.ACTIVE then
+        return Result.err("CAMPAIGN_NOT_ACTIVE", "Aktif kampanya yok")
+    end
+    if campaign.active_target_node_id ~= "" then
+        return Result.err("TARGET_ALREADY_SELECTED", "Aktif hedef degistirilemez")
+    end
+
+    local frontline = self:_captured_frontline(campaign)
+    local origin = {
+        x = campaign.siege_x,
+        y = campaign.siege_y,
+        z = campaign.siege_z
+    }
+    local selected = nil
+    local selected_distance = math.huge
+
+    for _, candidate in pairs(self.nodes) do
+        local available = candidate.current_controller == campaign.defender_guild
+            and (candidate.state == States.NODE.PROTECTED
+                or candidate.state == States.NODE.RESTORED)
+            and self:_reachable(campaign, candidate)
+
+        if available then
+            local candidate_distance = Rules.distance(candidate, origin)
+
+            if next(frontline) ~= nil then
+                candidate_distance = math.huge
+                for _, edge in pairs(self.edges) do
+                    local source_id = nil
+                    if edge.node_a == candidate.node_id
+                        and frontline[edge.node_b] then
+                        source_id = edge.node_b
+                    elseif edge.node_b == candidate.node_id
+                        and frontline[edge.node_a] then
+                        source_id = edge.node_a
+                    end
+
+                    local source = source_id and self.nodes[source_id] or nil
+                    if source ~= nil then
+                        candidate_distance = math.min(
+                            candidate_distance,
+                            Rules.distance(candidate, source)
+                        )
+                    end
+                end
+            end
+
+            if candidate_distance < selected_distance
+                or (candidate_distance == selected_distance
+                    and (not selected or candidate.node_id < selected.node_id)) then
+                selected = candidate
+                selected_distance = candidate_distance
+            end
+        end
+    end
+
+    if not selected then
+        return Result.err(
+            "NO_REACHABLE_CONQUEST_TARGET",
+            "Fetih hattindan erisilebilen yeni hedef yok"
+        )
+    end
+
+    return self:_set_target(campaign, selected, self:_now(now))
+end
+
 function Conquest:can_damage_flag(campaign_id, target_node_id, attacker, now)
     local campaign = self.campaigns[text(campaign_id)]
     local target = self.nodes[text(target_node_id)]
