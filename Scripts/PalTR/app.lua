@@ -279,17 +279,6 @@ function App:_register_hooks()
     )
 
     self.hooks:register(
-        "PlayerDamagePassive",
-        "/Script/Pal.PalPlayerCharacter:OnDamagePlayer_Server",
-        function(context, damage_result)
-            self.damage:on_player_damage(
-                context,
-                damage_result
-            )
-        end
-    )
-
-    self.hooks:register(
         "EnemyPlayerDamageEnforcement",
         "/Script/Pal.PalPlayerController:DamageReactionComponent_ProcessDamage_ToServer_ToEnemyPlayer",
         function(context, info, defender)
