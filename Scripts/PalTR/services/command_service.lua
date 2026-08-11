@@ -6,6 +6,7 @@ local Clock = require("PalTR.core.clock")
 local UE = require("PalTR.runtime.ue")
 local Announcer = require("PalTR.runtime.announcer")
 local BaseCampAdapter = require("PalTR.runtime.base_camp_adapter")
+local BuildObjectAdapter = require("PalTR.runtime.build_object_adapter")
 local ConquestStates = require("PalTR.domain.conquest_states")
 
 local CommandService = {}
@@ -103,7 +104,8 @@ function CommandService.new(
     status,
     logger,
     conquest,
-    base_camps
+    base_camps,
+    build_objects
 )
     return setmetatable({
         paths = paths,
@@ -113,9 +115,75 @@ function CommandService.new(
         logger = logger,
         conquest = conquest,
         base_camps = base_camps or BaseCampAdapter.new(),
+        build_objects = build_objects or BuildObjectAdapter.new(),
         last_response_key = "",
         last_response_at = 0
     }, CommandService)
+end
+
+function CommandService:_start_conquest_campaign(player, defender_guild)
+    local role, role_error = self:_conquest_role(player)
+    if not role then return false, role_error end
+
+    local result = self.conquest:start_campaign(
+        player.guild_key,
+        defender_guild,
+        role,
+        Clock.now()
+    )
+
+    if not result.ok then return false, result.error.message end
+
+    return true,
+        "Fetih kampanyasi acildi. Gecerli konuma kamp yapisini kur"
+end
+
+function CommandService:_establish_nearest_siege(player, defender_guild)
+    local role, role_error = self:_conquest_role(player)
+    if not role then return false, role_error end
+
+    local campaign = self.conquest:active_campaign(
+        player.guild_key,
+        defender_guild
+    )
+
+    if not campaign then
+        return false, "Bu klana karsi aktif fetih kampanyasi yok"
+    end
+
+    local camp_result = self.build_objects:nearest_owned_siege_camp(
+        player,
+        self.registry,
+        self.conquest.config
+    )
+
+    if not camp_result.ok then
+        return false, camp_result.error.message
+    end
+
+    local camp = camp_result.value
+    local target = self.conquest:nearest_initial_target(
+        defender_guild,
+        camp
+    )
+
+    if not target then
+        return false,
+            "Kamp konumunda mesafe kurallarina uyan dusman karakolu yok"
+    end
+
+    local result = self.conquest:establish_siege(
+        campaign.campaign_id,
+        role,
+        target.node_id,
+        camp,
+        Clock.now()
+    )
+
+    if not result.ok then return false, result.error.message end
+
+    return true,
+        "Kusatma kampi kaydedildi. Aktif hedef: " .. target.node_id
 end
 
 function CommandService:_conquest_role(player)
@@ -481,6 +549,7 @@ function CommandService:on_chat(
             true,
             "!durum | !klanlar | !iliskiler | !yardim | " ..
             "!fetihdurum | !baskent | !karakol | " ..
+            "!fetih KLAN | !kusatmakampi KLAN | " ..
             "!savas KLAN | !ateskes KLAN | " ..
             "!ateskesboz KLAN | !baris KLAN | " ..
             "!ittifak KLAN | !kabul KLAN | " ..
@@ -545,6 +614,48 @@ function CommandService:on_chat(
             player,
             node_type
         )
+
+        self:_respond(controller, player, command.raw, ok, response)
+        return
+    end
+
+
+    if command.action == "START_CONQUEST"
+        or command.action == "ESTABLISH_SIEGE" then
+
+        local identified, identity_error = self:_require_identity(player)
+
+        if not identified then
+            self:_respond(
+                controller,
+                player,
+                command.raw,
+                false,
+                identity_error
+            )
+            return
+        end
+
+        local target, target_error = self:_target(player, command.target)
+
+        if not target then
+            self:_respond(
+                controller,
+                player,
+                command.raw,
+                false,
+                target_error
+            )
+            return
+        end
+
+        local ok, response
+
+        if command.action == "START_CONQUEST" then
+            ok, response = self:_start_conquest_campaign(player, target.key)
+        else
+            ok, response = self:_establish_nearest_siege(player, target.key)
+        end
 
         self:_respond(controller, player, command.raw, ok, response)
         return

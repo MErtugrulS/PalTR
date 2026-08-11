@@ -202,6 +202,53 @@ function Conquest:nearest_controlled_node(guild_key, location)
     return nearest, nearest_distance
 end
 
+function Conquest:active_campaign(attacker_guild, defender_guild)
+    local selected = nil
+
+    for _, campaign in pairs(self.campaigns) do
+        local open = campaign.state ~= States.CAMPAIGN.PEACE_RESOLVED
+            and campaign.state ~= States.CAMPAIGN.CAPITAL_DEFEATED
+
+        if open
+            and campaign.attacker_guild == text(attacker_guild)
+            and campaign.defender_guild == text(defender_guild)
+            and (not selected or campaign.created_at > selected.created_at) then
+            selected = campaign
+        end
+    end
+
+    return selected
+end
+
+function Conquest:nearest_initial_target(defender_guild, camp)
+    local selected = nil
+    local selected_distance = math.huge
+
+    for _, node in pairs(self.nodes) do
+        if node.node_type == States.NODE_TYPE.OUTPOST
+            and node.current_controller == text(defender_guild)
+            and (node.state == States.NODE.PROTECTED
+                or node.state == States.NODE.RESTORED) then
+
+            local valid = Rules.validate_siege_location(
+                node,
+                self.nodes,
+                camp,
+                defender_guild,
+                self.config
+            )
+            local current_distance = Rules.distance(node, camp)
+
+            if valid.allow and current_distance < selected_distance then
+                selected = node
+                selected_distance = current_distance
+            end
+        end
+    end
+
+    return selected, selected_distance
+end
+
 function Conquest:_constructed_outpost_count(guild_key)
     local count = 0
 

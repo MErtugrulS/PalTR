@@ -19,6 +19,12 @@ end
 equal(Parser.parse("!baskent").value.action, "REGISTER_CAPITAL", "capital parse")
 equal(Parser.parse("!karakol").value.action, "REGISTER_OUTPOST", "outpost parse")
 equal(Parser.parse("!fetihdurum").value.action, "CONQUEST_STATUS", "status parse")
+equal(Parser.parse("!fetih B").value.action, "START_CONQUEST", "conquest parse")
+equal(
+    Parser.parse("!kusatmakampi B").value.action,
+    "ESTABLISH_SIEGE",
+    "siege parse"
+)
 
 local registry = { guilds = {}, runtime_players = {} }
 local conquest = {
@@ -47,6 +53,25 @@ function conquest:nodes_for_controller(guild_key)
     end
     return result
 end
+function conquest:start_campaign(attacker, defender, role)
+    self.started = { attacker = attacker, defender = defender, role = role }
+    return Result.ok({ campaign_id = "WAR::A" })
+end
+function conquest:active_campaign()
+    return { campaign_id = "WAR::A" }
+end
+function conquest:nearest_initial_target()
+    return { node_id = "OUTPOST_B" }, 300
+end
+function conquest:establish_siege(campaign_id, role, target_id, camp)
+    self.siege = {
+        campaign_id = campaign_id,
+        role = role,
+        target_id = target_id,
+        camp = camp
+    }
+    return Result.ok({ node_id = target_id })
+end
 
 local nearby = {
     current = {
@@ -59,6 +84,15 @@ local nearby = {
 }
 function nearby:nearest_owned() return Result.ok(self.current) end
 
+local build_objects = {}
+function build_objects:nearest_owned_siege_camp()
+    return Result.ok({
+        reference = "WORKBENCH_A",
+        guild_key = "A",
+        x = 300, y = 0, z = 0
+    })
+end
+
 local service = CommandService.new(
     { responses = "conquest_command_responses.tsv" },
     registry,
@@ -66,7 +100,8 @@ local service = CommandService.new(
     {},
     {},
     conquest,
-    nearby
+    nearby,
+    build_objects
 )
 
 local leader = { guild_key = "A", role = 1, is_master = true }
@@ -111,6 +146,17 @@ equal(
 local status_ok, status = service:_conquest_status_message(leader)
 equal(status_ok, true, "status available")
 equal(status, "Fetih: Baskent=1 | Karakol=1/10", "status counts nodes")
+
+ok, message = service:_start_conquest_campaign(leader, "B")
+equal(ok, true, "leader starts conquest")
+equal(conquest.started.defender, "B", "defender forwarded")
+equal(conquest.started.role, "LEADER", "campaign role forwarded")
+
+ok, message = service:_establish_nearest_siege(deputy, "B")
+equal(ok, true, "deputy establishes siege")
+equal(conquest.siege.campaign_id, "WAR::A", "active campaign used")
+equal(conquest.siege.target_id, "OUTPOST_B", "nearest valid target used")
+equal(conquest.siege.camp.reference, "WORKBENCH_A", "physical camp used")
 
 os.remove("conquest_command_responses.tsv")
 print("conquest_command_spec: ok")
