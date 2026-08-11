@@ -2799,7 +2799,17 @@ namespace PalTRUIAssetBuilder
                 return false;
             }
             StyleRoundedFrame(Tree, FrameName, FLinearColor(0.018f, 0.024f, 0.026f, 0.92f), FLinearColor(0.28f, 0.24f, 0.16f, 0.92f), 6.0f, 1.0f, FMargin(10.0f, 8.0f));
-            StyleRoundedFrame(Tree, BadgeFrameName, RelationIndex == 1 ? FLinearColor(0.10f, 0.22f, 0.13f, 0.96f) : FLinearColor(0.20f, 0.075f, 0.05f, 0.96f), RelationIndex == 1 ? FLinearColor(0.24f, 0.62f, 0.36f, 0.96f) : FLinearColor(0.66f, 0.22f, 0.16f, 0.96f), 5.0f, 1.0f, FMargin(12.0f, 5.0f));
+            const FLinearColor BadgeFill = RelationIndex == 1
+                ? FLinearColor(0.11f, 0.11f, 0.10f, 0.96f)
+                : (RelationIndex == 2
+                    ? FLinearColor(0.10f, 0.22f, 0.13f, 0.96f)
+                    : FLinearColor(0.20f, 0.075f, 0.05f, 0.96f));
+            const FLinearColor BadgeEdge = RelationIndex == 1
+                ? FLinearColor(0.34f, 0.32f, 0.28f, 0.96f)
+                : (RelationIndex == 2
+                    ? FLinearColor(0.24f, 0.62f, 0.36f, 0.96f)
+                    : FLinearColor(0.66f, 0.22f, 0.16f, 0.96f));
+            StyleRoundedFrame(Tree, BadgeFrameName, BadgeFill, BadgeEdge, 5.0f, 1.0f, FMargin(12.0f, 5.0f));
             StyleTextShadow(Tree, NameTextName);
             StyleTextShadow(Tree, StateTextName);
         }
@@ -3862,13 +3872,13 @@ namespace PalTRUIAssetBuilder
         }
 
         const FLinearColor NoOutline = FLinearColor::Transparent;
-        StyleRoundedFrame(Tree, TEXT("DashboardClanCardFrame"), PixelTheme::FromSRGB(11, 88, 84, 0.54f),
+        StyleRoundedFrame(Tree, TEXT("DashboardClanCardFrame"), PixelTheme::FromSRGB(8, 82, 77, 0.72f),
             NoOutline, 3.0f, 0.0f, FMargin(14.0f));
-        StyleRoundedFrame(Tree, TEXT("DashboardDiplomacyCardFrame"), PixelTheme::FromSRGB(21, 76, 111, 0.52f),
+        StyleRoundedFrame(Tree, TEXT("DashboardDiplomacyCardFrame"), PixelTheme::FromSRGB(18, 67, 101, 0.72f),
             NoOutline, 3.0f, 0.0f, FMargin(14.0f));
-        StyleRoundedFrame(Tree, TEXT("DashboardProtectionCardFrame"), PixelTheme::FromSRGB(126, 91, 28, 0.48f),
+        StyleRoundedFrame(Tree, TEXT("DashboardProtectionCardFrame"), PixelTheme::FromSRGB(115, 81, 25, 0.68f),
             NoOutline, 3.0f, 0.0f, FMargin(14.0f));
-        StyleRoundedFrame(Tree, TEXT("DashboardBuildingsCardFrame"), PixelTheme::FromSRGB(107, 57, 24, 0.48f),
+        StyleRoundedFrame(Tree, TEXT("DashboardBuildingsCardFrame"), PixelTheme::FromSRGB(92, 48, 21, 0.68f),
             NoOutline, 3.0f, 0.0f, FMargin(14.0f));
         StyleTransparentFrame(Tree, TEXT("DashboardRecentEventsFrame"), FMargin(16.0f));
         StyleTransparentFrame(Tree, TEXT("DashboardQuickActionsFrame"), FMargin(14.0f));
@@ -4023,6 +4033,9 @@ namespace PalTRUIAssetBuilder
             Icon->SetBrushFromTexture(EventTextures[Index - 1], true);
             IconSize->SetWidthOverride(38.0f);
             IconSize->SetHeightOverride(38.0f);
+            StyleTransparentFrame(Tree,
+                FName(*FString::Printf(TEXT("DashboardRecentEvent%dFrame"), Index)),
+                FMargin(4.0f, 4.0f));
         }
 
         for (const FName CardIconSizeName : {
@@ -4034,8 +4047,8 @@ namespace PalTRUIAssetBuilder
         {
             if (USizeBox* IconSize = Cast<USizeBox>(Tree->FindWidget(CardIconSizeName)))
             {
-                IconSize->SetWidthOverride(104.0f);
-                IconSize->SetHeightOverride(104.0f);
+                IconSize->SetWidthOverride(112.0f);
+                IconSize->SetHeightOverride(112.0f);
             }
         }
         for (int32 Index = 1; Index <= 3; ++Index)
@@ -4072,6 +4085,21 @@ namespace PalTRUIAssetBuilder
         StyleButton(Tree, TEXT("DashboardProtectionButton"), PixelTheme::FromSRGB(34, 43, 45, 0.92f));
         StyleButton(Tree, TEXT("CloseButton"), PixelTheme::FromSRGB(111, 43, 33, 0.99f));
 
+        SetTextFontSize(Tree, TEXT("DashboardClanCardTitleText"), 18);
+        SetTextFontSize(Tree, TEXT("DashboardClanCardValueText"), 24);
+        SetTextFontSize(Tree, TEXT("DashboardClanCardDetailText"), 13);
+        SetTextFontSize(Tree, TEXT("DashboardDiplomacyCardTitleText"), 18);
+        SetTextFontSize(Tree, TEXT("DashboardDiplomacyCardValueText"), 15);
+        SetTextFontSize(Tree, TEXT("DashboardDiplomacyCardDetailText"), 13);
+        SetTextFontSize(Tree, TEXT("DashboardProtectionCardTitleText"), 18);
+        SetTextFontSize(Tree, TEXT("DashboardProtectionCardValueText"), 18);
+        SetTextFontSize(Tree, TEXT("DashboardProtectionCardDetailText"), 12);
+        SetTextFontSize(Tree, TEXT("DashboardBuildingsCardTitleText"), 18);
+        SetTextFontSize(Tree, TEXT("DashboardBuildingsCardValueText"), 18);
+        SetTextFontSize(Tree, TEXT("DashboardBuildingsCardDetailText"), 12);
+        SetTextFontSize(Tree, TEXT("DashboardRecentEventsHeadingText"), 20);
+        SetTextFontSize(Tree, TEXT("DashboardQuickActionsHeadingText"), 20);
+
         for (const FName HeadingName : {
             FName(TEXT("ClanHeadingText")),
             FName(TEXT("DiplomacyHeadingText")),
@@ -4079,7 +4107,7 @@ namespace PalTRUIAssetBuilder
             FName(TEXT("ChatHeadingText"))
         })
         {
-            SetTextFontSize(Tree, HeadingName, 26);
+            SetTextFontSize(Tree, HeadingName, 28);
             SetTextColor(Tree, HeadingName, PixelTheme::TextPrimary);
             StyleTextShadow(Tree, HeadingName, FVector2D(1, 2), FLinearColor(0, 0, 0, 0.92f));
         }
