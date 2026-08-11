@@ -320,6 +320,22 @@ equal(
 )
 equal(
     service:restore_occupation(
+        "B_OUTPOST_1", "GUILD_B", "LEADER", 33
+    ).error.code,
+    "OCCUPATION_EXPIRED",
+    "H expired counter attack cannot restore"
+)
+relation.state = DiplomacyStates.CEASEFIRE
+equal(
+    service:restore_occupation(
+        "B_OUTPOST_1", "GUILD_B", "LEADER", 24
+    ).error.code,
+    "WAR_NOT_ACTIVE",
+    "H ceasefire blocks restore before scheduler tick"
+)
+relation.state = DiplomacyStates.WAR
+equal(
+    service:restore_occupation(
         "B_OUTPOST_1", "GUILD_B", "LEADER", 24
     ).ok,
     true,

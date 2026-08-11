@@ -1171,6 +1171,43 @@ function Conquest:_resolve_peace(campaign, now)
     campaign.updated_at = now
 end
 
+function Conquest:_campaign_for_occupation(occupation)
+    for _, current in pairs(self.campaigns) do
+        if current.war_id == occupation.war_id
+            and current.attacker_guild == occupation.occupying_guild then
+            return current
+        end
+    end
+    return nil
+end
+
+function Conquest:_counter_attack_window(occupation, now)
+    local elapsed = math.max(0, now - occupation.last_resumed_at)
+    if occupation.last_resumed_at <= 0
+        or elapsed >= occupation.remaining_seconds then
+        return Result.err("OCCUPATION_EXPIRED", "Isgal suresi tamamlandi")
+    end
+
+    local campaign = self:_campaign_for_occupation(occupation)
+    if not campaign or campaign.state ~= States.CAMPAIGN.ACTIVE then
+        return Result.err("CAMPAIGN_NOT_ACTIVE", "Karsi saldiri su an baslatilamaz")
+    end
+
+    local relation = self:_relation(
+        campaign.attacker_guild,
+        campaign.defender_guild
+    )
+    if not Rules.is_effective_war(relation) then
+        return Result.err("WAR_NOT_ACTIVE", "Karsi saldiri savas disinda ilerlemez")
+    end
+
+    if not RaidWindow.is_open(now, self.config) then
+        return Result.err("RAID_WINDOW_CLOSED", "Karsi saldiri raid saati disinda")
+    end
+
+    return Result.ok(campaign)
+end
+
 function Conquest:start_counter_attack(node_id, guild_key, actor_role, now)
     local authorized = self:_authorized(actor_role)
     if not authorized.ok then return authorized end
@@ -1184,27 +1221,13 @@ function Conquest:start_counter_attack(node_id, guild_key, actor_role, now)
         return Result.err("NOT_ORIGINAL_OWNER", "Karsi saldiriyi eski sahip baslatabilir")
     end
 
-    local campaign
-    for _, current in pairs(self.campaigns) do
-        if current.war_id == occupation.war_id
-            and current.attacker_guild == occupation.occupying_guild then
-            campaign = current
-            break
-        end
-    end
-
-    if not campaign or campaign.state ~= States.CAMPAIGN.ACTIVE then
-        return Result.err("CAMPAIGN_NOT_ACTIVE", "Karsi saldiri su an baslatilamaz")
-    end
-
-    local raid_open = RaidWindow.is_open(self:_now(now), self.config)
-    if not raid_open then
-        return Result.err("RAID_WINDOW_CLOSED", "Karsi saldiri raid saati disinda")
-    end
+    now = self:_now(now)
+    local window = self:_counter_attack_window(occupation, now)
+    if not window.ok then return window end
 
     occupation.state = States.OCCUPATION.COUNTER_ATTACK
     occupation.frontline_state = "COUNTER_ATTACK"
-    occupation.updated_at = self:_now(now)
+    occupation.updated_at = now
     local saved = self:_save_occupations()
     if not saved.ok then return saved end
     self:_event("FAZ05_COUNTER_ATTACK", node_id)
@@ -1224,6 +1247,9 @@ function Conquest:restore_occupation(node_id, guild_key, actor_role, now)
     end
 
     now = self:_now(now)
+    local window = self:_counter_attack_window(occupation, now)
+    if not window.ok then return window end
+
     local node = self.nodes[occupation.node_id]
     node.current_controller = occupation.original_owner
     node.guild_key = occupation.original_owner
