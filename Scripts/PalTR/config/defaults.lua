@@ -33,10 +33,24 @@ return {
         flag_interaction_radius_meters = 20,
         flag_rebind_radius_meters = 30,
         conquest_flag_actor_class_tokens = {
-            "BP_BuildObject_Signboard_C"
+            "BP_BuildObject_Believer_Flag_C",
+            "BP_BuildObject_DarkIsland_Flag_C",
+            "BP_BuildObject_FireCult_Flag_C",
+            "BP_BuildObject_Hunter_Flag_C",
+            "BP_BuildObject_Ninja_Flag_C",
+            "BP_BuildObject_Police_Flag_C",
+            "BP_BuildObject_Scientist_Flag_C",
+            "BP_BuildObject_SkyIsland_Flag_C"
         },
         flag_candidate_actor_class_tokens = {
-            "BP_BuildObject_Signboard"
+            "BP_BuildObject_Believer_Flag_C",
+            "BP_BuildObject_DarkIsland_Flag_C",
+            "BP_BuildObject_FireCult_Flag_C",
+            "BP_BuildObject_Hunter_Flag_C",
+            "BP_BuildObject_Ninja_Flag_C",
+            "BP_BuildObject_Police_Flag_C",
+            "BP_BuildObject_Scientist_Flag_C",
+            "BP_BuildObject_SkyIsland_Flag_C"
         },
         siege_camp_interaction_radius_meters = 20,
         siege_camp_actor_class_tokens = {

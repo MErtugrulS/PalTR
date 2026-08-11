@@ -74,8 +74,14 @@ UHT dump ve mevcut native hook sozlesmesiyle statik olarak dogrulananlar:
 
 ## Fetih runtime dogrulamasi
 
-- Ayakli tabela `BP_BuildObject_Signboard_C` fiziksel Klan Bayragi olarak
-  runtime'da dogrulandi ve config'e eklendi.
+- Ayakli tabela `BP_BuildObject_Signboard_C` gecici fiziksel Klan Bayragi olarak
+  runtime'da dogrulandi. Mevcut persistence referanslari korunur, ancak yeni
+  kayitlar icin config'ten kaldirildi.
+- Yerel `Pal-WindowsServer.pak` indeksinde Believer, DarkIsland, FireCult,
+  Hunter, Ninja, Police, Scientist ve SkyIsland direkli `BP_BuildObject_*_Flag`
+  Blueprintleri dogrulandi. Yeni baskent, karakol, yeniden baglama ve karsi
+  saldiri kayitlari yalniz bu gercek direkli bayrak siniflarini kabul eder;
+  dikey banner ve yan dekorlar stratejik node sayilmaz.
 - NWO ve Exceed klanlari icin baskent/karakol chat komutlariyla kaydedildi;
   kayitlar sunucu yeniden baslatmasindan sonra korundu.
 - Savas ilani, hazirlik suresi, fetih kampanyasi, kusatma kampi ve ilk hedef
@@ -97,6 +103,9 @@ UHT dump ve mevcut native hook sozlesmesiyle statik olarak dogrulananlar:
 
 Asagidakiler oyun icinde henuz gecmis sayilmadi:
 
+- Gercek direkli faction bayraklarindan birini kurup `!bayrakaday` ile sinif,
+  model kimligi, klan sahipligi ve konum cozumunun runtime dogrulanmasi; ardindan
+  ayni bayrakla baskent/karakol, yeniden baglama ve karsi saldiri kaydi.
 - Gercek fiziksel tabela tamamen yikildiginda native hook'un `FLAG_DISPOSED`
   olayi uretmesi; karakol ve baskent icin ayri ayri denenmeli.
 - Fethedilen dugumlere yeni fetheden-klan tabelasi kurup `!fetihbayragi` ile

@@ -1,6 +1,34 @@
 package.path = table.concat({ "Scripts/?.lua", "Scripts/?/init.lua", package.path }, ";")
 local Adapter = require("PalTR.runtime.conquest_flag_adapter")
+local Defaults = require("PalTR.config.defaults")
 local function equal(a, b, m) if a ~= b then error(m) end end
+local verified_flag_classes = {
+    "BP_BuildObject_Believer_Flag_C",
+    "BP_BuildObject_DarkIsland_Flag_C",
+    "BP_BuildObject_FireCult_Flag_C",
+    "BP_BuildObject_Hunter_Flag_C",
+    "BP_BuildObject_Ninja_Flag_C",
+    "BP_BuildObject_Police_Flag_C",
+    "BP_BuildObject_Scientist_Flag_C",
+    "BP_BuildObject_SkyIsland_Flag_C"
+}
+equal(
+    #Defaults.conquest.conquest_flag_actor_class_tokens,
+    #verified_flag_classes,
+    "all verified pole flags configured"
+)
+for index, class_name in ipairs(verified_flag_classes) do
+    equal(
+        Defaults.conquest.conquest_flag_actor_class_tokens[index],
+        class_name,
+        "verified pole flag configured"
+    )
+    equal(
+        Defaults.conquest.flag_candidate_actor_class_tokens[index],
+        class_name,
+        "candidate pole flag configured"
+    )
+end
 local actor = {
     valid = true, path = "VerifiedFlagClass_C Instance", group = "GROUP_A",
     model = { valid = true, id = "FLAG_A", builder = "PLAYER_A" },
