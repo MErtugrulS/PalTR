@@ -25,13 +25,7 @@ local function restore_previous_state(relation)
         relation.expires_at = 0
 
     elseif restored == States.CEASEFIRE then
-        -- Baris teklifi sırasında eski ateskes bitis zamani
-        -- gecici olarak active_at alaninda saklanir.
-        local ceasefire_expires_at =
-            tonumber(relation.active_at) or 0
-
-        relation.active_at = 0
-        relation.expires_at = ceasefire_expires_at
+        relation.expires_at = 0
 
     else
         relation.active_at = 0
@@ -105,11 +99,6 @@ function Rules.request_peace(relation, requester, config)
     relation.requested_by = requester
     relation.accepted_by = ""
 
-    if previous == States.CEASEFIRE then
-        -- Ateskesin asil bitis zamanini gecici olarak sakla.
-        relation.active_at = relation.expires_at
-    end
-
     relation.expires_at = Clock.after_hours(
         config.diplomacy.proposal_expiry_hours
     )
@@ -157,9 +146,7 @@ function Rules.accept(relation, accepter, config)
         relation.state = States.CEASEFIRE
 
         relation.active_at = now
-        relation.expires_at = Clock.after_hours(
-            config.diplomacy.ceasefire_duration_hours
-        )
+        relation.expires_at = 0
 
     elseif relation.state == States.PEACE_PENDING then
         relation.previous_state = relation.previous_state
@@ -320,34 +307,15 @@ function Rules.tick(relation, config)
         return "WAR_MADE_INDEFINITE"
     end
 
-    -- Eski Faz-03 ateskes kaydinda sure yoksa
-    -- 12 saatlik zamanlayici olustur.
+    -- Eski sureli ateskes kayitlarini suresiz hale getir.
     if relation.state == States.CEASEFIRE
-        and relation.expires_at <= 0 then
+        and relation.expires_at > 0 then
 
-        relation.active_at = now
-        relation.expires_at = Clock.after_hours(
-            config.diplomacy.ceasefire_duration_hours
-        )
-
-        relation.updated_at = now
-
-        return "CEASEFIRE_TIMER_REPAIRED"
-    end
-
-    if relation.state == States.CEASEFIRE
-        and relation.expires_at > 0
-        and now >= relation.expires_at then
-
-        relation.previous_state = States.CEASEFIRE
-        relation.state = States.WAR
-        reset_request(relation)
-
-        relation.active_at = now
         relation.expires_at = 0
+
         relation.updated_at = now
 
-        return "CEASEFIRE_ENDED"
+        return "CEASEFIRE_MADE_INDEFINITE"
     end
 
     if (relation.state == States.CEASEFIRE_PENDING

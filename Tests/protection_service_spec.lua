@@ -17,8 +17,8 @@ local function equal(actual, expected, message)
 end
 
 local config = {
-    offline_grace_minutes = 5,
-    combat_lock_minutes = 20
+    offline_grace_seconds = 600,
+    combat_lock_seconds = 1200
 }
 
 local online = Protection.evaluate(
@@ -31,7 +31,7 @@ local grace = Protection.evaluate(
     2100, 0, 2000, 0, config
 )
 equal(grace.protected, false, "offline grace")
-equal(grace.protected_at, 2300, "grace deadline")
+equal(grace.protected_at, 2600, "grace deadline")
 
 local combat = Protection.evaluate(
     2300, 0, 1000, 2200, config

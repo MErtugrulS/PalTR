@@ -12,8 +12,8 @@ return {
     diplomacy = {
         war_preparation_minutes = 30,
 
-        -- Ateskes kabul edildikten sonra 12 saat surer.
-        ceasefire_duration_hours = 12,
+        -- Ateskes bozulduktan sonra fetih hasarinin yeniden acilma gecikmesi.
+        ceasefire_rearm_seconds = 1800,
 
         -- Diplomasi teklifleri 24 saat cevap bekler.
         proposal_expiry_hours = 24
@@ -21,9 +21,9 @@ return {
 
     protection = {
         -- Son klan uyesi ayrildiktan sonra offline koruma gecikmesi.
-        offline_grace_minutes = 5,
+        offline_grace_seconds = 600,
 
         -- Son dis saldiridan sonra offline koruma icin gereken sakin sure.
-        combat_lock_minutes = 20
+        combat_lock_seconds = 1200
     }
 }

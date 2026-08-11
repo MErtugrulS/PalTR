@@ -9,7 +9,7 @@ return {
     },
 
     protection = {
-        offline_grace_minutes = 5,
-        combat_lock_minutes = 20
+        offline_grace_seconds = 600,
+        combat_lock_seconds = 1200
     }
 }

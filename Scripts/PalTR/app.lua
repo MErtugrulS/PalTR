@@ -178,22 +178,6 @@ function App:_handle_diplomacy_events(events)
                 "Savas yalnizca karsilikli barisla sona erecek."
             )
 
-        elseif event.name == "CEASEFIRE_ENDED" then
-            local first = self:_guild_name(
-                relation.guild_a
-            )
-
-            local second = self:_guild_name(
-                relation.guild_b
-            )
-
-            self:_announce_relation(
-                relation,
-                first .. " ile " .. second ..
-                " arasindaki 12 saatlik ateskes sona erdi. " ..
-                "Savas yeniden basladi."
-            )
-
         elseif event.name == "PROPOSAL_EXPIRED" then
             self:_announce_relation(
                 relation,
@@ -206,9 +190,9 @@ function App:_handle_diplomacy_events(events)
                 tostring(relation.key)
             )
 
-        elseif event.name == "CEASEFIRE_TIMER_REPAIRED" then
+        elseif event.name == "CEASEFIRE_MADE_INDEFINITE" then
             self.logger:info(
-                "Eski ateskes kaydina 12 saatlik sure eklendi: " ..
+                "Eski sureli ateskes suresiz hale getirildi: " ..
                 tostring(relation.key)
             )
         end

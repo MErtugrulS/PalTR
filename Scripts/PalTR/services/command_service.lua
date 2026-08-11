@@ -262,11 +262,11 @@ function CommandService:_relation_entry(player, relation)
             ")"
 
     elseif relation.state == States.CEASEFIRE
-        and relation.expires_at > now then
+        and relation.active_at > 0 then
 
         state = state ..
             " (" ..
-            format_duration(relation.expires_at - now) ..
+            format_duration(now - relation.active_at) ..
             ")"
 
     elseif (relation.state == States.CEASEFIRE_PENDING

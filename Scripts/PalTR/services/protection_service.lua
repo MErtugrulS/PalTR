@@ -10,6 +10,14 @@ local function non_negative(value)
     return math.max(0, tonumber(value) or 0)
 end
 
+local function configured_seconds(config, seconds_key, minutes_key)
+    if config[seconds_key] ~= nil then
+        return non_negative(config[seconds_key])
+    end
+
+    return non_negative(config[minutes_key]) * 60
+end
+
 function Protection.evaluate(
     now,
     online_count,
@@ -32,9 +40,17 @@ function Protection.evaluate(
     end
 
     local offline_ready_at = last_online_at
-        + non_negative(config.offline_grace_minutes) * 60
+        + configured_seconds(
+            config,
+            "offline_grace_seconds",
+            "offline_grace_minutes"
+        )
     local combat_ready_at = last_hostile_at
-        + non_negative(config.combat_lock_minutes) * 60
+        + configured_seconds(
+            config,
+            "combat_lock_seconds",
+            "combat_lock_minutes"
+        )
     local protected_at = math.max(
         offline_ready_at,
         combat_ready_at
