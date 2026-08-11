@@ -27,6 +27,12 @@ namespace PalTR
         AllianceDecision evaluate_alliance_structure_damage_by_pawn(
             const std::string& build_player_uid,
             const std::string& attacker_pawn_path) const;
+        AllianceDecision evaluate_alliance_guilds(
+            const std::string& target_guild_key,
+            const std::string& attacker_guild_key) const;
+        std::string guild_for_player_uid(const std::string& player_uid) const;
+        std::string guild_for_pawn_path(const std::string& pawn_path) const;
+        std::string guild_for_group_id(const std::string& group_id) const;
 
     private:
         bool reload(std::string& error);

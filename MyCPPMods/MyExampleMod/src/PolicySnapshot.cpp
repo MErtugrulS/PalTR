@@ -176,19 +176,33 @@ namespace PalTR
         const std::string& build_player_uid,
         const std::string& attacker_group_id) const
     {
-        AllianceDecision result{};
+        return evaluate_alliance_guilds(
+            guild_for_player_uid(build_player_uid),
+            guild_for_group_id(attacker_group_id));
+    }
 
-        const auto owner = m_player_guild_by_uid.find(normalize_guid(build_player_uid));
-        const auto attacker = m_guild_key_by_group_id.find(normalize_guid(attacker_group_id));
-        if (owner == m_player_guild_by_uid.end()
-            || attacker == m_guild_key_by_group_id.end())
+    AllianceDecision PolicySnapshot::evaluate_alliance_structure_damage_by_pawn(
+        const std::string& build_player_uid,
+        const std::string& attacker_pawn_path) const
+    {
+        return evaluate_alliance_guilds(
+            guild_for_player_uid(build_player_uid),
+            guild_for_pawn_path(attacker_pawn_path));
+    }
+
+    AllianceDecision PolicySnapshot::evaluate_alliance_guilds(
+        const std::string& target_guild_key,
+        const std::string& attacker_guild_key) const
+    {
+        AllianceDecision result{};
+        if (target_guild_key.empty() || attacker_guild_key.empty())
         {
             result.reason = "STRUCTURE_IDENTITY_UNRESOLVED";
             return result;
         }
 
-        result.target_guild_key = owner->second;
-        result.attacker_guild_key = attacker->second;
+        result.target_guild_key = target_guild_key;
+        result.attacker_guild_key = attacker_guild_key;
 
         if (result.target_guild_key == result.attacker_guild_key)
         {
@@ -202,33 +216,21 @@ namespace PalTR
         return result;
     }
 
-    AllianceDecision PolicySnapshot::evaluate_alliance_structure_damage_by_pawn(
-        const std::string& build_player_uid,
-        const std::string& attacker_pawn_path) const
+    std::string PolicySnapshot::guild_for_player_uid(const std::string& player_uid) const
     {
-        AllianceDecision result{};
+        const auto found = m_player_guild_by_uid.find(normalize_guid(player_uid));
+        return found == m_player_guild_by_uid.end() ? std::string{} : found->second;
+    }
 
-        const auto owner = m_player_guild_by_uid.find(normalize_guid(build_player_uid));
-        const auto attacker = m_player_guild_by_pawn_path.find(attacker_pawn_path);
-        if (owner == m_player_guild_by_uid.end()
-            || attacker == m_player_guild_by_pawn_path.end())
-        {
-            result.reason = "STRUCTURE_IDENTITY_UNRESOLVED";
-            return result;
-        }
+    std::string PolicySnapshot::guild_for_pawn_path(const std::string& pawn_path) const
+    {
+        const auto found = m_player_guild_by_pawn_path.find(pawn_path);
+        return found == m_player_guild_by_pawn_path.end() ? std::string{} : found->second;
+    }
 
-        result.target_guild_key = owner->second;
-        result.attacker_guild_key = attacker->second;
-
-        if (result.target_guild_key == result.attacker_guild_key)
-        {
-            result.reason = "SAME_GUILD_NOT_HANDLED";
-            return result;
-        }
-
-        result.block = m_alliance_pairs.contains(
-            pair_key(result.target_guild_key, result.attacker_guild_key));
-        result.reason = result.block ? "ACTIVE_ALLIANCE" : "NOT_ALLIED";
-        return result;
+    std::string PolicySnapshot::guild_for_group_id(const std::string& group_id) const
+    {
+        const auto found = m_guild_key_by_group_id.find(normalize_guid(group_id));
+        return found == m_guild_key_by_group_id.end() ? std::string{} : found->second;
     }
 }

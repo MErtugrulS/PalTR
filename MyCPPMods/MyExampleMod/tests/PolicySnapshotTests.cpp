@@ -71,6 +71,20 @@ int main()
         "UnknownPawn");
     ok &= expect(!unknown_pawn.block, "unresolved pawn identity fails open");
 
+    const auto allied_guilds = snapshot.evaluate_alliance_guilds(
+        "GUILD_A",
+        "GUILD_B");
+    ok &= expect(allied_guilds.block, "active alliance blocks by guild keys");
+    ok &= expect(
+        snapshot.guild_for_pawn_path("PawnB") == "GUILD_B",
+        "pawn path resolves guild");
+    ok &= expect(
+        snapshot.guild_for_player_uid("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA") == "GUILD_A",
+        "player uid resolves guild");
+    ok &= expect(
+        snapshot.guild_for_group_id("BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB") == "GUILD_B",
+        "group id resolves guild");
+
     const auto neutral = snapshot.evaluate_alliance_structure_damage(
         "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
         "CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC");
