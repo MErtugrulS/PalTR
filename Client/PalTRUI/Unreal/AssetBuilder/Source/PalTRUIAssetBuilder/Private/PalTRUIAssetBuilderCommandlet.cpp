@@ -4183,6 +4183,10 @@ namespace PalTRUIAssetBuilder
             SetTextFontSize(Tree,
                 FName(*FString::Printf(TEXT("DashboardRelationRow%dStateText"), Index)), 12);
         }
+        if (UBorder* ThirdRelationPreview = Cast<UBorder>(Tree->FindWidget(TEXT("DashboardRelationRow3Frame"))))
+        {
+            ThirdRelationPreview->SetVisibility(ESlateVisibility::Collapsed);
+        }
         if (USizeBox* PendingIconSize = Cast<USizeBox>(Tree->FindWidget(TEXT("DashboardPendingIconSize"))))
         {
             PendingIconSize->SetWidthOverride(74.0f);
