@@ -3693,7 +3693,9 @@ namespace PalTRUIAssetBuilder
         USizeBox* NavigationSize = Cast<USizeBox>(Tree->FindWidget(TEXT("LeftNavigationSize")));
         UBorder* NavigationFrame = Cast<UBorder>(Tree->FindWidget(TEXT("LeftNavigationFrame")));
         USizeBox* HeaderCrestSize = Cast<USizeBox>(Tree->FindWidget(TEXT("HeaderCrestImageSize")));
+        UTextBlock* NavigationHeading = Cast<UTextBlock>(Tree->FindWidget(TEXT("LeftNavigationHeadingText")));
         UHorizontalBox* StatusCards = Cast<UHorizontalBox>(Tree->FindWidget(TEXT("DashboardStatusCardsFrame")));
+        USizeBox* StatusCardsSize = Cast<USizeBox>(Tree->FindWidget(TEXT("DashboardStatusCardsSize")));
         UHorizontalBox* DashboardColumns = Cast<UHorizontalBox>(Tree->FindWidget(TEXT("DashboardColumns")));
         UVerticalBox* MainColumn = Cast<UVerticalBox>(Tree->FindWidget(TEXT("DashboardMainColumn")));
         UVerticalBox* SidebarColumn = Cast<UVerticalBox>(Tree->FindWidget(TEXT("DashboardSidebarColumn")));
@@ -3705,7 +3707,7 @@ namespace PalTRUIAssetBuilder
         UTextBlock* ClanHeading = Cast<UTextBlock>(Tree->FindWidget(TEXT("ClanHeadingText")));
         UTextBlock* ClanSubtitle = Cast<UTextBlock>(Tree->FindWidget(TEXT("ClanSubtitleText")));
         if (!Background || !ArtContentPadding || !HeaderFrame || !ContentFrame || !FooterFrame
-            || !BodyRow || !NavigationSize || !NavigationFrame || !HeaderCrestSize
+            || !BodyRow || !NavigationSize || !NavigationFrame || !HeaderCrestSize || !NavigationHeading
             || !StatusCards || !DashboardColumns || !MainColumn || !SidebarColumn
             || !LowerRow || !RecentFrame || !QuickFrame || !DashboardSize
             || !ClanPage || !ClanHeading || !ClanSubtitle)
@@ -3763,6 +3765,45 @@ namespace PalTRUIAssetBuilder
             return false;
         }
 
+        if (!StatusCardsSize)
+        {
+            if (StatusCards->GetParent() != MainColumn)
+            {
+                UE_LOG(LogTemp, Error, TEXT("PalTRUI pixel match update failed: status cards source hierarchy."));
+                return false;
+            }
+            const int32 StatusCardsIndex = MainColumn->GetChildIndex(StatusCards);
+            if (StatusCardsIndex == INDEX_NONE || !MainColumn->RemoveChild(StatusCards))
+            {
+                UE_LOG(LogTemp, Error, TEXT("PalTRUI pixel match update failed: status cards relocation."));
+                return false;
+            }
+            StatusCardsSize = Tree->ConstructWidget<USizeBox>(USizeBox::StaticClass(), TEXT("DashboardStatusCardsSize"));
+            StatusCardsSize->SetContent(StatusCards);
+            UVerticalBoxSlot* StatusSizeSlot = Cast<UVerticalBoxSlot>(MainColumn->InsertChildAt(StatusCardsIndex, StatusCardsSize));
+            if (!StatusSizeSlot)
+            {
+                UE_LOG(LogTemp, Error, TEXT("PalTRUI pixel match update failed: status cards size slot."));
+                return false;
+            }
+        }
+        else if (StatusCardsSize->GetContent() != StatusCards || StatusCardsSize->GetParent() != MainColumn)
+        {
+            UE_LOG(LogTemp, Error, TEXT("PalTRUI pixel match update refused: partial status cards size hierarchy."));
+            return false;
+        }
+        StatusCardsSize->SetHeightOverride(288.0f);
+        if (UVerticalBoxSlot* StatusSizeSlot = Cast<UVerticalBoxSlot>(StatusCardsSize->Slot))
+        {
+            StatusSizeSlot->SetPadding(FMargin(0, 0, 0, 16));
+            StatusSizeSlot->SetHorizontalAlignment(HAlign_Fill);
+        }
+        if (USizeBoxSlot* StatusContentSlot = Cast<USizeBoxSlot>(StatusCards->Slot))
+        {
+            StatusContentSlot->SetHorizontalAlignment(HAlign_Fill);
+            StatusContentSlot->SetVerticalAlignment(VAlign_Fill);
+        }
+
         const FAnchors PixelAnchors(0.055f, 0.040f, 0.945f, 0.955f);
         if (InputShield)
         {
@@ -3788,6 +3829,7 @@ namespace PalTRUIAssetBuilder
         HeaderCrestSize->SetHeightOverride(77.0f);
         NavigationSize->SetWidthOverride(304.0f);
         DashboardSize->SetHeightOverride(725.0f);
+        NavigationHeading->SetVisibility(ESlateVisibility::Collapsed);
 
         StyleTransparentFrame(Tree, TEXT("HeaderFrame"), FMargin(12.0f, 0.0f));
         StyleTransparentFrame(Tree, TEXT("ContentFrame"), FMargin(0.0f));
@@ -3919,13 +3961,13 @@ namespace PalTRUIAssetBuilder
 
         const FLinearColor NoOutline = FLinearColor::Transparent;
         StyleRoundedFrame(Tree, TEXT("DashboardClanCardFrame"), PixelTheme::FromSRGB(8, 82, 77, 0.72f),
-            NoOutline, 3.0f, 0.0f, FMargin(12.0f));
+            NoOutline, 3.0f, 0.0f, FMargin(14.0f));
         StyleRoundedFrame(Tree, TEXT("DashboardDiplomacyCardFrame"), PixelTheme::FromSRGB(18, 67, 101, 0.72f),
-            NoOutline, 3.0f, 0.0f, FMargin(12.0f));
+            NoOutline, 3.0f, 0.0f, FMargin(14.0f));
         StyleRoundedFrame(Tree, TEXT("DashboardProtectionCardFrame"), PixelTheme::FromSRGB(115, 81, 25, 0.68f),
-            NoOutline, 3.0f, 0.0f, FMargin(12.0f));
+            NoOutline, 3.0f, 0.0f, FMargin(14.0f));
         StyleRoundedFrame(Tree, TEXT("DashboardBuildingsCardFrame"), PixelTheme::FromSRGB(92, 48, 21, 0.68f),
-            NoOutline, 3.0f, 0.0f, FMargin(12.0f));
+            NoOutline, 3.0f, 0.0f, FMargin(14.0f));
         StyleTransparentFrame(Tree, TEXT("DashboardRecentEventsFrame"), FMargin(16.0f));
         StyleTransparentFrame(Tree, TEXT("DashboardQuickActionsFrame"), FMargin(14.0f));
         StyleTransparentFrame(Tree, TEXT("DashboardRelationsFrame"), FMargin(14.0f));
@@ -3967,11 +4009,30 @@ namespace PalTRUIAssetBuilder
         }
         if (UTextBlock* RelationsHeading = Cast<UTextBlock>(Tree->FindWidget(TEXT("DashboardSidebarTitleText"))))
         {
-            RelationsHeading->SetRenderTranslation(FVector2D(0.0f, 10.0f));
+            RelationsHeading->SetText(FText::FromString(TEXT("İlişkiler")));
+            RelationsHeading->SetRenderTranslation(FVector2D(0.0f, 16.0f));
         }
         if (UTextBlock* PendingHeading = Cast<UTextBlock>(Tree->FindWidget(TEXT("PendingOffersHeadingText"))))
         {
-            PendingHeading->SetRenderTranslation(FVector2D(0.0f, 10.0f));
+            PendingHeading->SetText(FText::FromString(TEXT("Bekleyen Teklifler")));
+            PendingHeading->SetRenderTranslation(FVector2D(0.0f, 28.0f));
+        }
+        ClanHeading->SetText(FText::FromString(TEXT("Klan Durumu")));
+        if (UTextBlock* RecentHeading = Cast<UTextBlock>(Tree->FindWidget(TEXT("DashboardRecentEventsHeadingText"))))
+        {
+            RecentHeading->SetText(FText::FromString(TEXT("Son Olaylar")));
+        }
+        if (UTextBlock* QuickHeading = Cast<UTextBlock>(Tree->FindWidget(TEXT("DashboardQuickActionsHeadingText"))))
+        {
+            QuickHeading->SetText(FText::FromString(TEXT("Hızlı İşlemler")));
+        }
+        if (UTextBlock* ProtectionTitle = Cast<UTextBlock>(Tree->FindWidget(TEXT("DashboardProtectionCardTitleText"))))
+        {
+            ProtectionTitle->SetText(FText::FromString(TEXT("Koruma")));
+        }
+        if (UTextBlock* BuildingsTitle = Cast<UTextBlock>(Tree->FindWidget(TEXT("DashboardBuildingsCardTitleText"))))
+        {
+            BuildingsTitle->SetText(FText::FromString(TEXT("Yapılar")));
         }
 
         struct FNavigationVisual
@@ -4101,8 +4162,8 @@ namespace PalTRUIAssetBuilder
         {
             if (USizeBox* IconSize = Cast<USizeBox>(Tree->FindWidget(CardIconSizeName)))
             {
-                IconSize->SetWidthOverride(88.0f);
-                IconSize->SetHeightOverride(88.0f);
+                IconSize->SetWidthOverride(112.0f);
+                IconSize->SetHeightOverride(112.0f);
             }
         }
         for (int32 Index = 1; Index <= 3; ++Index)
@@ -4391,6 +4452,7 @@ namespace PalTRUIAssetBuilder
             TEXT("DashboardPendingAcceptButtonText"),
             TEXT("DashboardPendingRejectButton"),
             TEXT("DashboardPendingRejectButtonText"),
+            TEXT("DashboardStatusCardsSize"),
             TEXT("DashboardStatusCardsFrame"),
             TEXT("DashboardClanCardFrame"),
             TEXT("DashboardClanCardContent"),
@@ -4557,6 +4619,8 @@ namespace PalTRUIAssetBuilder
         }
 
         USizeBox* DashboardColumnsSize = Cast<USizeBox>(Panel->WidgetTree->FindWidget(TEXT("DashboardColumnsSize")));
+        USizeBox* DashboardStatusCardsSize = Cast<USizeBox>(Panel->WidgetTree->FindWidget(TEXT("DashboardStatusCardsSize")));
+        UHorizontalBox* DashboardStatusCards = Cast<UHorizontalBox>(Panel->WidgetTree->FindWidget(TEXT("DashboardStatusCardsFrame")));
         UHorizontalBox* DashboardColumns = Cast<UHorizontalBox>(Panel->WidgetTree->FindWidget(TEXT("DashboardColumns")));
         UHorizontalBox* DashboardLowerRow = Cast<UHorizontalBox>(Panel->WidgetTree->FindWidget(TEXT("DashboardLowerRow")));
         UBorder* DashboardRelations = Cast<UBorder>(Panel->WidgetTree->FindWidget(TEXT("DashboardRelationsFrame")));
@@ -4573,6 +4637,9 @@ namespace PalTRUIAssetBuilder
         if (!DashboardColumnsSize
             || DashboardColumnsSize->GetContent() != DashboardColumns
             || !FMath::IsNearlyEqual(DashboardColumnsSize->GetHeightOverride(), 725.0f)
+            || !DashboardStatusCardsSize
+            || DashboardStatusCardsSize->GetContent() != DashboardStatusCards
+            || !FMath::IsNearlyEqual(DashboardStatusCardsSize->GetHeightOverride(), 288.0f)
             || !DashboardLowerSlot
             || DashboardLowerSlot->GetSize().SizeRule != ESlateSizeRule::Fill
             || !DashboardRelationsSlot
