@@ -25,7 +25,8 @@ local function make_paths(prefix)
         conquest_loot = prefix .. "_loot.tsv",
         conquest_loot_items = prefix .. "_loot_items.tsv",
         conquest_events = prefix .. "_events.tsv",
-        conquest_damage_policy = prefix .. "_damage_policy.tsv"
+        conquest_damage_policy = prefix .. "_damage_policy.tsv",
+        conquest_runtime_events = prefix .. "_runtime_events.tsv"
     }
 end
 
@@ -242,14 +243,19 @@ equal(
     "D target damage allowed"
 )
 
-local fallen = service:flag_fallen(
-    campaign.campaign_id,
-    "B_OUTPOST_1",
-    "GUILD_A",
-    22
+local runtime_file = assert(io.open(paths.conquest_runtime_events, "w"))
+runtime_file:write(
+    "timestamp\tmarker\tflag_reference\n" ..
+    "22\tFLAG_DISPOSED\tB_FLAG_1\n"
 )
-equal(fallen.ok, true, "G outpost occupied")
+runtime_file:close()
+local runtime_result = service:process_runtime_events(22)
+equal(runtime_result.ok, true, "G runtime dispose event processed")
+equal(runtime_result.value, 1, "G one outpost occupied")
 equal(service.nodes.B_OUTPOST_1.state, States.NODE.OCCUPIED, "G node occupied")
+local replay_result = service:process_runtime_events(23)
+equal(replay_result.ok, true, "G cleared queue reloads")
+equal(replay_result.value, 0, "G dispose event is not replayed")
 
 local first_manifest = service.loot_manifests[
     service.occupations.B_OUTPOST_1.loot_manifest_id

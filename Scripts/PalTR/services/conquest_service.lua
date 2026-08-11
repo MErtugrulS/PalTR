@@ -648,6 +648,62 @@ function Conquest:write_damage_policy(now)
     return FileIO.overwrite(self.paths.conquest_damage_policy, lines)
 end
 
+function Conquest:process_runtime_events(now)
+    local path = self.paths.conquest_runtime_events
+    local loaded = FileIO.read_lines(path)
+    if not loaded.ok then return loaded end
+
+    local processed = 0
+
+    for index, line in ipairs(loaded.value or {}) do
+        if index > 1 and line ~= "" then
+            local columns = TSV.decode(line)
+            local event_at = number(columns[1])
+            local marker = text(columns[2])
+            local reference = text(columns[3])
+
+            if marker == "FLAG_DISPOSED" and reference ~= "" then
+                local node = self:node_for_flag_reference(reference)
+
+                if node then
+                    for _, campaign in pairs(self.campaigns) do
+                        if campaign.active_target_node_id == node.node_id then
+                            local event_time = event_at > 0 and event_at or now
+                            local attacker = campaign.attacker_guild
+                            local decision = self:can_damage_flag(
+                                campaign.campaign_id,
+                                node.node_id,
+                                attacker,
+                                event_time
+                            )
+
+                            if decision.allow then
+                                local fallen = self:flag_fallen(
+                                    campaign.campaign_id,
+                                    node.node_id,
+                                    attacker,
+                                    event_time
+                                )
+                                if not fallen.ok then return fallen end
+                                processed = processed + 1
+                                break
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end
+
+    local cleared = FileIO.overwrite(
+        path,
+        { "timestamp\tmarker\tflag_reference" }
+    )
+    if not cleared.ok then return cleared end
+
+    return Result.ok(processed)
+end
+
 function Conquest:can_damage_conquest_zone(
     campaign_id,
     attacker,

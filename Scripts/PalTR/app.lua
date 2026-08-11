@@ -135,6 +135,9 @@ function App:_headers()
         [self.paths.conquest_damage_policy] =
             "flag_reference\tnode_id\towner_guild\tallowed_attacker_guild",
 
+        [self.paths.conquest_runtime_events] =
+            "timestamp\tmarker\tflag_reference",
+
         [self.paths.relations] =
             "pair_key\tguild_a\tguild_b\tstate\tprevious_state\trequested_by\taccepted_by\tcreated_at\tupdated_at\tactive_at\texpires_at\tnote",
 
@@ -349,6 +352,15 @@ function App:_tick()
     end
 
     self.protection:refresh(now)
+
+    local runtime_events = self.conquest:process_runtime_events(now)
+
+    if not runtime_events.ok then
+        self.logger:error(
+            "FAZ05_RUNTIME_EVENT_FAILED | " ..
+            tostring(runtime_events.error)
+        )
+    end
 
     local conquest_result = self.conquest:tick(now)
 

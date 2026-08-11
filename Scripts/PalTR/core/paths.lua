@@ -21,6 +21,7 @@ function Paths.new(root)
         conquest_loot_items = join(root, "conquest_loot_items.tsv"),
         conquest_events = join(root, "conquest_events.tsv"),
         conquest_damage_policy = join(root, "conquest_damage_policy.tsv"),
+        conquest_runtime_events = join(root, "conquest_runtime_events.tsv"),
         relations = join(root, "diplomacy_relations.tsv"),
         events = join(root, "diplomacy_events.tsv"),
         responses = join(root, "command_responses.tsv"),
