@@ -1,0 +1,379 @@
+<Window x:Class="PalTRLauncher.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="PalTR Launcher"
+        Width="1480" Height="900"
+        MinWidth="1180" MinHeight="720"
+        WindowStartupLocation="CenterScreen"
+        WindowStyle="None"
+        ResizeMode="CanResizeWithGrip"
+        Background="#02070B">
+    <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
+
+        <DataTemplate x:Key="NewsCardTemplate">
+            <Border Style="{StaticResource SoftPanel}" Margin="0,0,0,10" Padding="15,13">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="6" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <Border Background="{StaticResource GoldBrush}" CornerRadius="3" Margin="0,2,0,2" />
+                    <StackPanel Grid.Column="1" Margin="13,0,12,0">
+                        <TextBlock Text="{Binding Category}" Style="{StaticResource Eyebrow}" />
+                        <TextBlock Text="{Binding Title}" FontSize="15" FontWeight="SemiBold" Margin="0,3,0,0" />
+                        <TextBlock Text="{Binding Summary}" Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,4,0,0" />
+                    </StackPanel>
+                    <TextBlock Grid.Column="2" Text="{Binding PublishedAt}" Style="{StaticResource Caption}" />
+                </Grid>
+            </Border>
+        </DataTemplate>
+
+        <DataTemplate x:Key="NotificationTemplate">
+            <Border Style="{StaticResource SoftPanel}" Margin="0,0,0,10">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="40" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <Border Width="30" Height="30" CornerRadius="15" Background="#C36F5832">
+                        <TextBlock Text="!" FontFamily="Georgia" FontWeight="Bold" Foreground="#FFF1D59C"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
+                    <StackPanel Grid.Column="1">
+                        <TextBlock Text="{Binding Title}" FontWeight="SemiBold" />
+                        <TextBlock Text="{Binding Detail}" Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,3,0,0" />
+                    </StackPanel>
+                    <TextBlock Grid.Column="2" Text="{Binding Time}" Style="{StaticResource Caption}" Margin="12,0,0,0" />
+                </Grid>
+            </Border>
+        </DataTemplate>
+    </Window.Resources>
+
+    <Border Margin="22" Background="{StaticResource WindowSurfaceBrush}" BorderBrush="#E0C9A25A"
+            BorderThickness="1" CornerRadius="18" Effect="{StaticResource DeepShadow}">
+        <Grid ClipToBounds="True">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="92" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="38" />
+            </Grid.RowDefinitions>
+
+            <!-- Eskitilmiş düşük opaklıklı yüzey dokusu -->
+            <Rectangle Grid.RowSpan="3" Fill="{StaticResource OrnamentBrush}" IsHitTestVisible="False" />
+            <Ellipse Grid.RowSpan="3" Width="730" Height="730" HorizontalAlignment="Right" VerticalAlignment="Top"
+                     Margin="0,-390,-260,0" IsHitTestVisible="False">
+                <Ellipse.Fill>
+                    <RadialGradientBrush>
+                        <GradientStop Color="#3F2CCDD8" Offset="0" />
+                        <GradientStop Color="#00114756" Offset="1" />
+                    </RadialGradientBrush>
+                </Ellipse.Fill>
+            </Ellipse>
+
+            <!-- Üst çerçeve -->
+            <Border Grid.Row="0" Background="{StaticResource HeaderSurfaceBrush}" BorderBrush="#B2C9A25A"
+                    BorderThickness="0,0,0,1" CornerRadius="17,17,0,0" MouseLeftButtonDown="TitleBar_OnMouseLeftButtonDown">
+                <Grid Margin="24,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <Grid Width="58" Height="62">
+                            <Path Fill="#D6B88648" Stroke="#F2E0C17D" StrokeThickness="1.5"
+                                  Data="M29,2 L52,11 L49,39 Q43,54 29,60 Q15,54 9,39 L6,11 Z" />
+                            <Path Fill="#F40D3440" Data="M29,8 L45,14 L43,37 Q39,48 29,53 Q19,48 15,37 L13,14 Z" />
+                            <TextBlock Text="P" FontFamily="Georgia" FontSize="27" FontWeight="Bold" Foreground="#FFF3E5C1"
+                                       HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,-2,0,0" />
+                        </Grid>
+                        <StackPanel Margin="15,0,0,0" VerticalAlignment="Center">
+                            <TextBlock Text="PALTR LAUNCHER" Style="{StaticResource DisplayTitle}" FontSize="29" />
+                            <StackPanel Orientation="Horizontal" Margin="1,4,0,0">
+                                <Rectangle Width="48" Height="1" Fill="{StaticResource GoldBrush}" VerticalAlignment="Center" />
+                                <TextBlock Text=" TOPLULUK MERKEZİ " Style="{StaticResource Eyebrow}" />
+                                <Rectangle Width="48" Height="1" Fill="{StaticResource GoldBrush}" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </StackPanel>
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                        <Border Background="#B30B1B22" BorderBrush="#9A7A673D" BorderThickness="1" CornerRadius="9"
+                                Padding="13,9" Margin="0,0,8,0">
+                            <StackPanel Orientation="Horizontal">
+                                <Ellipse Width="9" Height="9" Fill="{StaticResource SuccessBrush}" Margin="0,0,8,0" />
+                                <TextBlock Text="{Binding Snapshot.ServerStatus}" FontWeight="SemiBold" />
+                            </StackPanel>
+                        </Border>
+                        <Border Background="#B70D3E48" BorderBrush="#7049C3CE" BorderThickness="1" CornerRadius="9"
+                                Padding="13,9" Margin="0,0,8,0">
+                            <TextBlock><Run Text="Aktif Oyuncu  "/><Run Text="{Binding Snapshot.ActivePlayers}" FontWeight="Bold" Foreground="#FF9DEFF2"/><Run Text=" / "/><Run Text="{Binding Snapshot.Capacity}"/></TextBlock>
+                        </Border>
+                        <Button Style="{StaticResource SecondaryButton}" Padding="13,9" Margin="0,0,8,0"
+                                Command="{Binding SelectPageCommand}" CommandParameter="Bildirimler">
+                            <TextBlock><Run Text="Bildirim  "/><Run Text="{Binding Snapshot.NotificationCount}" FontWeight="Bold" Foreground="#FFFFD987"/></TextBlock>
+                        </Button>
+                        <Button Content="—" Style="{StaticResource GhostButton}" Padding="13,9" Margin="0,0,6,0" Click="Minimize_OnClick" />
+                        <Button Content="×" Style="{StaticResource SecondaryButton}" Background="#C16E2D27" BorderBrush="#CE9C6D55"
+                                Padding="14,8" FontSize="17" Click="Close_OnClick" />
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <Grid Grid.Row="1">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="238" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+
+                <!-- Değiştirilebilir navigasyon -->
+                <Border Grid.Column="0" Background="#D8051722" BorderBrush="#6EC9A25A" BorderThickness="0,0,1,0" Padding="17,22">
+                    <Grid>
+                        <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+                        <StackPanel>
+                            <TextBlock Text="MENÜ" Style="{StaticResource Eyebrow}" Margin="12,0,0,13" />
+                            <RadioButton Content="Ana Sayfa" Tag="⌂" Style="{StaticResource NavButton}" GroupName="Navigation"
+                                         IsChecked="{Binding IsHomePage, Mode=OneWay}" Command="{Binding SelectPageCommand}" CommandParameter="Ana Sayfa" />
+                            <RadioButton Content="Haberler" Tag="▤" Style="{StaticResource NavButton}" GroupName="Navigation"
+                                         IsChecked="{Binding IsNewsPage, Mode=OneWay}" Command="{Binding SelectPageCommand}" CommandParameter="Haberler" />
+                            <RadioButton Content="Bildirimler" Tag="!" Style="{StaticResource NavButton}" GroupName="Navigation"
+                                         IsChecked="{Binding IsNotificationsPage, Mode=OneWay}" Command="{Binding SelectPageCommand}" CommandParameter="Bildirimler" />
+                            <RadioButton Content="Destek Merkezi" Tag="?" Style="{StaticResource NavButton}" GroupName="Navigation"
+                                         IsChecked="{Binding IsSupportPage, Mode=OneWay}" Command="{Binding SelectPageCommand}" CommandParameter="Destek" />
+                            <RadioButton Content="Hesabım" Tag="♙" Style="{StaticResource NavButton}" GroupName="Navigation"
+                                         IsChecked="{Binding IsAccountPage, Mode=OneWay}" Command="{Binding SelectPageCommand}" CommandParameter="Hesabım" />
+                        </StackPanel>
+                        <StackPanel Grid.Row="2">
+                            <Border Height="1" Background="#5E7C663A" Margin="7,0,7,14" />
+                            <Border Style="{StaticResource SoftPanel}" Padding="13">
+                                <StackPanel>
+                                    <TextBlock Text="OTURUM" Style="{StaticResource Eyebrow}" />
+                                    <TextBlock Text="{Binding Snapshot.AccountName}" FontSize="17" FontWeight="SemiBold" Margin="0,7,0,1" />
+                                    <TextBlock Text="{Binding Snapshot.Membership}" Foreground="{StaticResource GoldLightBrush}" FontSize="12" />
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+
+                <!-- Sayfalar -->
+                <Grid Grid.Column="1" Margin="22,20,22,18">
+                    <!-- Modern launcher ana sayfası -->
+                    <Grid Visibility="{Binding IsHomePage, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <Grid.RowDefinitions><RowDefinition Height="305"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="1.62*"/><ColumnDefinition Width="0.92*"/></Grid.ColumnDefinitions>
+
+                        <Border Grid.Row="0" Grid.Column="0" Background="{StaticResource HeroSurfaceBrush}" BorderBrush="#9BC9A25A"
+                                BorderThickness="1" CornerRadius="16" Margin="0,0,16,16" Effect="{StaticResource CardShadow}" ClipToBounds="True">
+                            <Grid>
+                                <Rectangle Fill="{StaticResource OrnamentBrush}" Opacity="0.5" />
+                                <Ellipse Width="390" Height="390" HorizontalAlignment="Right" Margin="0,-90,-80,0">
+                                    <Ellipse.Fill><RadialGradientBrush><GradientStop Color="#7E23B8C5" Offset="0"/><GradientStop Color="#00123C4D" Offset="1"/></RadialGradientBrush></Ellipse.Fill>
+                                </Ellipse>
+                                <Path HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,42,0" Width="218" Height="218"
+                                      Stretch="Fill" Fill="#1BCBEAF0" Stroke="#98D9B968" StrokeThickness="2"
+                                      Data="M109,4 L136,66 L204,40 L152,91 L214,109 L152,127 L204,178 L136,152 L109,214 L82,152 L14,178 L66,127 L4,109 L66,91 L14,40 L82,66 Z" />
+                                <StackPanel Margin="30" Width="510" HorizontalAlignment="Left" VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding CurrentSlide.Category}" Style="{StaticResource Eyebrow}" Foreground="{StaticResource CyanBrush}" />
+                                    <TextBlock Text="{Binding CurrentSlide.Title}" Style="{StaticResource DisplayTitle}" FontSize="34" TextWrapping="Wrap" Margin="0,11,0,9" />
+                                    <TextBlock Text="{Binding CurrentSlide.Summary}"
+                                               Style="{StaticResource Caption}" FontSize="14" LineHeight="21" TextWrapping="Wrap" Width="470" HorizontalAlignment="Left" />
+                                    <StackPanel Orientation="Horizontal" Margin="0,22,0,0">
+                                        <Button Content="{Binding CurrentSlide.LinkLabel}" Style="{StaticResource PrimaryButton}" Width="190" Command="{Binding OpenSlideLinkCommand}" />
+                                        <Button Content="DURUMU YENİLE" Style="{StaticResource SecondaryButton}" Width="145" Margin="10,0,0,0" Command="{Binding RefreshCommand}" />
+                                    </StackPanel>
+                                </StackPanel>
+                                <Border HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,24,22" Background="#B508171E"
+                                        BorderBrush="#657B673D" BorderThickness="1" CornerRadius="10" Padding="13,8">
+                                    <StackPanel Orientation="Horizontal">
+                                        <Ellipse Width="8" Height="8" Fill="{StaticResource SuccessBrush}" Margin="0,0,8,0" />
+                                        <TextBlock Text="{Binding Snapshot.ServerName}" FontWeight="SemiBold" />
+                                    </StackPanel>
+                                </Border>
+                                <StackPanel HorizontalAlignment="Right" VerticalAlignment="Top" Orientation="Horizontal" Margin="0,22,24,0">
+                                    <Button Content="‹" Style="{StaticResource GhostButton}" Width="38" Height="38" Padding="0"
+                                            FontSize="22" Command="{Binding PreviousSlideCommand}" />
+                                    <Border Background="#A307171F" BorderBrush="#5F8C7544" BorderThickness="1" CornerRadius="8"
+                                            Padding="12,8" Margin="6,0">
+                                        <TextBlock VerticalAlignment="Center">
+                                            <Run Text="{Binding CurrentSlideNumber, Mode=OneWay}" FontWeight="Bold" Foreground="{StaticResource GoldLightBrush}" />
+                                            <Run Text=" / " /><Run Text="{Binding SlideCount, Mode=OneWay}" />
+                                        </TextBlock>
+                                    </Border>
+                                    <Button Content="›" Style="{StaticResource GhostButton}" Width="38" Height="38" Padding="0"
+                                            FontSize="22" Command="{Binding NextSlideCommand}" />
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+
+                        <Border Grid.Row="0" Grid.Column="1" Style="{StaticResource OrnatePanel}" Margin="0,0,0,16">
+                            <Grid>
+                                <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+                                <StackPanel Orientation="Horizontal">
+                                    <Border Width="40" Height="40" CornerRadius="12" Background="#A7115962">
+                                        <TextBlock Text="●" Foreground="{StaticResource SuccessBrush}" FontSize="17" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                    </Border>
+                                    <StackPanel Margin="12,0,0,0">
+                                        <TextBlock Text="SUNUCU DURUMU" Style="{StaticResource Eyebrow}" />
+                                        <TextBlock Text="{Binding Snapshot.ServerStatus}" FontSize="18" FontWeight="SemiBold" Margin="0,3,0,0" />
+                                    </StackPanel>
+                                </StackPanel>
+                                <Grid Grid.Row="1" Margin="0,18,0,16">
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                    <Border Style="{StaticResource SoftPanel}" Margin="0,0,6,0">
+                                        <StackPanel VerticalAlignment="Center">
+                                            <TextBlock Text="AKTİF OYUNCU" Style="{StaticResource Eyebrow}" HorizontalAlignment="Center" />
+                                            <TextBlock Text="{Binding Snapshot.ActivePlayers}" Style="{StaticResource DisplayTitle}" FontSize="44" Foreground="#FF8BE5D6" HorizontalAlignment="Center" />
+                                        </StackPanel>
+                                    </Border>
+                                    <Border Grid.Column="1" Style="{StaticResource SoftPanel}" Margin="6,0,0,0">
+                                        <StackPanel VerticalAlignment="Center">
+                                            <TextBlock Text="KAPASİTE" Style="{StaticResource Eyebrow}" HorizontalAlignment="Center" />
+                                            <TextBlock Text="{Binding Snapshot.Capacity}" Style="{StaticResource DisplayTitle}" FontSize="44" HorizontalAlignment="Center" />
+                                        </StackPanel>
+                                    </Border>
+                                </Grid>
+                                <Grid Grid.Row="2">
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                    <StackPanel>
+                                        <TextBlock Text="BAĞLANTI" Style="{StaticResource Eyebrow}" />
+                                        <TextBlock Text="{Binding Snapshot.ServerAddress}" Style="{StaticResource Caption}" Margin="0,4,0,0" />
+                                    </StackPanel>
+                                    <TextBlock Grid.Column="1" Text="CANLI" Foreground="{StaticResource SuccessBrush}" FontWeight="Bold" VerticalAlignment="Bottom" />
+                                </Grid>
+                            </Grid>
+                        </Border>
+
+                        <Border Grid.Row="1" Grid.Column="0" Style="{StaticResource OrnatePanel}" Margin="0,0,16,0">
+                            <Grid>
+                                <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+                                <Grid>
+                                    <StackPanel>
+                                        <TextBlock Text="Son Haberler" Style="{StaticResource SectionTitle}" />
+                                        <TextBlock Text="PalTR dünyasından güncellemeler" Style="{StaticResource Caption}" Margin="0,4,0,14" />
+                                    </StackPanel>
+                                    <Button Content="TÜMÜNÜ GÖR" Style="{StaticResource GhostButton}" HorizontalAlignment="Right" VerticalAlignment="Top"
+                                            Padding="12,7" FontSize="11" Command="{Binding SelectPageCommand}" CommandParameter="Haberler" />
+                                </Grid>
+                                <ItemsControl Grid.Row="1" ItemsSource="{Binding News}" ItemTemplate="{StaticResource NewsCardTemplate}" />
+                            </Grid>
+                        </Border>
+
+                        <Grid Grid.Row="1" Grid.Column="1">
+                            <Grid.RowDefinitions><RowDefinition Height="1.08*"/><RowDefinition Height="0.92*"/></Grid.RowDefinitions>
+                            <Border Style="{StaticResource OrnatePanel}" Margin="0,0,0,8">
+                                <Grid>
+                                    <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+                                    <TextBlock Text="Hızlı İşlemler" Style="{StaticResource SectionTitle}" />
+                                    <StackPanel Grid.Row="1" Margin="0,13,0,0">
+                                        <Button Content="GÜNCELLEMELERİ KONTROL ET" Style="{StaticResource PrimaryButton}" Command="{Binding CheckUpdatesCommand}" />
+                                        <Button Content="DESTEK TALEBİ OLUŞTUR" Style="{StaticResource SecondaryButton}" Margin="0,9,0,0"
+                                                Command="{Binding SelectPageCommand}" CommandParameter="Destek" />
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+                            <Border Grid.Row="1" Style="{StaticResource OrnatePanel}" Margin="0,8,0,0">
+                                <Grid>
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                    <StackPanel>
+                                        <TextBlock Text="HESAP" Style="{StaticResource Eyebrow}" />
+                                        <TextBlock Text="{Binding Snapshot.AccountName}" Style="{StaticResource DisplayTitle}" FontSize="22" Margin="0,7,0,2" />
+                                        <TextBlock Text="{Binding Snapshot.Membership}" Foreground="{StaticResource GoldLightBrush}" />
+                                    </StackPanel>
+                                    <Border Grid.Column="1" Width="58" Height="58" CornerRadius="29" Background="#A00F5360" BorderBrush="#C2C9A25A" BorderThickness="1">
+                                        <TextBlock Text="P" Style="{StaticResource DisplayTitle}" FontSize="27" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                    </Border>
+                                </Grid>
+                            </Border>
+                        </Grid>
+                    </Grid>
+
+                    <!-- Haberler -->
+                    <ScrollViewer Visibility="{Binding IsNewsPage, Converter={StaticResource BooleanToVisibilityConverter}}" VerticalScrollBarVisibility="Auto">
+                        <StackPanel MaxWidth="940" HorizontalAlignment="Left">
+                            <TextBlock Text="Haberler ve Güncellemeler" Style="{StaticResource DisplayTitle}" FontSize="31" />
+                            <TextBlock Text="Sunucu duyuruları, bakım notları ve launcher sürümleri." Style="{StaticResource Caption}" Margin="0,6,0,22" />
+                            <ItemsControl ItemsSource="{Binding News}" ItemTemplate="{StaticResource NewsCardTemplate}" />
+                        </StackPanel>
+                    </ScrollViewer>
+
+                    <!-- Bildirimler -->
+                    <StackPanel Visibility="{Binding IsNotificationsPage, Converter={StaticResource BooleanToVisibilityConverter}}" MaxWidth="940" HorizontalAlignment="Left">
+                        <TextBlock Text="Bildirim Merkezi" Style="{StaticResource DisplayTitle}" FontSize="31" />
+                        <TextBlock Text="Hesap, sunucu ve güncelleme bildirimlerin burada toplanır." Style="{StaticResource Caption}" Margin="0,6,0,22" />
+                        <Border Style="{StaticResource OrnatePanel}"><ItemsControl ItemsSource="{Binding Notifications}" ItemTemplate="{StaticResource NotificationTemplate}" /></Border>
+                    </StackPanel>
+
+                    <!-- Destek -->
+                    <Grid Visibility="{Binding IsSupportPage, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="420"/></Grid.ColumnDefinitions>
+                        <Border Style="{StaticResource OrnatePanel}" Margin="0,0,16,0">
+                            <StackPanel>
+                                <TextBlock Text="Destek Merkezi" Style="{StaticResource DisplayTitle}" FontSize="31" />
+                                <TextBlock Text="Teknik sorunlar ve hesap talepleri için kayıt oluştur." Style="{StaticResource Caption}" Margin="0,6,0,22" />
+                                <TextBlock Text="KONU" Style="{StaticResource Eyebrow}" Margin="0,0,0,7" />
+                                <TextBox Text="{Binding SupportSubject, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource TextInput}" />
+                                <TextBlock Text="AÇIKLAMA" Style="{StaticResource Eyebrow}" Margin="0,18,0,7" />
+                                <TextBox Text="{Binding SupportMessage, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource TextInput}" MinHeight="210"
+                                         AcceptsReturn="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" />
+                                <Button Content="TALEBİ HAZIRLA" Style="{StaticResource PrimaryButton}" Width="190" HorizontalAlignment="Left" Margin="0,18,0,0"
+                                        Command="{Binding SubmitTicketCommand}" />
+                            </StackPanel>
+                        </Border>
+                        <Border Grid.Column="1" Style="{StaticResource OrnatePanel}">
+                            <StackPanel>
+                                <TextBlock Text="Taleplerim" Style="{StaticResource SectionTitle}" Margin="0,0,0,14" />
+                                <ItemsControl ItemsSource="{Binding Tickets}">
+                                    <ItemsControl.ItemTemplate><DataTemplate>
+                                        <Border Style="{StaticResource SoftPanel}" Margin="0,0,0,9">
+                                            <StackPanel>
+                                                <Grid><TextBlock Text="{Binding Number}" Foreground="{StaticResource GoldLightBrush}" FontWeight="Bold"/><TextBlock Text="{Binding State}" HorizontalAlignment="Right" Foreground="{StaticResource SuccessBrush}"/></Grid>
+                                                <TextBlock Text="{Binding Subject}" FontWeight="SemiBold" Margin="0,7,0,3"/><TextBlock Text="{Binding UpdatedAt}" Style="{StaticResource Caption}"/>
+                                            </StackPanel>
+                                        </Border>
+                                    </DataTemplate></ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+
+                    <!-- Hesap -->
+                    <Grid Visibility="{Binding IsAccountPage, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="440"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                        <Border Style="{StaticResource OrnatePanel}" Margin="0,0,16,0">
+                            <StackPanel>
+                                <TextBlock Text="Hesabım" Style="{StaticResource DisplayTitle}" FontSize="31" />
+                                <Border Width="92" Height="92" CornerRadius="46" Background="#A50E5963" BorderBrush="{StaticResource GoldBrush}" BorderThickness="2" HorizontalAlignment="Left" Margin="0,24,0,16">
+                                    <TextBlock Text="P" Style="{StaticResource DisplayTitle}" FontSize="42" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                </Border>
+                                <TextBlock Text="{Binding Snapshot.AccountName}" Style="{StaticResource DisplayTitle}" FontSize="27" />
+                                <TextBlock Text="{Binding Snapshot.Membership}" Foreground="{StaticResource GoldLightBrush}" Margin="0,4,0,18" />
+                                <TextBlock Text="Kimlik doğrulama ve güvenlik seçenekleri gerçek API bağlantısından sonra gösterilecek." Style="{StaticResource Caption}" TextWrapping="Wrap" />
+                            </StackPanel>
+                        </Border>
+                        <Border Grid.Column="1" Style="{StaticResource OrnatePanel}">
+                            <StackPanel>
+                                <TextBlock Text="Hesap Yönetimi" Style="{StaticResource SectionTitle}" />
+                                <Button Content="ŞİFRE VE GÜVENLİK" Style="{StaticResource SecondaryButton}" Margin="0,20,0,9" IsEnabled="False" />
+                                <Button Content="BAĞLI OYUN HESAPLARI" Style="{StaticResource SecondaryButton}" Margin="0,0,0,9" IsEnabled="False" />
+                                <Button Content="OTURUM GEÇMİŞİ" Style="{StaticResource SecondaryButton}" IsEnabled="False" />
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+                </Grid>
+            </Grid>
+
+            <Border Grid.Row="2" Background="#EE071621" BorderBrush="#6BC9A25A" BorderThickness="0,1,0,0" CornerRadius="0,0,17,17">
+                <Grid Margin="18,0">
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <Ellipse Width="7" Height="7" Fill="{StaticResource SuccessBrush}" Margin="0,0,8,0" />
+                        <TextBlock Text="{Binding StatusMessage}" Style="{StaticResource Caption}" />
+                    </StackPanel>
+                    <TextBlock Text="PalTR Launcher  •  UI Demo" Style="{StaticResource Caption}" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                </Grid>
+            </Border>
+        </Grid>
+    </Border>
+</Window>
