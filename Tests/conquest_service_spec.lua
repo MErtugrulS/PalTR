@@ -569,6 +569,22 @@ equal(
         "GUILD_B",
         "LEADER",
         {
+            flag_reference = "IMPOSSIBLE_COUNTER_FLAG",
+            guild_key = "GUILD_B",
+            x = 0, y = 0, z = 0
+        },
+        27
+    ).error.code,
+    "COUNTER_HOLD_EXCEEDS_OCCUPATION",
+    "J counter hold must finish strictly before occupation"
+)
+service.config.counter_attack_hold_seconds = 8
+equal(
+    service:start_counter_attack(
+        "B_OUTPOST_1",
+        "GUILD_B",
+        "LEADER",
+        {
             flag_reference = "B_COUNTER_FLAG_PAUSED",
             guild_key = "GUILD_B",
             x = 0, y = 0, z = 0
@@ -584,7 +600,7 @@ relation.previous_state = DiplomacyStates.WAR
 equal(service:tick(31).ok, true, "J ceasefire tick")
 equal(campaign.state, States.CAMPAIGN.CEASEFIRE_PAUSED, "J campaign paused")
 equal(service.occupations.B_OUTPOST_1.remaining_seconds, 5, "J timer frozen")
-equal(service.occupations.B_OUTPOST_1.counter_remaining_seconds, 6, "J counter timer frozen")
+equal(service.occupations.B_OUTPOST_1.counter_remaining_seconds, 4, "J counter timer frozen")
 
 local second_manifest = service.loot_manifests[
     service.occupations.B_OUTPOST_1.loot_manifest_id
@@ -603,6 +619,17 @@ equal(service:tick(129).ok, true, "K rearm still active")
 equal(campaign.state, States.CAMPAIGN.REARMING, "K rearm blocks early")
 equal(service:tick(130).ok, true, "K rearm completes")
 equal(campaign.state, States.CAMPAIGN.ACTIVE, "K campaign resumes")
+local resumed_counter_event = assert(io.open(paths.conquest_runtime_events, "w"))
+resumed_counter_event:write(
+    "timestamp\tmarker\tflag_reference\n" ..
+    "131\tFLAG_DISPOSED\tB_COUNTER_FLAG_PAUSED\n"
+)
+resumed_counter_event:close()
+equal(
+    service:process_runtime_events(131).value,
+    1,
+    "K resumed counter flag destruction handled"
+)
 equal(service:tick(135).ok, true, "I occupation finalizes")
 equal(service.nodes.B_OUTPOST_1.state, States.NODE.CONQUERED, "I node conquered")
 equal(service.occupations.B_OUTPOST_1.counter_flag_reference, "", "I expired occupation clears counter flag")

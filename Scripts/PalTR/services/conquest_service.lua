@@ -1629,6 +1629,20 @@ function Conquest:start_counter_attack(node_id, guild_key, actor_role, flag, now
             "Karsi saldiri suresi kalan baskin penceresine sigmiyor"
         )
     end
+    local occupation_elapsed = math.max(
+        0,
+        now - occupation.last_resumed_at
+    )
+    local occupation_remaining = math.max(
+        0,
+        occupation.remaining_seconds - occupation_elapsed
+    )
+    if hold_seconds >= occupation_remaining then
+        return Result.err(
+            "COUNTER_HOLD_EXCEEDS_OCCUPATION",
+            "Karsi saldiri isgal bitmeden tamamlanamaz"
+        )
+    end
 
     occupation.state = States.OCCUPATION.COUNTER_ATTACK
     occupation.frontline_state = "COUNTER_ATTACK"
