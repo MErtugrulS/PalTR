@@ -182,14 +182,13 @@
                                                Style="{StaticResource Caption}" FontSize="14" LineHeight="21" TextWrapping="Wrap" Width="470" HorizontalAlignment="Left" />
                                     <StackPanel Orientation="Horizontal" Margin="0,22,0,0">
                                         <Button Content="{Binding CurrentSlide.LinkLabel}" Style="{StaticResource PrimaryButton}" Width="190" Command="{Binding OpenSlideLinkCommand}" />
-                                        <Button Content="DURUMU YENİLE" Style="{StaticResource SecondaryButton}" Width="145" Margin="10,0,0,0" Command="{Binding RefreshCommand}" />
                                     </StackPanel>
                                 </StackPanel>
                                 <Border HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,24,22" Background="#B508171E"
                                         BorderBrush="#657B673D" BorderThickness="1" CornerRadius="10" Padding="13,8">
                                     <StackPanel Orientation="Horizontal">
                                         <Ellipse Width="8" Height="8" Fill="{StaticResource SuccessBrush}" Margin="0,0,8,0" />
-                                        <TextBlock Text="{Binding Snapshot.ServerName}" FontWeight="SemiBold" />
+                                        <TextBlock Text="Öne çıkan paylaşım" FontWeight="SemiBold" />
                                     </StackPanel>
                                 </Border>
                                 <StackPanel HorizontalAlignment="Right" VerticalAlignment="Top" Orientation="Horizontal" Margin="0,22,24,0">
@@ -210,7 +209,12 @@
 
                         <Border Grid.Row="0" Grid.Column="1" Style="{StaticResource OrnatePanel}" Margin="0,0,0,16">
                             <Grid>
-                                <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="*" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
                                 <StackPanel Orientation="Horizontal">
                                     <Border Width="40" Height="40" CornerRadius="12" Background="#A7115962">
                                         <TextBlock Text="●" Foreground="{StaticResource SuccessBrush}" FontSize="17" HorizontalAlignment="Center" VerticalAlignment="Center" />
@@ -242,6 +246,16 @@
                                         <TextBlock Text="{Binding Snapshot.ServerAddress}" Style="{StaticResource Caption}" Margin="0,4,0,0" />
                                     </StackPanel>
                                     <TextBlock Grid.Column="1" Text="CANLI" Foreground="{StaticResource SuccessBrush}" FontWeight="Bold" VerticalAlignment="Bottom" />
+                                </Grid>
+                                <Grid Grid.Row="3" Margin="0,14,0,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <Button Content="SUNUCUYA KATIL" Style="{StaticResource PrimaryButton}"
+                                            Margin="0,0,5,0" Padding="12,9" Command="{Binding JoinServerCommand}" />
+                                    <Button Grid.Column="1" Content="YENİLE" Style="{StaticResource SecondaryButton}"
+                                            Margin="5,0,0,0" Padding="12,9" Command="{Binding RefreshCommand}" />
                                 </Grid>
                             </Grid>
                         </Border>

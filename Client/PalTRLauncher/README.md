@@ -11,7 +11,7 @@ PalTR oyun içi UI'sinden bağımsız Windows launcher istemcisidir.
 - Hesap yönetimi iskeleti
 - Launcher, oyun ve mod sürüm özeti
 - Sonradan yeni sayfalar eklenebilen sol navigasyon
-- Yönetim panelinden beslenecek bağlantılı ana sayfa slider sözleşmesi
+- Yönetim panelinden beslenecek bağlantılı reklam/duyuru slider sözleşmesi
 
 ## Görsel mimari
 
@@ -21,6 +21,8 @@ PalTR oyun içi UI'sinden bağımsız Windows launcher istemcisidir.
   tutulur.
 - Navigasyon satırları birbirinden bağımsızdır; gelecekte Battle Pass veya
   farklı bir modül mevcut sayfalar değiştirilmeden eklenebilir.
+- Slider yalnızca reklam ve duyuru yayını içindir; sunucuya katılma ve yenileme
+  işlemleri ayrı sunucu durumu kartında tutulur.
 - Slider içeriği `LauncherSlide` modeliyle sunumdan ayrıdır. Yönetim paneli
   başlık, açıklama, bağlantı etiketi ve güvenli HTTP(S) hedefini besleyebilir.
 

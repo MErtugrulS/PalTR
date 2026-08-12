@@ -163,22 +163,6 @@ public sealed class LauncherViewModel : ObservableObject
             return;
         }
 
-        if (string.IsNullOrWhiteSpace(slide.TargetUrl))
-        {
-            if (slide.Category == "PALTR ANA SUNUCU")
-            {
-                JoinServerCommand.Execute(null);
-                return;
-            }
-
-            if (slide.Category == "GÜNCELLEME NOTLARI")
-            {
-                SelectedPage = "Haberler";
-                SetStatus(true, "Launcher haberleri açıldı.");
-                return;
-            }
-        }
-
         LauncherActionResult result = externalLinkService.Open(slide.TargetUrl);
         SetStatus(result.Success, result.Message);
     }

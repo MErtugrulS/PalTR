@@ -22,23 +22,23 @@ public sealed class DemoLauncherService : ILauncherService
             Slides = new[]
             {
                 new LauncherSlide(
-                    "PALTR ANA SUNUCU",
-                    "Maceraya kaldığın yerden devam et.",
-                    "Topluluğa bağlan, sunucu durumunu gör ve PalTR güncellemelerini tek merkezden yönet.",
-                    "SUNUCUYA KATIL",
-                    string.Empty),
-                new LauncherSlide(
-                    "TOPLULUK DUYURUSU",
+                    "ÖNE ÇIKAN DUYURU",
                     "PalTR dünyasındaki yenilikleri keşfet.",
-                    "Yönetim panelinden yayınlanacak duyuru, etkinlik ve bağlantılar bu vitrinde oyunculara ulaşacak.",
+                    "Etkinlikler, topluluk duyuruları ve önemli bağlantılar yönetim panelinden bu alanda yayınlanacak.",
                     "DETAYI AÇ",
                     "https://www.palworldgame.com/"),
                 new LauncherSlide(
-                    "GÜNCELLEME NOTLARI",
-                    "Launcher ve mod sürümleri tek merkezde.",
-                    "Yeni sürümler, bakım duyuruları ve kurulum bilgileri yayınlandığı anda burada görüntülenecek.",
-                    "HABERLERİ GÖR",
-                    string.Empty)
+                    "TOPLULUK PAYLAŞIMI",
+                    "Yeni etkinlikler için hazırlıklar başladı.",
+                    "Yönetim ekibinin görsel, başlık, açıklama ve bağlantıyla hazırladığı paylaşımlar burada dönecek.",
+                    "DETAYI AÇ",
+                    "https://www.palworldgame.com/"),
+                new LauncherSlide(
+                    "SUNUCU HABERİ",
+                    "Haftanın gelişmeleri tek vitrinde.",
+                    "Sunucu haberleri ve dış bağlantılı tanıtımlar oyunculara launcher açılışında gösterilecek.",
+                    "PAYLAŞIMI AÇ",
+                    "https://www.palworldgame.com/")
             },
             News = new[]
             {
