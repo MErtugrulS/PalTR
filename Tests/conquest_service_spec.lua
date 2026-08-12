@@ -756,6 +756,16 @@ equal(
     States.LOOT.EXTRACTED,
     "M loot restored"
 )
+relation.state = DiplomacyStates.WAR
+relation.previous_state = DiplomacyStates.NEUTRAL
+diplomacy.resolved_winner = nil
+equal(restored:tick(151).ok, true, "M terminal campaign reconciles diplomacy")
+equal(
+    diplomacy.resolved_winner,
+    "GUILD_A",
+    "M restart closes a war left active after capital defeat"
+)
+equal(relation.state, DiplomacyStates.NEUTRAL, "M recovered war returns neutral")
 
 cleanup(paths)
 

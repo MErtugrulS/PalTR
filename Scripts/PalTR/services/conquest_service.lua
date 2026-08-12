@@ -1814,8 +1814,26 @@ function Conquest:tick(now)
     local changed = false
 
     for _, campaign in pairs(self.campaigns) do
-        if campaign.state ~= States.CAMPAIGN.PEACE_RESOLVED
-            and campaign.state ~= States.CAMPAIGN.CAPITAL_DEFEATED then
+        if campaign.state == States.CAMPAIGN.CAPITAL_DEFEATED then
+            local relation = self:_relation(
+                campaign.attacker_guild,
+                campaign.defender_guild
+            )
+            if Rules.is_effective_war(relation)
+                and self.diplomacy
+                and self.diplomacy.resolve_capital_defeat then
+                local relation_state = relation.state
+                local resolved = self.diplomacy:resolve_capital_defeat(
+                    campaign.attacker_guild,
+                    campaign.defender_guild,
+                    "PalTR Conquest Recovery"
+                )
+                if not resolved.ok then return resolved end
+                campaign.previous_relation_state = relation_state
+                campaign.updated_at = now
+                changed = true
+            end
+        elseif campaign.state ~= States.CAMPAIGN.PEACE_RESOLVED then
             local relation = self:_relation(
                 campaign.attacker_guild,
                 campaign.defender_guild
