@@ -819,4 +819,86 @@ equal(
 )
 
 cleanup(peace_paths)
+
+-- Wall-clock deadlines preserve the earlier counter-attack result on restart.
+local restart_paths = make_paths(TempPath.prefix("paltr_conquest_restart"))
+local restart_config = make_config(10)
+restart_config.conquest.occupation_hold_seconds = 20
+restart_config.conquest.counter_attack_hold_seconds = 5
+local restart_diplomacy = make_diplomacy(
+    restart_config,
+    "GUILD_E",
+    "GUILD_F"
+)
+local before_restart = Conquest.new(
+    restart_paths,
+    restart_config,
+    restart_diplomacy,
+    nil,
+    { random = function() return 0 end }
+)
+register(before_restart, {
+    node_id = "E_CAPITAL", guild_key = "GUILD_E",
+    node_type = States.NODE_TYPE.CAPITAL,
+    x = -1200, y = 0, z = 0, now = 1
+})
+register(before_restart, {
+    node_id = "F_CAPITAL", guild_key = "GUILD_F",
+    node_type = States.NODE_TYPE.CAPITAL,
+    x = 1200, y = 0, z = 0, now = 1
+})
+register(before_restart, {
+    node_id = "F_OUTPOST", guild_key = "GUILD_F",
+    node_type = States.NODE_TYPE.OUTPOST,
+    parent_node_id = "F_CAPITAL",
+    x = 0, y = 0, z = 0, now = 2
+})
+local restart_campaign = before_restart:start_campaign(
+    "GUILD_E", "GUILD_F", "LEADER", 10
+).value
+equal(before_restart:establish_siege(
+    restart_campaign.campaign_id,
+    "LEADER",
+    "F_OUTPOST",
+    { reference = "SIEGE_E", x = 400, y = 0, z = 0 },
+    20
+).ok, true, "N restart siege established")
+equal(before_restart:flag_fallen(
+    restart_campaign.campaign_id,
+    "F_OUTPOST",
+    "GUILD_E",
+    21
+).ok, true, "N restart occupation created")
+equal(before_restart:start_counter_attack(
+    "F_OUTPOST",
+    "GUILD_F",
+    "LEADER",
+    {
+        flag_reference = "F_RESTART_COUNTER_FLAG",
+        guild_key = "GUILD_F",
+        x = 0, y = 0, z = 0
+    },
+    22
+).ok, true, "N restart counter attack started")
+
+local after_restart = Conquest.new(
+    restart_paths,
+    restart_config,
+    restart_diplomacy,
+    nil,
+    { random = function() return 0 end }
+)
+equal(after_restart:tick(50).ok, true, "N restart deadlines reconciled")
+equal(
+    after_restart.nodes.F_OUTPOST.current_controller,
+    "GUILD_F",
+    "N earlier counter deadline wins after restart"
+)
+equal(
+    after_restart.occupations.F_OUTPOST.state,
+    States.OCCUPATION.RESTORED,
+    "N restored occupation persisted after restart"
+)
+cleanup(restart_paths)
+
 print("conquest_service_spec: ok")

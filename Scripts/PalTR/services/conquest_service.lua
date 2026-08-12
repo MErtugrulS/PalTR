@@ -1845,25 +1845,33 @@ function Conquest:tick(now)
     for _, occupation in pairs(self.occupations) do
         if occupation.state == States.OCCUPATION.OCCUPIED
             or occupation.state == States.OCCUPATION.COUNTER_ATTACK then
-            local elapsed = math.max(0, now - occupation.last_resumed_at)
-            if elapsed >= occupation.remaining_seconds then
+            local occupation_deadline = occupation.last_resumed_at
+                + occupation.remaining_seconds
+            local occupation_expired = now >= occupation_deadline
+            local counter_wins = false
+
+            if occupation.state == States.OCCUPATION.COUNTER_ATTACK
+                and occupation.counter_last_resumed_at > 0 then
+                local counter_deadline = occupation.counter_last_resumed_at
+                    + occupation.counter_remaining_seconds
+                counter_wins = now >= counter_deadline
+                    and (
+                        not occupation_expired
+                        or counter_deadline < occupation_deadline
+                    )
+            end
+
+            if counter_wins then
+                local restored = self:_apply_occupation_restore(
+                    occupation,
+                    now
+                )
+                if not restored.ok then return restored end
+                changed = true
+            elseif occupation_expired then
                 local finalized = self:_finalize_occupation(occupation, now)
                 if not finalized.ok then return finalized end
                 changed = true
-            elseif occupation.state == States.OCCUPATION.COUNTER_ATTACK
-                and occupation.counter_last_resumed_at > 0 then
-                local counter_elapsed = math.max(
-                    0,
-                    now - occupation.counter_last_resumed_at
-                )
-                if counter_elapsed >= occupation.counter_remaining_seconds then
-                    local restored = self:_apply_occupation_restore(
-                        occupation,
-                        now
-                    )
-                    if not restored.ok then return restored end
-                    changed = true
-                end
             end
         end
     end
