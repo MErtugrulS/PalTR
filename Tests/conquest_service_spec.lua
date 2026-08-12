@@ -804,6 +804,19 @@ local peace_manifest = peace_service.loot_manifests[
     peace_service.occupations.D_OUTPOST.loot_manifest_id
 ]
 peace_relation.state = DiplomacyStates.NEUTRAL
+local missing_peace_node = peace_service.nodes.D_OUTPOST
+peace_service.nodes.D_OUTPOST = nil
+equal(
+    peace_service:tick(22).error.code,
+    "NODE_NOT_FOUND",
+    "L peace does not close over a missing occupation node"
+)
+equal(
+    peace_campaign.state,
+    States.CAMPAIGN.ACTIVE,
+    "L failed peace resolution keeps campaign active"
+)
+peace_service.nodes.D_OUTPOST = missing_peace_node
 equal(peace_service:tick(22).ok, true, "L peace resolves")
 equal(peace_campaign.state, States.CAMPAIGN.PEACE_RESOLVED, "L campaign closes")
 equal(peace_service.nodes.D_OUTPOST.state, States.NODE.CONQUERED, "L occupier wins")

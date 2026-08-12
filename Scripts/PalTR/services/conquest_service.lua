@@ -1468,25 +1468,36 @@ end
 
 function Conquest:_resolve_peace(campaign, now)
     for _, occupation in pairs(self.occupations) do
+        local unresolved = occupation.war_id == campaign.war_id
+            and occupation.state ~= States.OCCUPATION.CONQUERED
+            and occupation.state ~= States.OCCUPATION.RESTORED
+        if unresolved and not self.nodes[occupation.node_id] then
+            return Result.err(
+                "NODE_NOT_FOUND",
+                "Barisla cozulmesi gereken isgal node'u yok"
+            )
+        end
+    end
+
+    for _, occupation in pairs(self.occupations) do
         if occupation.war_id == campaign.war_id
             and occupation.state ~= States.OCCUPATION.CONQUERED
             and occupation.state ~= States.OCCUPATION.RESTORED then
             if self.config.peace_occupation_resolution == "OCCUPIER_WINS" then
-                self:_finalize_occupation(occupation, now)
+                local finalized = self:_finalize_occupation(occupation, now)
+                if not finalized.ok then return finalized end
             else
                 local node = self.nodes[occupation.node_id]
-                if node then
-                    set_controller(node, occupation.original_owner)
-                    node.state = States.NODE.RESTORED
-                    if text(occupation.counter_flag_reference) ~= "" then
-                        node.flag_reference = occupation.counter_flag_reference
-                        node.flag_state = States.FLAG.BOUND
-                        node.x = number(occupation.counter_flag_x)
-                        node.y = number(occupation.counter_flag_y)
-                        node.z = number(occupation.counter_flag_z)
-                    end
-                    node.updated_at = now
+                set_controller(node, occupation.original_owner)
+                node.state = States.NODE.RESTORED
+                if text(occupation.counter_flag_reference) ~= "" then
+                    node.flag_reference = occupation.counter_flag_reference
+                    node.flag_state = States.FLAG.BOUND
+                    node.x = number(occupation.counter_flag_x)
+                    node.y = number(occupation.counter_flag_y)
+                    node.z = number(occupation.counter_flag_z)
                 end
+                node.updated_at = now
                 occupation.state = States.OCCUPATION.RESTORED
                 occupation.remaining_seconds = 0
                 occupation.last_resumed_at = 0
@@ -1513,6 +1524,7 @@ function Conquest:_resolve_peace(campaign, now)
     campaign.siege_camp_reference = ""
     campaign.rearm_until = 0
     campaign.updated_at = now
+    return Result.ok(true)
 end
 
 function Conquest:_campaign_for_occupation(occupation)
@@ -1834,7 +1846,8 @@ function Conquest:tick(now)
                     changed = true
                 end
             else
-                self:_resolve_peace(campaign, now)
+                local resolved = self:_resolve_peace(campaign, now)
+                if not resolved.ok then return resolved end
                 changed = true
             end
 
