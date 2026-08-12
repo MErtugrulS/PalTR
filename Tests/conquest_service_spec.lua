@@ -636,9 +636,9 @@ equal(service.occupations.B_OUTPOST_1.counter_flag_reference, "", "I expired occ
 equal(service.nodes.B_OUTPOST_1.flag_state, States.FLAG.MISSING, "I conquered flag awaits replacement")
 
 equal(
-    service:extract_loot(second_manifest.manifest_id, "GUILD_A", 136).ok,
+    service:mark_loot_in_transit(second_manifest.manifest_id, "GUILD_A").ok,
     true,
-    "loot extracts after resume"
+    "loot enters transit after resume"
 )
 
 equal(
@@ -676,6 +676,11 @@ equal(
     "capital defeated"
 )
 equal(campaign.state, States.CAMPAIGN.CAPITAL_DEFEATED, "capital result state")
+equal(
+    service:extract_loot(second_manifest.manifest_id, "GUILD_A", 142).ok,
+    true,
+    "loot in transit remains extractable after capital defeat"
+)
 equal(service.nodes.B_OUTPOST_2.current_controller, "GUILD_A", "remaining node transferred")
 equal(service.nodes.B_CAPITAL.node_type, States.NODE_TYPE.OUTPOST, "captured capital demoted")
 equal(service.nodes.B_OUTPOST_2.flag_state, States.FLAG.MISSING, "transferred outpost needs new flag")
@@ -795,11 +800,23 @@ peace_service:flag_fallen(
     "GUILD_C",
     21
 )
+local peace_manifest = peace_service.loot_manifests[
+    peace_service.occupations.D_OUTPOST.loot_manifest_id
+]
 peace_relation.state = DiplomacyStates.NEUTRAL
 equal(peace_service:tick(22).ok, true, "L peace resolves")
 equal(peace_campaign.state, States.CAMPAIGN.PEACE_RESOLVED, "L campaign closes")
 equal(peace_service.nodes.D_OUTPOST.state, States.NODE.CONQUERED, "L occupier wins")
 equal(peace_campaign.siege_camp_reference, "", "L siege camp clears")
+equal(
+    peace_service:extract_loot(
+        peace_manifest.manifest_id,
+        "GUILD_C",
+        23
+    ).ok,
+    true,
+    "L earned loot remains extractable after peace"
+)
 
 cleanup(peace_paths)
 print("conquest_service_spec: ok")

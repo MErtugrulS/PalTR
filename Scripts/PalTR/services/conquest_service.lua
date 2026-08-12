@@ -1776,8 +1776,17 @@ function Conquest:extract_loot(manifest_id, guild_key, now)
         end
     end
 
-    if not campaign or campaign.state ~= States.CAMPAIGN.ACTIVE then
-        return Result.err("LOOT_EXTRACTION_PAUSED", "Ateskes veya rearm sirasinda loot cikarilamaz")
+    local extraction_open = campaign
+        and (
+            campaign.state == States.CAMPAIGN.ACTIVE
+            or campaign.state == States.CAMPAIGN.PEACE_RESOLVED
+            or campaign.state == States.CAMPAIGN.CAPITAL_DEFEATED
+        )
+    if not extraction_open then
+        return Result.err(
+            "LOOT_EXTRACTION_PAUSED",
+            "Ateskes veya yeniden silahlanmada loot cikarilamaz"
+        )
     end
 
     local result = Loot.extract(manifest, guild_key, self:_now(now))
