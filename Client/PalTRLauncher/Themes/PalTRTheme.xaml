@@ -41,9 +41,9 @@
         <GradientStop Color="#F208131A" Offset="1" />
     </LinearGradientBrush>
     <LinearGradientBrush x:Key="HeroSurfaceBrush" StartPoint="0,0" EndPoint="1,1">
-        <GradientStop Color="#F0184D60" Offset="0" />
-        <GradientStop Color="#EF0A2A3C" Offset="0.48" />
-        <GradientStop Color="#F10A1721" Offset="1" />
+        <GradientStop Color="#F2143B52" Offset="0" />
+        <GradientStop Color="#F40A2638" Offset="0.48" />
+        <GradientStop Color="#FA07131C" Offset="1" />
     </LinearGradientBrush>
     <LinearGradientBrush x:Key="ParchmentHeaderBrush" StartPoint="0,0" EndPoint="0,1">
         <GradientStop Color="#F1E0C99A" Offset="0" />
@@ -99,7 +99,7 @@
         <Setter Property="Background" Value="{StaticResource CardSurfaceBrush}" />
         <Setter Property="BorderBrush" Value="#9AC9A25A" />
         <Setter Property="BorderThickness" Value="1" />
-        <Setter Property="CornerRadius" Value="14" />
+        <Setter Property="CornerRadius" Value="8" />
         <Setter Property="Padding" Value="18" />
         <Setter Property="Effect" Value="{StaticResource CardShadow}" />
     </Style>
@@ -107,7 +107,7 @@
         <Setter Property="Background" Value="#B5132834" />
         <Setter Property="BorderBrush" Value="#526C7B7C" />
         <Setter Property="BorderThickness" Value="1" />
-        <Setter Property="CornerRadius" Value="12" />
+        <Setter Property="CornerRadius" Value="7" />
         <Setter Property="Padding" Value="15" />
     </Style>
     <Style x:Key="ParchmentStrip" TargetType="Border">
