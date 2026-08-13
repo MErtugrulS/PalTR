@@ -449,15 +449,23 @@ namespace PalTR
             std::string error;
             if (!m_policy.refresh_if_changed(error))
             {
-                m_policy_loaded = false;
                 if (error != m_last_policy_error)
                 {
                     m_last_policy_error = error;
-                    Output::send<LogLevel::Error>(
-                        STR("[PalTRStructureGuard] Policy refresh failed; guard failing open: {}\n"),
-                        unreal_text(error));
+                    if (m_policy_loaded)
+                    {
+                        Output::send<LogLevel::Warning>(
+                            STR("[PalTRStructureGuard] Policy refresh failed; retaining last valid policy: {}\n"),
+                            unreal_text(error));
+                    }
+                    else
+                    {
+                        Output::send<LogLevel::Error>(
+                            STR("[PalTRStructureGuard] Initial policy load failed; guard unavailable: {}\n"),
+                            unreal_text(error));
+                    }
                 }
-                return false;
+                return m_policy_loaded;
             }
 
             m_policy_loaded = true;

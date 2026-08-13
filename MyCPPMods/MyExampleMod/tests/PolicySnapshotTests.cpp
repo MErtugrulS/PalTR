@@ -108,6 +108,25 @@ int main()
         !snapshot.is_guild_offline_protected("GUILD_B"),
         "online guild remains unprotected");
 
+    std::filesystem::remove(root / "guild_protection.tsv");
+    error.clear();
+    ok &= expect(
+        !snapshot.refresh_if_changed(error),
+        "missing protection snapshot is rejected");
+    ok &= expect(
+        error.find("cannot open") != std::string::npos,
+        "missing protection snapshot reports a useful error");
+    ok &= expect(
+        snapshot.is_guild_offline_protected("GUILD_A"),
+        "last valid protection remains loaded after refresh failure");
+    write_file(
+        root / "guild_protection.tsv",
+        "guild_key\tonline_count\tlast_online_at\tlast_hostile_at\tprotected_at\tprotected\treason\n"
+        "GUILD_A\t0\t1000\t2000\t3200\ttrue\tOFFLINE_PROTECTED\n"
+        "GUILD_B\t1\t3200\t0\t0\tfalse\tONLINE\n");
+    error.clear();
+    ok &= expect(snapshot.refresh_if_changed(error), "restored snapshot reloads");
+
     const auto active_flag = snapshot.evaluate_conquest_flag_damage(
         "11111111-1111-1111-1111-111111111111",
         "GUILD_B");
@@ -261,6 +280,9 @@ int main()
     ok &= expect(
         error.find("invalid registry snapshot header") != std::string::npos,
         "invalid registry header reports a useful error");
+    ok &= expect(
+        snapshot.guild_for_player_uid("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA") == "GUILD_A",
+        "last valid registry remains loaded after invalid refresh");
 
     const auto activity_path = root / "guild_combat_activity.tsv";
     PalTR::ProtectionActivityStore activity(activity_path);

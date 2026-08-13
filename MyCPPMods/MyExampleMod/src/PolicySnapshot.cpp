@@ -114,7 +114,8 @@ namespace
         std::ifstream input(path);
         if (!input)
         {
-            return true;
+            error = "cannot open " + path.string();
+            return false;
         }
 
         std::string line;
@@ -156,7 +157,8 @@ namespace
         std::ifstream input(path);
         if (!input)
         {
-            return true;
+            error = "cannot open " + path.string();
+            return false;
         }
 
         std::string line;
@@ -197,7 +199,8 @@ namespace
         std::ifstream input(path);
         if (!input)
         {
-            return true;
+            error = "cannot open " + path.string();
+            return false;
         }
 
         std::string line;
