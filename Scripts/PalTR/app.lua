@@ -176,9 +176,12 @@ function App:_headers()
         if file then
             file:close()
         else
-            FileIO.overwrite(path, { header })
+            local created = FileIO.overwrite(path, { header })
+            if not created.ok then return created end
         end
     end
+
+    return { ok = true }
 end
 
 function App:_guild_name(guild_key)
@@ -254,7 +257,9 @@ function App:_handle_diplomacy_events(events)
 end
 
 function App:_register_hooks()
-    self.hooks:register(
+    local registered = true
+
+    registered = self.hooks:register(
         "PlayerConnected",
         "/Script/Engine.PlayerController:ServerAcknowledgePossession",
         function(context, pawn)
@@ -272,9 +277,9 @@ function App:_register_hooks()
                 "Oyuncu baglandi"
             )
         end
-    )
+    ) and registered
 
-    self.hooks:register(
+    registered = self.hooks:register(
         "PlayerGuildMapped",
         "/Script/Pal.PalPlayerState:OnUpdatePlayerInfoInGuildBelongTo",
         function(context, guild, uid, _player_info)
@@ -294,9 +299,9 @@ function App:_register_hooks()
                 )
             end
         end
-    )
+    ) and registered
 
-    self.hooks:register(
+    registered = self.hooks:register(
         "ChatCommand",
         "/Script/Pal.PalPlayerController:EnterChat_Receive",
         function(context, message, _chat_type)
@@ -314,9 +319,9 @@ function App:_register_hooks()
                 )
             end
         end
-    )
+    ) and registered
 
-    self.hooks:register(
+    registered = self.hooks:register(
         "EnemyPlayerDamageEnforcement",
         "/Script/Pal.PalPlayerController:DamageReactionComponent_ProcessDamage_ToServer_ToEnemyPlayer",
         function(context, info, defender)
@@ -326,7 +331,9 @@ function App:_register_hooks()
                 defender
             )
         end
-    )
+    ) and registered
+
+    return registered
 end
 
 function App:_tick()
@@ -406,37 +413,58 @@ function App:_tick()
 end
 
 function App:start()
-    self:_headers()
+    local headers = self:_headers()
+    if not headers.ok then
+        error(
+            "Zorunlu veri dosyalari hazirlanamadi: " ..
+            tostring(headers.error and headers.error.message or "")
+        )
+    end
     self.registry:scan_guilds()
     self.last_guild_scan = Clock.now()
-    self.protection:refresh(self.last_guild_scan)
+    if not self.protection:refresh(self.last_guild_scan) then
+        error("Offline koruma snapshot'i baslatilamadi")
+    end
     local initial_policy = self.conquest:write_damage_policy(
         self.last_guild_scan
     )
 
     if not initial_policy.ok then
-        self.logger:error(
-            "FAZ05_DAMAGE_POLICY_INITIAL_WRITE_FAILED | " ..
-            tostring(initial_policy.error)
+        error(
+            "Fetih hasar politikasi baslatilamadi: " ..
+            tostring(
+                initial_policy.error
+                and initial_policy.error.message
+                or ""
+            )
         )
     end
     local initial_territory = self.territory:refresh()
     if not initial_territory.ok then
-        self.logger:error(
-            "FAZ05_TERRITORY_INITIAL_WRITE_FAILED | " ..
-            tostring(initial_territory.error)
+        error(
+            "Bolge snapshot'i baslatilamadi: " ..
+            tostring(
+                initial_territory.error
+                and initial_territory.error.message
+                or ""
+            )
         )
     end
-    self:_register_hooks()
+    if not self:_register_hooks() then
+        error("Zorunlu PalTR hook'larindan biri kaydedilemedi")
+    end
 
-    self.scheduler:start(
+    local scheduler_started = self.scheduler:start(
         self.config.runtime.scheduler_interval_ms,
         function()
             self:_tick()
         end
     )
+    if not scheduler_started then
+        error("PalTR zamanlayicisi baslatilamadi")
+    end
 
-    FileIO.overwrite(
+    local health = FileIO.overwrite(
         self.paths.health,
         {
             "timestamp\tversion\tstatus",
@@ -448,6 +476,12 @@ function App:start()
             })
         }
     )
+    if not health.ok then
+        error(
+            "Health dosyasi yazilamadi: " ..
+            tostring(health.error and health.error.message or "")
+        )
+    end
 
     self.status:build(
         nil,
