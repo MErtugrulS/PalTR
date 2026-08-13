@@ -15,6 +15,18 @@ public sealed class LauncherViewModel : ObservableObject
     private string supportSubject = string.Empty;
     private string supportMessage = string.Empty;
     private int currentSlideIndex;
+    private bool isAuthenticated;
+    private bool isRegisterMode;
+    private string loginIdentifier = string.Empty;
+    private string loginPassword = string.Empty;
+    private string registerDisplayName = string.Empty;
+    private string registerEmail = string.Empty;
+    private string registerPassword = string.Empty;
+    private string registerPasswordConfirmation = string.Empty;
+    private bool hasAcceptedTerms;
+    private string authenticationMessage = "PalTR hesabınla devam et.";
+    private bool isAuthenticationMessageError;
+    private string signedInAccountName = string.Empty;
 
     public LauncherViewModel(
         ILauncherService service,
@@ -30,6 +42,11 @@ public sealed class LauncherViewModel : ObservableObject
         PreviousSlideCommand = new RelayCommand(_ => MoveSlide(-1));
         NextSlideCommand = new RelayCommand(_ => MoveSlide(1));
         OpenSlideLinkCommand = new RelayCommand(_ => OpenCurrentSlideLink());
+        ShowLoginCommand = new RelayCommand(_ => ShowAuthenticationMode(false));
+        ShowRegisterCommand = new RelayCommand(_ => ShowAuthenticationMode(true));
+        LoginCommand = new RelayCommand(_ => Login());
+        RegisterCommand = new RelayCommand(_ => Register());
+        LogoutCommand = new RelayCommand(_ => Logout());
     }
 
     public LauncherSnapshot Snapshot { get; private set; } = new();
@@ -42,6 +59,68 @@ public sealed class LauncherViewModel : ObservableObject
 
     public int CurrentSlideNumber => Snapshot.Slides.Count == 0 ? 0 : currentSlideIndex + 1;
     public int SlideCount => Snapshot.Slides.Count;
+
+    public bool IsLauncherVisible => isAuthenticated;
+    public bool IsAuthenticationVisible => !isAuthenticated;
+    public bool IsLoginMode => !isRegisterMode;
+    public bool IsRegisterMode => isRegisterMode;
+    public string AccountDisplayName => string.IsNullOrWhiteSpace(signedInAccountName)
+        ? Snapshot.AccountName
+        : signedInAccountName;
+
+    public string LoginIdentifier
+    {
+        get => loginIdentifier;
+        set => SetProperty(ref loginIdentifier, value);
+    }
+
+    public string LoginPassword
+    {
+        get => loginPassword;
+        set => SetProperty(ref loginPassword, value);
+    }
+
+    public string RegisterDisplayName
+    {
+        get => registerDisplayName;
+        set => SetProperty(ref registerDisplayName, value);
+    }
+
+    public string RegisterEmail
+    {
+        get => registerEmail;
+        set => SetProperty(ref registerEmail, value);
+    }
+
+    public string RegisterPassword
+    {
+        get => registerPassword;
+        set => SetProperty(ref registerPassword, value);
+    }
+
+    public string RegisterPasswordConfirmation
+    {
+        get => registerPasswordConfirmation;
+        set => SetProperty(ref registerPasswordConfirmation, value);
+    }
+
+    public bool HasAcceptedTerms
+    {
+        get => hasAcceptedTerms;
+        set => SetProperty(ref hasAcceptedTerms, value);
+    }
+
+    public string AuthenticationMessage
+    {
+        get => authenticationMessage;
+        private set => SetProperty(ref authenticationMessage, value);
+    }
+
+    public bool IsAuthenticationMessageError
+    {
+        get => isAuthenticationMessageError;
+        private set => SetProperty(ref isAuthenticationMessageError, value);
+    }
 
     public string SelectedPage
     {
@@ -99,6 +178,11 @@ public sealed class LauncherViewModel : ObservableObject
     public ICommand PreviousSlideCommand { get; }
     public ICommand NextSlideCommand { get; }
     public ICommand OpenSlideLinkCommand { get; }
+    public ICommand ShowLoginCommand { get; }
+    public ICommand ShowRegisterCommand { get; }
+    public ICommand LoginCommand { get; }
+    public ICommand RegisterCommand { get; }
+    public ICommand LogoutCommand { get; }
 
     public async Task InitializeAsync() => await RefreshAsync();
 
@@ -109,6 +193,7 @@ public sealed class LauncherViewModel : ObservableObject
         Notifications.ReplaceWith(Snapshot.Notifications);
         Tickets.ReplaceWith(Snapshot.Tickets);
         RaisePropertyChanged(nameof(Snapshot));
+        RaisePropertyChanged(nameof(AccountDisplayName));
         currentSlideIndex = 0;
         RaiseSlideProperties();
         SetStatus(true, "Demo launcher verileri hazır. Gerçek API bağlantısı sonraki fazda.");
@@ -174,6 +259,109 @@ public sealed class LauncherViewModel : ObservableObject
         RaisePropertyChanged(nameof(CurrentSlide));
         RaisePropertyChanged(nameof(CurrentSlideNumber));
         RaisePropertyChanged(nameof(SlideCount));
+    }
+
+    private void ShowAuthenticationMode(bool registerMode)
+    {
+        if (isRegisterMode == registerMode)
+        {
+            return;
+        }
+
+        isRegisterMode = registerMode;
+        SetAuthenticationMessage(false, registerMode
+            ? "Yeni PalTR hesabını oluştur."
+            : "PalTR hesabınla devam et.");
+        RaisePropertyChanged(nameof(IsLoginMode));
+        RaisePropertyChanged(nameof(IsRegisterMode));
+    }
+
+    private void Login()
+    {
+        string identifier = LoginIdentifier.Trim();
+        if (identifier.Length < 3)
+        {
+            SetAuthenticationMessage(true, "Kullanıcı adı veya e-posta alanını doldur.");
+            return;
+        }
+
+        if (LoginPassword.Length < 6)
+        {
+            SetAuthenticationMessage(true, "Parola en az 6 karakter olmalı.");
+            return;
+        }
+
+        signedInAccountName = identifier.Contains('@')
+            ? identifier.Split('@', 2)[0]
+            : identifier;
+        CompleteAuthentication("Demo oturumu açıldı. Gerçek hesap servisi henüz bağlı değil.");
+    }
+
+    private void Register()
+    {
+        string displayName = RegisterDisplayName.Trim();
+        string email = RegisterEmail.Trim();
+        if (displayName.Length < 3)
+        {
+            SetAuthenticationMessage(true, "Oyuncu adı en az 3 karakter olmalı.");
+            return;
+        }
+
+        if (!email.Contains('@') || email.StartsWith('@') || email.EndsWith('@'))
+        {
+            SetAuthenticationMessage(true, "Geçerli bir e-posta adresi gir.");
+            return;
+        }
+
+        if (RegisterPassword.Length < 8)
+        {
+            SetAuthenticationMessage(true, "Yeni parola en az 8 karakter olmalı.");
+            return;
+        }
+
+        if (RegisterPassword != RegisterPasswordConfirmation)
+        {
+            SetAuthenticationMessage(true, "Parola alanları birbiriyle eşleşmiyor.");
+            return;
+        }
+
+        if (!HasAcceptedTerms)
+        {
+            SetAuthenticationMessage(true, "Devam etmek için kullanım koşullarını kabul et.");
+            return;
+        }
+
+        signedInAccountName = displayName;
+        CompleteAuthentication("Demo hesabı hazırlandı. Bilgiler sunucuya kaydedilmedi.");
+    }
+
+    private void CompleteAuthentication(string message)
+    {
+        isAuthenticated = true;
+        LoginPassword = string.Empty;
+        RegisterPassword = string.Empty;
+        RegisterPasswordConfirmation = string.Empty;
+        RaisePropertyChanged(nameof(IsLauncherVisible));
+        RaisePropertyChanged(nameof(IsAuthenticationVisible));
+        RaisePropertyChanged(nameof(AccountDisplayName));
+        SetStatus(true, message);
+    }
+
+    private void Logout()
+    {
+        isAuthenticated = false;
+        signedInAccountName = string.Empty;
+        SelectedPage = "Ana Sayfa";
+        SetAuthenticationMessage(false, "Oturum kapatıldı. Yeniden giriş yapabilirsin.");
+        RaisePropertyChanged(nameof(IsLauncherVisible));
+        RaisePropertyChanged(nameof(IsAuthenticationVisible));
+        RaisePropertyChanged(nameof(AccountDisplayName));
+    }
+
+    private void SetAuthenticationMessage(bool isError, string message)
+    {
+        IsAuthenticationMessageError = isError;
+        AuthenticationMessage = message;
     }
 }
 
