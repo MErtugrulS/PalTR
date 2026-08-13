@@ -183,21 +183,6 @@ function Conquest:node_for_flag_reference(reference)
     return nil
 end
 
-function Conquest:linked_nodes(node_id)
-    local result = {}
-
-    for _, edge in pairs(self.edges) do
-        if edge.node_a == node_id and self.nodes[edge.node_b] then
-            table.insert(result, self.nodes[edge.node_b])
-        elseif edge.node_b == node_id and self.nodes[edge.node_a] then
-            table.insert(result, self.nodes[edge.node_a])
-        end
-    end
-
-    table.sort(result, function(a, b) return a.node_id < b.node_id end)
-    return result
-end
-
 function Conquest:nodes_for_controller(guild_key)
     local result = {}
 

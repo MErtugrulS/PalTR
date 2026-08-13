@@ -22,6 +22,5 @@ end
 function Logger:info(message) self:_write("BILGI", message) end
 function Logger:warn(message) self:_write("UYARI", message) end
 function Logger:error(message) self:_write("HATA", message) end
-function Logger:debug(message) self:_write("DEBUG", message) end
 
 return Logger

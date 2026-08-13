@@ -60,7 +60,6 @@ return {
         siege_camp_actor_class_tokens = {
             "BP_BuildObject_WorkBench_C"
         },
-        raid_timezone = "Europe/Istanbul",
         raid_utc_offset_minutes = 180,
         raid_window_start = "20:00",
         raid_window_end = "00:00",

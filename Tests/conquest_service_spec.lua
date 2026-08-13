@@ -49,7 +49,6 @@ local function make_config(maximum)
             max_outposts_per_clan = maximum or 10,
             world_units_per_meter = 100,
             flag_rebind_radius_meters = 30,
-            raid_timezone = "Europe/Istanbul",
             raid_utc_offset_minutes = 180,
             raid_window_start = "00:00",
             raid_window_end = "00:00",
