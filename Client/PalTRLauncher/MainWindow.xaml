@@ -173,23 +173,21 @@
                         <Grid.RowDefinitions><RowDefinition Height="390"/><RowDefinition Height="*"/></Grid.RowDefinitions>
                         <Grid.ColumnDefinitions><ColumnDefinition Width="1.55*"/><ColumnDefinition Width="0.85*"/></Grid.ColumnDefinitions>
 
-                        <Border Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" Background="{StaticResource HeroSurfaceBrush}" BorderBrush="#C3C9A25A"
-                                BorderThickness="1" CornerRadius="12" Margin="0,0,0,16" Effect="{StaticResource CardShadow}" ClipToBounds="True">
+                        <Border Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" Background="#E2C9A25A"
+                                CornerRadius="13" Padding="2" Margin="0,0,0,16" Effect="{StaticResource CardShadow}">
+                            <Border Background="{StaticResource HeroSurfaceBrush}" CornerRadius="11" ClipToBounds="True">
                             <Grid Background="Transparent" MouseLeftButtonUp="Slider_OnMouseLeftButtonUp">
-                                <Image Source="{Binding CurrentSlide.ImagePath}" Stretch="UniformToFill" Opacity="0.72" />
+                                <Image Source="{Binding CurrentSlide.ImagePath}" Stretch="UniformToFill" Opacity="0.86" />
                                 <Rectangle>
                                     <Rectangle.Fill>
                                         <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
                                             <GradientStop Color="#F2071722" Offset="0" />
-                                            <GradientStop Color="#C20A1D29" Offset="0.48" />
-                                            <GradientStop Color="#4D07131C" Offset="1" />
+                                            <GradientStop Color="#A80A1D29" Offset="0.46" />
+                                            <GradientStop Color="#1407131C" Offset="1" />
                                         </LinearGradientBrush>
                                     </Rectangle.Fill>
                                 </Rectangle>
-                                <Rectangle Fill="{StaticResource OrnamentBrush}" Opacity="0.28" />
-                                <Ellipse Width="650" Height="650" HorizontalAlignment="Right" Margin="0,-170,-80,0">
-                                    <Ellipse.Fill><RadialGradientBrush><GradientStop Color="#7E23B8C5" Offset="0"/><GradientStop Color="#00123C4D" Offset="1"/></RadialGradientBrush></Ellipse.Fill>
-                                </Ellipse>
+                                <Rectangle Fill="{StaticResource OrnamentBrush}" Opacity="0.12" IsHitTestVisible="False" />
                                 <StackPanel Margin="42" Width="680" HorizontalAlignment="Left" VerticalAlignment="Center">
                                     <TextBlock Text="{Binding CurrentSlide.Category}" Style="{StaticResource Eyebrow}" Foreground="{StaticResource CyanBrush}" />
                                     <TextBlock Text="{Binding CurrentSlide.Title}" Style="{StaticResource DisplayTitle}" FontSize="42" TextWrapping="Wrap" Margin="0,13,0,10" />
@@ -210,6 +208,7 @@
                                             FontSize="22" Command="{Binding NextSlideCommand}" />
                                 </StackPanel>
                             </Grid>
+                            </Border>
                         </Border>
 
                         <Border Grid.Row="1" Grid.Column="1" Style="{StaticResource OrnatePanel}">

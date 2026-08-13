@@ -25,19 +25,19 @@ public sealed class DemoLauncherService : ILauncherService
                     "KLANLAR, DİPLOMASİ VE İTTİFAKLAR",
                     "Klanını kur, ilişkilerini yönet, dünyadaki yerini belirle.",
                     "PalTR; klanları yalnızca bir isim olmaktan çıkarır. Diğer klanlarla tarafsızlık, ittifak ve savaş ilişkilerini yönet; teklifleri takip et, ortaklarını belirle ve sunucudaki siyasi dengeyi tek merkezden izle.",
-                    "Assets/slider-diplomacy.png",
+                    "pack://application:,,,/PalTRLauncher;component/Assets/slider-diplomacy.png",
                     "https://www.palworldgame.com/"),
                 new LauncherSlide(
                     "ÜS VE YAPI KORUMASI",
                     "Müttefiklerin güvende, ortak emeğiniz koruma altında.",
                     "Sunucu taraflı yapı koruma katmanı; ittifak içindeki oyuncuların ve Pal'ların müttefik yapılara zarar vermesini önlemek üzere geliştiriliyor. Koruma kararları merkezi diplomasi verisiyle tutarlı biçimde uygulanacak.",
-                    "Assets/slider-protection.png",
+                    "pack://application:,,,/PalTRLauncher;component/Assets/slider-protection.png",
                     "https://www.palworldgame.com/"),
                 new LauncherSlide(
                     "SAVAŞ VE BÖLGE DÜZENİ",
                     "Rekabetin kuralları belli, savaşın sonuçları anlamlı.",
                     "PalTR'nin diplomasi altyapısı; klan savaşları, koruma durumları ve ileride eklenecek bölge kontrolü için ortak bir temel oluşturuyor. Oyuncular kimin müttefik, tarafsız veya düşman olduğunu açıkça görebilecek.",
-                    "Assets/slider-war.png",
+                    "pack://application:,,,/PalTRLauncher;component/Assets/slider-war.png",
                     "https://www.palworldgame.com/")
             },
             News = new[]
