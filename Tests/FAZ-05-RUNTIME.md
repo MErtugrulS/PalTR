@@ -126,6 +126,15 @@ UHT dump ve mevcut native hook sozlesmesiyle statik olarak dogrulananlar:
 
 Asagidakiler oyun icinde henuz gecmis sayilmadi:
 
+- Son server saglamlik commitleri kurulduktan sonraki ilk temiz baslangicta
+  `BASLATMA_HATASI` gorulmemesi; mevcut registry, diplomasi, fetih ve bolge TSV
+  dosyalarinin yeni baslik dogrulamasindan gecmesi ve health durumunun `STARTED`
+  olmasi. Bu paket henuz oyun klasorune kurulmadigi icin onceki runtime sonucu
+  yeni commitleri kapsamiyor.
+- Temiz baslangictan sonra bir `!durum` ve bir fetih durum komutunun cevap
+  vermesi; logda `KOMUT_RESPONSE_WRITE_FAILED` veya
+  `FAZ05_EVENT_WRITE_FAILED` bulunmamasi. Salt-okunur/disk-dolu hata senaryolari
+  otomatik testte kapsanir, canli veri klasorunde elle hata uretilmeyecek.
 - Gercek direkli faction bayraklarindan birini kurup `!bayrakaday` ile sinif,
   model kimligi, klan sahipligi ve konum cozumunun runtime dogrulanmasi; ardindan
   ayni bayrakla baskent/karakol, yeniden baglama ve karsi saldiri kaydi.
