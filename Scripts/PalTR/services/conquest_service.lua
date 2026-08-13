@@ -732,9 +732,13 @@ function Conquest:start_campaign(attacker, defender, actor_role, now)
         updated_at = now
     }
 
+    local previous_campaign = self.campaigns[campaign_id]
     self.campaigns[campaign_id] = campaign
     local saved = self:_save_campaigns()
-    if not saved.ok then return saved end
+    if not saved.ok then
+        self.campaigns[campaign_id] = previous_campaign
+        return saved
+    end
     return Result.ok(campaign)
 end
 
@@ -808,6 +812,11 @@ function Conquest:_set_target(campaign, target, now)
         return Result.err("TARGET_NOT_FRONTLINE_REACHABLE", "Fetih hatti hedefe ulasmiyor")
     end
 
+    local previous_target_state = target.state
+    local previous_target_updated_at = target.updated_at
+    local previous_target_node_id = campaign.active_target_node_id
+    local previous_campaign_updated_at = campaign.updated_at
+
     target.state = target.node_type == States.NODE_TYPE.CAPITAL
         and States.NODE.CAPITAL_TARGETABLE
         or States.NODE.TARGETABLE
@@ -816,9 +825,29 @@ function Conquest:_set_target(campaign, target, now)
     campaign.updated_at = now
 
     local nodes = self.repository:save_nodes(self.nodes)
-    if not nodes.ok then return nodes end
+    if not nodes.ok then
+        target.state = previous_target_state
+        target.updated_at = previous_target_updated_at
+        campaign.active_target_node_id = previous_target_node_id
+        campaign.updated_at = previous_campaign_updated_at
+        return nodes
+    end
     local campaigns = self:_save_campaigns()
-    if not campaigns.ok then return campaigns end
+    if not campaigns.ok then
+        target.state = previous_target_state
+        target.updated_at = previous_target_updated_at
+        campaign.active_target_node_id = previous_target_node_id
+        campaign.updated_at = previous_campaign_updated_at
+
+        local rollback = self.repository:save_nodes(self.nodes)
+        if not rollback.ok and self.logger then
+            self.logger:error(
+                "FAZ05_TARGET_ROLLBACK_WRITE_FAILED | " ..
+                Result.describe(rollback)
+            )
+        end
+        return campaigns
+    end
 
     self:_event("FAZ05_TARGET_SELECTED", campaign.campaign_id .. "|" .. target.node_id)
     return Result.ok(target)
@@ -864,6 +893,14 @@ function Conquest:establish_siege(
         return Result.err(location.reason, "Kusatma kampi konumu gecersiz")
     end
 
+    local previous_siege = {
+        reference = campaign.siege_camp_reference,
+        x = campaign.siege_x,
+        y = campaign.siege_y,
+        z = campaign.siege_z,
+        updated_at = campaign.updated_at
+    }
+
     campaign.siege_camp_reference = text(camp.reference)
     if campaign.siege_camp_reference == "" then
         return Result.err("SIEGE_REFERENCE_MISSING", "Kusatma kampi referansi yok")
@@ -876,10 +913,11 @@ function Conquest:establish_siege(
 
     local selected = self:_set_target(campaign, target, now)
     if not selected.ok then
-        campaign.siege_camp_reference = ""
-        campaign.siege_x = 0
-        campaign.siege_y = 0
-        campaign.siege_z = 0
+        campaign.siege_camp_reference = previous_siege.reference
+        campaign.siege_x = previous_siege.x
+        campaign.siege_y = previous_siege.y
+        campaign.siege_z = previous_siege.z
+        campaign.updated_at = previous_siege.updated_at
     end
 
     return selected
