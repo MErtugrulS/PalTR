@@ -22,22 +22,22 @@ public sealed class DemoLauncherService : ILauncherService
             Slides = new[]
             {
                 new LauncherSlide(
-                    "ÖNE ÇIKAN DUYURU",
-                    "PalTR dünyasındaki yenilikleri keşfet.",
-                    "Etkinlikler, topluluk duyuruları ve önemli bağlantılar yönetim panelinden bu alanda yayınlanacak.",
-                    "Assets/paltr-logo.png",
+                    "KLANLAR, DİPLOMASİ VE İTTİFAKLAR",
+                    "Klanını kur, ilişkilerini yönet, dünyadaki yerini belirle.",
+                    "PalTR; klanları yalnızca bir isim olmaktan çıkarır. Diğer klanlarla tarafsızlık, ittifak ve savaş ilişkilerini yönet; teklifleri takip et, ortaklarını belirle ve sunucudaki siyasi dengeyi tek merkezden izle.",
+                    "Assets/slider-diplomacy.png",
                     "https://www.palworldgame.com/"),
                 new LauncherSlide(
-                    "TOPLULUK PAYLAŞIMI",
-                    "Yeni etkinlikler için hazırlıklar başladı.",
-                    "Yönetim ekibinin görsel, başlık, açıklama ve bağlantıyla hazırladığı paylaşımlar burada dönecek.",
-                    "Assets/paltr-logo.png",
+                    "ÜS VE YAPI KORUMASI",
+                    "Müttefiklerin güvende, ortak emeğiniz koruma altında.",
+                    "Sunucu taraflı yapı koruma katmanı; ittifak içindeki oyuncuların ve Pal'ların müttefik yapılara zarar vermesini önlemek üzere geliştiriliyor. Koruma kararları merkezi diplomasi verisiyle tutarlı biçimde uygulanacak.",
+                    "Assets/slider-protection.png",
                     "https://www.palworldgame.com/"),
                 new LauncherSlide(
-                    "SUNUCU HABERİ",
-                    "Haftanın gelişmeleri tek vitrinde.",
-                    "Sunucu haberleri ve dış bağlantılı tanıtımlar oyunculara launcher açılışında gösterilecek.",
-                    "Assets/paltr-logo.png",
+                    "SAVAŞ VE BÖLGE DÜZENİ",
+                    "Rekabetin kuralları belli, savaşın sonuçları anlamlı.",
+                    "PalTR'nin diplomasi altyapısı; klan savaşları, koruma durumları ve ileride eklenecek bölge kontrolü için ortak bir temel oluşturuyor. Oyuncular kimin müttefik, tarafsız veya düşman olduğunu açıkça görebilecek.",
+                    "Assets/slider-war.png",
                     "https://www.palworldgame.com/")
             },
             News = new[]
