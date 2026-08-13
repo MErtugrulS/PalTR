@@ -204,6 +204,20 @@ equal(
     "loot selector restored"
 )
 
+local invalid = assert(io.open(paths.conquest_nodes, "w"))
+invalid:write("wrong_header\n")
+invalid:close()
+local invalid_ok, invalid_error = pcall(function()
+    repository:load_nodes()
+end)
+equal(invalid_ok, false, "invalid conquest header stops loading")
+equal(
+    tostring(invalid_error):find("Gecersiz fetih dosyasi basligi", 1, true)
+        ~= nil,
+    true,
+    "invalid conquest header reports useful error"
+)
+
 for _, path in pairs(paths) do
     os.remove(path)
 end

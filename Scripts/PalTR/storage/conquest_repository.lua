@@ -9,12 +9,27 @@ local function number(value)
     return tonumber(value) or 0
 end
 
-local function load_table(path, mapper)
+local function valid_header(actual, expected_prefix)
+    return actual == expected_prefix
+        or actual:sub(1, #expected_prefix + 1) == expected_prefix .. "\t"
+end
+
+local function load_table(path, expected_header_prefix, mapper)
     local records = {}
     local result = FileIO.read_lines(path)
 
     if not result.ok then
         return records
+    end
+
+    if #(result.value or {}) == 0 then
+        if FileIO.exists(path) then
+            error("Bos fetih dosyasi: " .. tostring(path))
+        end
+        return records
+    end
+    if not valid_header(result.value[1], expected_header_prefix) then
+        error("Gecersiz fetih dosyasi basligi: " .. tostring(path))
     end
 
     for index, line in ipairs(result.value or {}) do
@@ -45,7 +60,10 @@ function Repository.new(paths)
 end
 
 function Repository:load_nodes()
-    return load_table(self.paths.conquest_nodes, function(c)
+    return load_table(
+        self.paths.conquest_nodes,
+        "node_id\tguild_key\tnode_type\tflag_reference\tlocation_x\tlocation_y\tlocation_z\tparent_node_id\tstate\toriginal_owner\tcurrent_controller\tcreated_at\tupdated_at",
+        function(c)
         local flag_state = c[14]
         if flag_state == nil or flag_state == "" then
             local fallen = c[9] == "OCCUPIED"
@@ -80,7 +98,8 @@ function Repository:load_nodes()
             display_name = c[16] or "",
             territory_radius_meters = number(c[17])
         }
-    end)
+        end
+    )
 end
 
 function Repository:save_nodes(records)
@@ -103,7 +122,10 @@ function Repository:save_nodes(records)
 end
 
 function Repository:load_edges()
-    return load_table(self.paths.conquest_edges, function(c)
+    return load_table(
+        self.paths.conquest_edges,
+        "edge_id\tnode_a\tnode_b\tcreated_at",
+        function(c)
         return {
             key = c[1],
             edge_id = c[1],
@@ -111,7 +133,8 @@ function Repository:load_edges()
             node_b = c[3],
             created_at = number(c[4])
         }
-    end)
+        end
+    )
 end
 
 function Repository:save_edges(records)
@@ -126,7 +149,10 @@ function Repository:save_edges(records)
 end
 
 function Repository:load_campaigns()
-    return load_table(self.paths.conquest_campaigns, function(c)
+    return load_table(
+        self.paths.conquest_campaigns,
+        "campaign_id\twar_id\tattacker_guild\tdefender_guild\tstate\tactive_target_node_id\tsiege_camp_reference\tsiege_x\tsiege_y\tsiege_z\trearm_until\tprevious_relation_state\tcreated_at\tupdated_at",
+        function(c)
         return {
             key = c[1],
             campaign_id = c[1],
@@ -144,7 +170,8 @@ function Repository:load_campaigns()
             created_at = number(c[13]),
             updated_at = number(c[14])
         }
-    end)
+        end
+    )
 end
 
 function Repository:save_campaigns(records)
@@ -167,7 +194,10 @@ function Repository:save_campaigns(records)
 end
 
 function Repository:load_occupations()
-    return load_table(self.paths.conquest_occupations, function(c)
+    return load_table(
+        self.paths.conquest_occupations,
+        "node_id\toriginal_owner\toccupying_guild\twar_id\tstate\tprevious_state\toccupation_started_at\tremaining_seconds\tlast_resumed_at\tloot_manifest_id\tfrontline_state\tupdated_at",
+        function(c)
         local state = c[5]
         local previous_state = c[6]
         local counter_flag_reference = c[13] or ""
@@ -198,7 +228,8 @@ function Repository:load_occupations()
             counter_flag_y = number(c[17]),
             counter_flag_z = number(c[18])
         }
-    end)
+        end
+    )
 end
 
 function Repository:save_occupations(records)
@@ -225,7 +256,10 @@ function Repository:save_occupations(records)
 end
 
 function Repository:load_loot_manifests()
-    return load_table(self.paths.conquest_loot, function(c)
+    return load_table(
+        self.paths.conquest_loot,
+        "manifest_id\tnode_id\twar_id\towner_guild\tstate\tcreated_at\textracted_at",
+        function(c)
         return {
             key = c[1],
             manifest_id = c[1],
@@ -236,7 +270,8 @@ function Repository:load_loot_manifests()
             created_at = number(c[6]),
             extracted_at = number(c[7])
         }
-    end)
+        end
+    )
 end
 
 function Repository:save_loot_manifests(records)
@@ -255,7 +290,10 @@ function Repository:save_loot_manifests(records)
 end
 
 function Repository:load_loot_items()
-    return load_table(self.paths.conquest_loot_items, function(c)
+    return load_table(
+        self.paths.conquest_loot_items,
+        "item_key\tmanifest_id\titem_id\titem_selector\tquantity\ttier\tcategory",
+        function(c)
         return {
             key = c[1],
             item_key = c[1],
@@ -266,7 +304,8 @@ function Repository:load_loot_items()
             tier = c[6],
             category = c[7]
         }
-    end)
+        end
+    )
 end
 
 function Repository:save_loot_items(records)

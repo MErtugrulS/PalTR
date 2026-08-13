@@ -1,13 +1,28 @@
 local FileIO = require("PalTR.storage.file_io")
 local TSV = require("PalTR.storage.tsv")
 local Tables = require("PalTR.core.table_utils")
+local Text = require("PalTR.core.text")
 
 local Repositories = {}
 
-local function load_table(path, mapper)
+local function valid_header(actual, expected_prefix)
+    return actual == expected_prefix
+        or Text.starts_with(actual, expected_prefix .. "\t")
+end
+
+local function load_table(path, expected_header_prefix, mapper)
     local result = {}
     local lines = FileIO.read_lines(path)
     if not lines.ok then return result end
+    if #(lines.value or {}) == 0 then
+        if FileIO.exists(path) then
+            error("Bos registry dosyasi: " .. tostring(path))
+        end
+        return result
+    end
+    if not valid_header(lines.value[1], expected_header_prefix) then
+        error("Gecersiz registry basligi: " .. tostring(path))
+    end
     for index, line in ipairs(lines.value) do
         if index > 1 and line ~= "" then
             local record = mapper(TSV.decode(line))
@@ -26,7 +41,10 @@ local function save_table(path, header, records, serializer)
 end
 
 function Repositories.load_guilds(path)
-    return load_table(path, function(c)
+    return load_table(
+        path,
+        "guild_key\tguild_name\tguild_id",
+        function(c)
         return {
             key = c[1],
             name = c[2],
@@ -35,7 +53,8 @@ function Repositories.load_guilds(path)
             first_seen = tonumber(c[5]) or 0,
             last_seen = tonumber(c[6]) or 0
         }
-    end)
+        end
+    )
 end
 
 function Repositories.save_guilds(path, records)
@@ -53,7 +72,10 @@ function Repositories.save_guilds(path, records)
 end
 
 function Repositories.load_players(path)
-    return load_table(path, function(c)
+    return load_table(
+        path,
+        "player_key\tplayer_name\tplayer_id\tplayer_uid\tguild_key\trole\tis_master\tplayer_state_path\tpawn_path",
+        function(c)
         return {
             key = c[1],
             name = c[2],
@@ -67,7 +89,8 @@ function Repositories.load_players(path)
             first_seen = tonumber(c[10]) or 0,
             last_seen = tonumber(c[11]) or 0
         }
-    end)
+        end
+    )
 end
 
 function Repositories.save_players(path, records)
@@ -86,7 +109,10 @@ function Repositories.save_players(path, records)
 end
 
 function Repositories.load_relations(path)
-    return load_table(path, function(c)
+    return load_table(
+        path,
+        "pair_key\tguild_a\tguild_b\tstate",
+        function(c)
         return {
             key = c[1],
             guild_a = c[2],
@@ -101,7 +127,8 @@ function Repositories.load_relations(path)
             expires_at = tonumber(c[11]) or 0,
             note = c[12] or ""
         }
-    end)
+        end
+    )
 end
 
 function Repositories.save_relations(path, records)
