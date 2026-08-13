@@ -10,6 +10,17 @@ local Result = require("PalTR.core.result")
 local Diplomacy = {}
 Diplomacy.__index = Diplomacy
 
+local function copy_record(record)
+    local copy = {}
+    for key, value in pairs(record or {}) do copy[key] = value end
+    return copy
+end
+
+local function restore_record(record, snapshot)
+    for key in pairs(record or {}) do record[key] = nil end
+    for key, value in pairs(snapshot or {}) do record[key] = value end
+end
+
 function Diplomacy.new(paths, config, logger)
     return setmetatable({
         paths = paths,
@@ -20,19 +31,47 @@ function Diplomacy.new(paths, config, logger)
 end
 
 function Diplomacy:_event(event_type, relation, detail)
-    FileIO.append(self.paths.events, TSV.encode({
+    local result = FileIO.append(self.paths.events, TSV.encode({
         Clock.now(),
         event_type,
         relation and relation.key or "",
         detail or ""
     }))
+    if not result.ok and self.logger then
+        self.logger:error(
+            "Diplomasi olayi yazilamadi: " ..
+            tostring(result.error and result.error.message or "")
+        )
+    end
+    return result
 end
 
 function Diplomacy:_save()
-    Repositories.save_relations(
+    return Repositories.save_relations(
         self.paths.relations,
         self.relations
     )
+end
+
+function Diplomacy:_commit_transition(
+    relation,
+    snapshot,
+    result,
+    note,
+    event_type,
+    detail
+)
+    if not result.ok then return result end
+
+    relation.note = note
+    local saved = self:_save()
+    if not saved.ok then
+        restore_record(relation, snapshot)
+        return saved
+    end
+
+    self:_event(event_type, relation, detail)
+    return result
 end
 
 function Diplomacy:get(first, second)
@@ -64,7 +103,11 @@ function Diplomacy:get(first, second)
     }
 
     self.relations[relation.key] = relation
-    self:_save()
+    local saved = self:_save()
+    if not saved.ok then
+        self.relations[relation.key] = nil
+        return nil, saved.error.message
+    end
 
     return relation
 end
@@ -76,19 +119,17 @@ function Diplomacy:declare_war(own, target, actor)
         return Result.err("RELATION", error_message)
     end
 
+    local snapshot = copy_record(relation)
     local result = Rules.declare_war(
         relation,
         own,
         self.config
     )
-
-    if result.ok then
-        relation.note = "Savas ilani: " .. actor
-        self:_save()
-        self:_event("WAR_DECLARED", relation, actor)
-    end
-
-    return result
+    return self:_commit_transition(
+        relation, snapshot, result,
+        "Savas ilani: " .. actor,
+        "WAR_DECLARED", actor
+    )
 end
 
 function Diplomacy:request_ceasefire(own, target, actor)
@@ -98,23 +139,18 @@ function Diplomacy:request_ceasefire(own, target, actor)
         return Result.err("RELATION", error_message)
     end
 
+    local snapshot = copy_record(relation)
     local result = Rules.request_ceasefire(
         relation,
         own,
         self.config
     )
 
-    if result.ok then
-        relation.note = "Ateskes teklifi: " .. actor
-        self:_save()
-        self:_event(
-            "CEASEFIRE_REQUESTED",
-            relation,
-            actor
-        )
-    end
-
-    return result
+    return self:_commit_transition(
+        relation, snapshot, result,
+        "Ateskes teklifi: " .. actor,
+        "CEASEFIRE_REQUESTED", actor
+    )
 end
 
 function Diplomacy:request_peace(own, target, actor)
@@ -124,23 +160,18 @@ function Diplomacy:request_peace(own, target, actor)
         return Result.err("RELATION", error_message)
     end
 
+    local snapshot = copy_record(relation)
     local result = Rules.request_peace(
         relation,
         own,
         self.config
     )
 
-    if result.ok then
-        relation.note = "Baris teklifi: " .. actor
-        self:_save()
-        self:_event(
-            "PEACE_REQUESTED",
-            relation,
-            actor
-        )
-    end
-
-    return result
+    return self:_commit_transition(
+        relation, snapshot, result,
+        "Baris teklifi: " .. actor,
+        "PEACE_REQUESTED", actor
+    )
 end
 
 function Diplomacy:request_alliance(own, target, actor)
@@ -150,23 +181,18 @@ function Diplomacy:request_alliance(own, target, actor)
         return Result.err("RELATION", error_message)
     end
 
+    local snapshot = copy_record(relation)
     local result = Rules.request_alliance(
         relation,
         own,
         self.config
     )
 
-    if result.ok then
-        relation.note = "Ittifak teklifi: " .. actor
-        self:_save()
-        self:_event(
-            "ALLIANCE_REQUESTED",
-            relation,
-            actor
-        )
-    end
-
-    return result
+    return self:_commit_transition(
+        relation, snapshot, result,
+        "Ittifak teklifi: " .. actor,
+        "ALLIANCE_REQUESTED", actor
+    )
 end
 
 function Diplomacy:accept(own, target, actor)
@@ -183,23 +209,17 @@ function Diplomacy:accept(own, target, actor)
         )
     end
 
+    local snapshot = copy_record(relation)
     local result = Rules.accept(
         relation,
         own,
         self.config
     )
-
-    if result.ok then
-        relation.note = "Kabul eden: " .. actor
-        self:_save()
-        self:_event(
-            "PROPOSAL_ACCEPTED",
-            relation,
-            actor
-        )
-    end
-
-    return result
+    return self:_commit_transition(
+        relation, snapshot, result,
+        "Kabul eden: " .. actor,
+        "PROPOSAL_ACCEPTED", actor
+    )
 end
 
 function Diplomacy:reject(own, target, actor)
@@ -216,19 +236,13 @@ function Diplomacy:reject(own, target, actor)
         )
     end
 
+    local snapshot = copy_record(relation)
     local result = Rules.reject(relation, own)
-
-    if result.ok then
-        relation.note = "Reddeden: " .. actor
-        self:_save()
-        self:_event(
-            "PROPOSAL_REJECTED",
-            relation,
-            actor
-        )
-    end
-
-    return result
+    return self:_commit_transition(
+        relation, snapshot, result,
+        "Reddeden: " .. actor,
+        "PROPOSAL_REJECTED", actor
+    )
 end
 
 function Diplomacy:cancel(own, target, actor)
@@ -238,19 +252,13 @@ function Diplomacy:cancel(own, target, actor)
         return Result.err("RELATION", error_message)
     end
 
+    local snapshot = copy_record(relation)
     local result = Rules.cancel(relation, own)
-
-    if result.ok then
-        relation.note = "Teklif iptal edildi: " .. actor
-        self:_save()
-        self:_event(
-            "PROPOSAL_CANCELLED",
-            relation,
-            actor
-        )
-    end
-
-    return result
+    return self:_commit_transition(
+        relation, snapshot, result,
+        "Teklif iptal edildi: " .. actor,
+        "PROPOSAL_CANCELLED", actor
+    )
 end
 
 function Diplomacy:break_ceasefire(own, target, actor)
@@ -260,19 +268,13 @@ function Diplomacy:break_ceasefire(own, target, actor)
         return Result.err("RELATION", error_message)
     end
 
+    local snapshot = copy_record(relation)
     local result = Rules.break_ceasefire(relation)
-
-    if result.ok then
-        relation.note = "Ateskesi bozan: " .. actor
-        self:_save()
-        self:_event(
-            "CEASEFIRE_BROKEN",
-            relation,
-            actor
-        )
-    end
-
-    return result
+    return self:_commit_transition(
+        relation, snapshot, result,
+        "Ateskesi bozan: " .. actor,
+        "CEASEFIRE_BROKEN", actor
+    )
 end
 
 function Diplomacy:return_neutral(own, target, actor)
@@ -282,19 +284,13 @@ function Diplomacy:return_neutral(own, target, actor)
         return Result.err("RELATION", error_message)
     end
 
+    local snapshot = copy_record(relation)
     local result = Rules.return_neutral(relation)
-
-    if result.ok then
-        relation.note = "Ittifaktan ayrilan: " .. actor
-        self:_save()
-        self:_event(
-            "ALLIANCE_ENDED",
-            relation,
-            actor
-        )
-    end
-
-    return result
+    return self:_commit_transition(
+        relation, snapshot, result,
+        "Ittifaktan ayrilan: " .. actor,
+        "ALLIANCE_ENDED", actor
+    )
 end
 
 function Diplomacy:resolve_capital_defeat(winner, loser, actor)
@@ -304,26 +300,23 @@ function Diplomacy:resolve_capital_defeat(winner, loser, actor)
         return Result.err("RELATION", error_message)
     end
 
+    local snapshot = copy_record(relation)
     local result = Rules.resolve_capital_defeat(relation)
-
-    if result.ok then
-        relation.note = "Baskent yenilgisi: " .. tostring(actor or winner)
-        self:_save()
-        self:_event(
-            "CAPITAL_DEFEATED",
-            relation,
-            tostring(winner) .. ">" .. tostring(loser)
-        )
-    end
-
-    return result
+    return self:_commit_transition(
+        relation, snapshot, result,
+        "Baskent yenilgisi: " .. tostring(actor or winner),
+        "CAPITAL_DEFEATED",
+        tostring(winner) .. ">" .. tostring(loser)
+    )
 end
 
 function Diplomacy:tick()
     local changed = 0
     local events = {}
+    local snapshots = {}
 
     for _, relation in pairs(self.relations) do
+        snapshots[relation.key] = copy_record(relation)
         local event_name = Rules.tick(
             relation,
             self.config
@@ -331,22 +324,37 @@ function Diplomacy:tick()
 
         if event_name then
             changed = changed + 1
-
-            self:_event(
-                event_name,
-                relation,
-                relation.state
-            )
-
             table.insert(events, {
                 name = event_name,
-                relation = relation
+                relation = relation,
+                detail = relation.state
             })
         end
     end
 
     if changed > 0 then
-        self:_save()
+        local saved = self:_save()
+        if not saved.ok then
+            for key, snapshot in pairs(snapshots) do
+                local relation = self.relations[key]
+                if relation then restore_record(relation, snapshot) end
+            end
+            if self.logger then
+                self.logger:error(
+                    "Diplomasi tick kaydedilemedi: " ..
+                    tostring(saved.error and saved.error.message or "")
+                )
+            end
+            return {}
+        end
+
+        for _, event in ipairs(events) do
+            self:_event(
+                event.name,
+                event.relation,
+                event.detail
+            )
+        end
     end
 
     return events
