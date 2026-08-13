@@ -5,6 +5,8 @@ return {
         scheduler_interval_ms = 5000,
         guild_scan_seconds = 60,
         player_validity_poll = true,
+        -- Cevrimici oyuncu heartbeat'ini kalici kayda alma araligi.
+        player_snapshot_seconds = 60,
         -- Faz-04 oyuncu hasar politikasini uygular.
         enable_damage_enforcement = true,
         -- Ayrintili her-vurus TSV audit'i yalniz sorun ayiklamada acilir.

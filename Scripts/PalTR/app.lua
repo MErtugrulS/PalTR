@@ -369,6 +369,8 @@ function App:_tick()
         diplomacy_events
     )
 
+    local now = Clock.now()
+
     if self.config.runtime.player_validity_poll then
         self.registry:poll_validity(
             function(player)
@@ -382,11 +384,11 @@ function App:_tick()
                     player,
                     "Oyuncu cevrimdisi algilandi"
                 )
-            end
+            end,
+            self.config.runtime.player_snapshot_seconds,
+            now
         )
     end
-
-    local now = Clock.now()
 
     if now - self.last_guild_scan
         >= self.config.runtime.guild_scan_seconds then

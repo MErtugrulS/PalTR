@@ -6,7 +6,8 @@ return {
 
     runtime = {
         enable_damage_enforcement = true,
-        enable_damage_audit = false
+        enable_damage_audit = false,
+        player_snapshot_seconds = 60
     },
 
     protection = {

@@ -2,6 +2,7 @@ local GuildAdapter = require("PalTR.runtime.guild_adapter")
 local PlayerAdapter = require("PalTR.runtime.player_adapter")
 local Repositories = require("PalTR.storage.repositories")
 local Clock = require("PalTR.core.clock")
+local Result = require("PalTR.core.result")
 local Text = require("PalTR.core.text")
 local Tables = require("PalTR.core.table_utils")
 local UE = require("PalTR.runtime.ue")
@@ -16,7 +17,8 @@ function Registry.new(paths, logger)
         guilds = Repositories.load_guilds(paths.guilds),
         players = Repositories.load_players(paths.players),
         runtime_players = {},
-        runtime_guilds = {}
+        runtime_guilds = {},
+        last_player_snapshot_at = 0
     }, Registry)
 end
 
@@ -29,15 +31,7 @@ function Registry:_write_failed(label, result)
     return true
 end
 
-function Registry:save()
-    local guilds = Repositories.save_guilds(
-        self.paths.guilds,
-        self.guilds
-    )
-    if self:_write_failed("Klan registry yazilamadi", guilds) then
-        return guilds
-    end
-
+function Registry:_save_player_state(now)
     local players = Repositories.save_players(
         self.paths.players,
         self.players
@@ -46,7 +40,23 @@ function Registry:save()
         return players
     end
 
-    return self:save_online()
+    local online = self:save_online()
+    if online.ok then
+        self.last_player_snapshot_at = tonumber(now) or Clock.now()
+    end
+    return online
+end
+
+function Registry:save(now)
+    local guilds = Repositories.save_guilds(
+        self.paths.guilds,
+        self.guilds
+    )
+    if self:_write_failed("Klan registry yazilamadi", guilds) then
+        return guilds
+    end
+
+    return self:_save_player_state(now)
 end
 
 function Registry:save_online()
@@ -112,7 +122,7 @@ function Registry:on_connected(context, pawn)
 
     self.runtime_players[runtime.key] = runtime
     self.players[runtime.key] = runtime
-    self:save()
+    self:_save_player_state()
     return runtime
 end
 
@@ -301,18 +311,29 @@ function Registry:resolve_guild(query)
     return nil, "Klan bulunamadi"
 end
 
-function Registry:poll_validity(on_disconnected)
+function Registry:poll_validity(on_disconnected, snapshot_seconds, now)
+    now = tonumber(now) or Clock.now()
+    local disconnected = false
+
     for key, player in pairs(self.runtime_players) do
         if player.online and not UE.valid(player.controller) then
             player.online = false
-            player.last_seen = Clock.now()
+            player.last_seen = now
             self.players[key] = player
+            disconnected = true
             if on_disconnected then on_disconnected(player) end
         elseif player.online then
-            player.last_seen = Clock.now()
+            player.last_seen = now
         end
     end
-    self:save()
+
+    local interval = math.max(tonumber(snapshot_seconds) or 60, 1)
+    if disconnected
+        or now - self.last_player_snapshot_at >= interval then
+        return self:_save_player_state(now)
+    end
+
+    return Result.ok(false)
 end
 
 return Registry

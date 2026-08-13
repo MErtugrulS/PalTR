@@ -6,6 +6,7 @@ package.path = table.concat({
 
 local Registry = require("PalTR.services.registry_service")
 local FileIO = require("PalTR.storage.file_io")
+local UE = require("PalTR.runtime.ue")
 local TempPath = dofile("Tests/support/temp_path.lua")
 
 local function equal(actual, expected, message)
@@ -49,7 +50,48 @@ equal(
     "online snapshot is deterministic"
 )
 
+registry.runtime_players = {}
+registry.last_player_snapshot_at = 100
 local original_overwrite = FileIO.overwrite
+local heartbeat_writes = 0
+FileIO.overwrite = function(path, lines)
+    heartbeat_writes = heartbeat_writes + 1
+    return original_overwrite(path, lines)
+end
+equal(
+    registry:poll_validity(nil, 60, 120).ok,
+    true,
+    "early heartbeat poll succeeds"
+)
+equal(heartbeat_writes, 0, "early heartbeat does not rewrite snapshots")
+equal(
+    registry:poll_validity(nil, 60, 160).ok,
+    true,
+    "due heartbeat poll succeeds"
+)
+equal(heartbeat_writes, 2, "due heartbeat writes only player snapshots")
+equal(registry.last_player_snapshot_at, 160, "heartbeat timestamp advances")
+
+local original_valid = UE.valid
+local disconnected_count = 0
+registry.runtime_players.P = {
+    key = "P", online = true, controller = {}, name = "Player",
+    guild_key = "GUILD_B", first_seen = 1, last_seen = 160
+}
+UE.valid = function() return false end
+equal(
+    registry:poll_validity(function()
+        disconnected_count = disconnected_count + 1
+    end, 60, 161).ok,
+    true,
+    "disconnect snapshot succeeds"
+)
+UE.valid = original_valid
+FileIO.overwrite = original_overwrite
+equal(disconnected_count, 1, "disconnect callback runs immediately")
+equal(heartbeat_writes, 4, "disconnect bypasses heartbeat delay")
+equal(registry.runtime_players.P.online, false, "disconnected player is offline")
+
 FileIO.overwrite = function(path, lines)
     if path == paths.guilds then
         return {
