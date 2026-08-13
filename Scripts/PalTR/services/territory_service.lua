@@ -171,7 +171,7 @@ function Territory:_boundary_snapshot_lines(atlas)
     local lines = { BOUNDARY_SNAPSHOT_HEADER }
     for _, component in ipairs(atlas and atlas.components or {}) do
         local bounds = component.bounds
-        table.insert(lines, TSV.encode({
+        local fields = TSV.encode({
             component.boundary_id,
             component.controller_guild,
             self:_guild_name(component.controller_guild),
@@ -180,9 +180,12 @@ function Territory:_boundary_snapshot_lines(atlas)
             string.format("%.3f", bounds.min_y),
             string.format("%.3f", bounds.max_x),
             string.format("%.3f", bounds.max_y),
-            #component.points,
-            encode_points(component.points)
-        }))
+            #component.points
+        })
+        -- The final field is trusted numeric geometry. Text.clean deliberately
+        -- truncates ordinary fields at 1500 bytes, which would corrupt long
+        -- polygons and make the declared point count disagree with the data.
+        table.insert(lines, fields .. "\t" .. encode_points(component.points))
     end
     return lines
 end

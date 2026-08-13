@@ -5,6 +5,9 @@ package.path = table.concat({
 }, ";")
 
 local Territory = require("PalTR.services.territory_service")
+local TerritorySnapshotReader = require(
+    "PalTR.services.territory_snapshot_reader"
+)
 local TempPath = dofile("Tests/support/temp_path.lua")
 
 local function equal(actual, expected, message)
@@ -92,6 +95,14 @@ equal(boundaries:find("A::001", 1, true) ~= nil, true,
     "boundary snapshot includes stable component id")
 equal(boundaries:find(";", 1, true) ~= nil, true,
     "boundary snapshot includes polygon points")
+equal(boundaries:find("<kesildi>", 1, true), nil,
+    "long boundary geometry is never truncated by text sanitizing")
+local decoded_boundaries = TerritorySnapshotReader.read({
+    territory_snapshot = path,
+    territory_boundaries = boundary_path
+})
+equal(#decoded_boundaries.boundaries > 0, true,
+    "written boundary snapshot round-trips through live reader")
 
 equal(os.remove(path), true, "snapshot removed for recreation test")
 equal(service:refresh().ok, true, "missing unchanged snapshot recreated")
