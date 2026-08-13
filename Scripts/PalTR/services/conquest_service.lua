@@ -83,7 +83,9 @@ function Conquest.new(paths, config, diplomacy, logger, options)
         campaigns = repository:load_campaigns(),
         occupations = repository:load_occupations(),
         loot_manifests = repository:load_loot_manifests(),
-        loot_items = repository:load_loot_items()
+        loot_items = repository:load_loot_items(),
+        damage_policy_signature = nil,
+        zone_policy_signature = nil
     }, Conquest)
 end
 
@@ -1145,13 +1147,29 @@ function Conquest:write_damage_policy(now)
         }))
     end
 
-    local zone_result = FileIO.overwrite(
-        self.paths.conquest_zone_policy,
-        zone_lines
-    )
-    if not zone_result.ok then return zone_result end
+    local zone_signature = table.concat(zone_lines, "\n")
+    if zone_signature ~= self.zone_policy_signature
+        or not FileIO.exists(self.paths.conquest_zone_policy) then
+        local zone_result = FileIO.overwrite(
+            self.paths.conquest_zone_policy,
+            zone_lines
+        )
+        if not zone_result.ok then return zone_result end
+        self.zone_policy_signature = zone_signature
+    end
 
-    return FileIO.overwrite(self.paths.conquest_damage_policy, lines)
+    local damage_signature = table.concat(lines, "\n")
+    if damage_signature ~= self.damage_policy_signature
+        or not FileIO.exists(self.paths.conquest_damage_policy) then
+        local damage_result = FileIO.overwrite(
+            self.paths.conquest_damage_policy,
+            lines
+        )
+        if not damage_result.ok then return damage_result end
+        self.damage_policy_signature = damage_signature
+    end
+
+    return Result.ok(true)
 end
 
 function Conquest:_cancel_counter_attack(occupation, now)

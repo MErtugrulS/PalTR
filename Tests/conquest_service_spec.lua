@@ -5,6 +5,7 @@ package.path = table.concat({
 }, ";")
 
 local Conquest = require("PalTR.services.conquest_service")
+local FileIO = require("PalTR.storage.file_io")
 local Result = require("PalTR.core.result")
 local DiplomacyStates = require("PalTR.domain.states")
 local States = require("PalTR.domain.conquest_states")
@@ -273,6 +274,16 @@ local siege = service:establish_siege(
 )
 equal(siege.ok, true, "siege and first target established")
 equal(service:write_damage_policy(21).ok, true, "damage policy written")
+local original_overwrite = FileIO.overwrite
+local repeated_policy_writes = 0
+FileIO.overwrite = function(path, lines)
+    repeated_policy_writes = repeated_policy_writes + 1
+    return original_overwrite(path, lines)
+end
+local repeated_policy = service:write_damage_policy(21)
+FileIO.overwrite = original_overwrite
+equal(repeated_policy.ok, true, "unchanged damage policy stays valid")
+equal(repeated_policy_writes, 0, "unchanged damage policy is not rewritten")
 local policy_file = assert(io.open(paths.conquest_damage_policy, "r"))
 local policy_text = policy_file:read("*a")
 policy_file:close()
