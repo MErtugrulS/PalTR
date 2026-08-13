@@ -1,6 +1,7 @@
 <Window x:Class="PalTRLauncher.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
         Title="PalTR Launcher"
         Width="1500" Height="920"
         MinWidth="1180" MinHeight="720"
@@ -8,6 +9,14 @@
         WindowStyle="None"
         ResizeMode="CanResizeWithGrip"
         Background="{StaticResource WindowSurfaceBrush}">
+    <shell:WindowChrome.WindowChrome>
+        <shell:WindowChrome CaptionHeight="0"
+                            ResizeBorderThickness="6"
+                            GlassFrameThickness="0"
+                            CornerRadius="0"
+                            NonClientFrameEdges="None"
+                            UseAeroCaptionButtons="False" />
+    </shell:WindowChrome.WindowChrome>
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
 
@@ -87,7 +96,7 @@
                             <TextBlock Text="PALTR LAUNCHER" Style="{StaticResource DisplayTitle}" FontSize="29" />
                             <StackPanel Orientation="Horizontal" Margin="1,4,0,0">
                                 <Rectangle Width="48" Height="1" Fill="{StaticResource GoldBrush}" VerticalAlignment="Center" />
-                                <TextBlock Text=" TOPLULUK MERKEZİ " Style="{StaticResource Eyebrow}" />
+                                <TextBlock Text=" OYUN VE SUNUCU MERKEZİ " Style="{StaticResource Eyebrow}" />
                                 <Rectangle Width="48" Height="1" Fill="{StaticResource GoldBrush}" VerticalAlignment="Center" />
                             </StackPanel>
                         </StackPanel>
