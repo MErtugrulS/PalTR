@@ -52,6 +52,25 @@ PalTRUI payload'ı proje publish edilirken otomatik eklenir. UE4SS ve
 onaylanmadan launcher paketine gömülmez. Eksiklerse launcher kapanmaz, yalnız
 kurulum durumu açıkça engelli görünür ve sunucuya katılma başlatılmaz.
 
+## GitHub Releases üzerinden güncelleme
+
+Launcher, public `MErtugrulS/PalTR` reposunun en son GitHub Release'inde bulunan
+`paltr-update.json` manifestini denetler. Manifestte yeni sürüm varsa **Güncelle**
+işlemi ZIP paketini indirir; boyutunu ve SHA-256 değerini doğrular, arşivi yol
+geçişine karşı kontrollü biçimde açar ve mevcut yedekli kurulum katmanına teslim
+eder. Ağ veya GitHub kullanılamazsa launcher açılmaya devam eder ve gömülü paket
+kurtarma seçeneği olarak korunur.
+
+Release dosyalarını üretmek için repo kökünde:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File Scripts/New-PalTRUIReleaseAssets.ps1
+```
+
+Çıktıdaki ZIP ve `paltr-update.json`, scriptin bildirdiği aynı tag ile oluşturulan
+GitHub Release'e eklenmelidir. Launcher özel repo tokenı içermez; bu akış public
+release dosyaları içindir.
+
 ## Demo giriş
 
 - Kullanıcı adı: `Herakles`
