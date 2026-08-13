@@ -74,6 +74,26 @@ auth.MapPost("/login", async (LoginRequest request, AccountStore store, IOptions
     return Results.Ok(await IssueSessionAsync(account, store, optionAccessor.Value));
 });
 
+auth.MapPost("/resend-verification", async (ResendVerificationRequest request, AccountStore store,
+    IVerificationEmailSender emailSender, IOptions<AccountOptions> optionAccessor) =>
+{
+    AccountRecord? account = await store.FindAccountAsync(request.Identifier);
+    if (account is not null && !account.EmailVerified)
+    {
+        AccountOptions options = optionAccessor.Value;
+        string token = Security.NewToken();
+        await store.SaveVerificationAsync(account.Id, Security.HashToken(token),
+            DateTimeOffset.UtcNow.AddHours(options.VerificationTokenHours));
+        string url = $"{options.PublicBaseUrl.TrimEnd('/')}/api/auth/verify-email?token={WebUtility.UrlEncode(token)}";
+        try { await emailSender.SendAsync(account.Email, account.Username, url); }
+        catch (Exception)
+        {
+            return Results.Problem("Doğrulama e-postası gönderilemedi. Daha sonra tekrar dene.", statusCode: 503);
+        }
+    }
+    return Results.Ok(new MessageResponse("Hesap mevcut ve doğrulanmamışsa yeni bağlantı gönderildi."));
+});
+
 auth.MapPost("/refresh", async (RefreshRequest request, AccountStore store, IOptions<AccountOptions> optionAccessor) =>
 {
     SessionRecord? oldSession = await store.FindSessionByRefreshAsync(Security.HashToken(request.RefreshToken));
@@ -132,6 +152,7 @@ static string? ReadBearer(HttpRequest request)
 
 public sealed record RegisterRequest([Required] string Username, [Required] string Email, [Required] string Password);
 public sealed record LoginRequest([Required] string Identifier, [Required] string Password);
+public sealed record ResendVerificationRequest([Required] string Identifier);
 public sealed record RefreshRequest([Required] string RefreshToken);
 public sealed record MessageResponse(string Message);
 public sealed record AccountResponse(string Username, string Email);
