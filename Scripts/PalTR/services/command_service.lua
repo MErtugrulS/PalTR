@@ -8,6 +8,7 @@ local Announcer = require("PalTR.runtime.announcer")
 local ConquestFlagAdapter = require("PalTR.runtime.conquest_flag_adapter")
 local BuildObjectAdapter = require("PalTR.runtime.build_object_adapter")
 local ConquestStates = require("PalTR.domain.conquest_states")
+local Result = require("PalTR.core.result")
 
 local CommandService = {}
 CommandService.__index = CommandService
@@ -491,7 +492,7 @@ function CommandService:_respond(
     self.last_response_key = response_key
     self.last_response_at = now
 
-    FileIO.append(self.paths.responses, TSV.encode({
+    local response_write = FileIO.append(self.paths.responses, TSV.encode({
         Clock.now(),
         player and player.name or "",
         player and player.guild_key or "",
@@ -499,6 +500,12 @@ function CommandService:_respond(
         tostring(success),
         message
     }))
+    if not response_write.ok then
+        self.logger:error(
+            "KOMUT_RESPONSE_WRITE_FAILED | " ..
+            Result.describe(response_write)
+        )
+    end
 
     self.status:build(player, message)
     self.logger:info("KOMUT_SONUC | " .. message)

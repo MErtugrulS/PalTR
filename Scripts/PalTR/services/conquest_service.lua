@@ -82,10 +82,16 @@ end
 
 function Conquest:_event(marker, detail)
     if self.paths and self.paths.conquest_events then
-        FileIO.append(
+        local result = FileIO.append(
             self.paths.conquest_events,
             TSV.encode({ self:_now(), marker, detail or "" })
         )
+        if not result.ok and self.logger then
+            self.logger:error(
+                "FAZ05_EVENT_WRITE_FAILED | " ..
+                Result.describe(result)
+            )
+        end
     end
 
     if self.logger then
