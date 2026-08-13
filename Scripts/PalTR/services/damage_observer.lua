@@ -190,81 +190,81 @@ function Observer:on_enemy_player_damage_request(
         end
     end
 
-    local fields = {
-        "Hook=EnemyPlayerDamagePolicy",
-
-        "Policy=" ..
-            (
-                result.block
-                and "BLOCK"
-                or "ALLOW"
-            ),
-
-        "Reason=" .. result.reason,
-        "RelationState=" .. result.state,
-        "Applied=" .. tostring(applied),
-
-        "AttackerPlayer=" ..
-            (
-                attacker_player
-                and attacker_player.name
-                or ""
-            ),
-
-        "AttackerGuild=" ..
-            (
-                attacker_player
-                and attacker_player.guild_key
-                or ""
-            ),
-
-        "DefenderPlayer=" ..
-            (
-                defender_player
-                and defender_player.name
-                or ""
-            ),
-
-        "DefenderGuild=" ..
-            (
-                defender_player
-                and defender_player.guild_key
-                or ""
-            ),
-
-        "NativeDamageValue=" ..
-            render(
-                read_field(
-                    info,
-                    "NativeDamageValue"
-                )
-            ),
-
-        "BasePower=" ..
-            render(
-                read_field(
-                    info,
-                    "BasePower"
-                )
-            ),
-
-        "NoDamage=" ..
-            render(
-                read_field(
-                    info,
-                    "NoDamage"
-                )
-            )
-    }
-
-    if apply_error ~= "" then
-        table.insert(
-            fields,
-            "ApplyError=" .. apply_error
-        )
-    end
-
     if self.audit_enabled then
+        local fields = {
+            "Hook=EnemyPlayerDamagePolicy",
+
+            "Policy=" ..
+                (
+                    result.block
+                    and "BLOCK"
+                    or "ALLOW"
+                ),
+
+            "Reason=" .. result.reason,
+            "RelationState=" .. result.state,
+            "Applied=" .. tostring(applied),
+
+            "AttackerPlayer=" ..
+                (
+                    attacker_player
+                    and attacker_player.name
+                    or ""
+                ),
+
+            "AttackerGuild=" ..
+                (
+                    attacker_player
+                    and attacker_player.guild_key
+                    or ""
+                ),
+
+            "DefenderPlayer=" ..
+                (
+                    defender_player
+                    and defender_player.name
+                    or ""
+                ),
+
+            "DefenderGuild=" ..
+                (
+                    defender_player
+                    and defender_player.guild_key
+                    or ""
+                ),
+
+            "NativeDamageValue=" ..
+                render(
+                    read_field(
+                        info,
+                        "NativeDamageValue"
+                    )
+                ),
+
+            "BasePower=" ..
+                render(
+                    read_field(
+                        info,
+                        "BasePower"
+                    )
+                ),
+
+            "NoDamage=" ..
+                render(
+                    read_field(
+                        info,
+                        "NoDamage"
+                    )
+                )
+        }
+
+        if apply_error ~= "" then
+            table.insert(
+                fields,
+                "ApplyError=" .. apply_error
+            )
+        end
+
         self:_append(
             defender_path,
             defender_player,

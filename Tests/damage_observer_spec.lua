@@ -28,6 +28,19 @@ local registry = {
 }
 
 local append_count = 0
+local detailed_field_reads = 0
+local allowed_info = setmetatable({
+    IsPlayerVsPlayerDamage = true
+}, {
+    __index = function(_, key)
+        if key == "NativeDamageValue"
+            or key == "BasePower"
+            or key == "NoDamage" then
+            detailed_field_reads = detailed_field_reads + 1
+        end
+        return nil
+    end
+})
 local allowed = Observer.new(
     "unused.tsv",
     registry,
@@ -37,10 +50,9 @@ local allowed = Observer.new(
     logger
 )
 allowed._append = function() append_count = append_count + 1 end
-allowed:on_enemy_player_damage_request(nil, {
-    IsPlayerVsPlayerDamage = true
-}, nil)
+allowed:on_enemy_player_damage_request(nil, allowed_info, nil)
 equal(append_count, 0, "damage audit defaults off")
+equal(detailed_field_reads, 0, "disabled audit skips detailed field reads")
 equal(#logs, 0, "allowed damage does not spam console")
 
 local audited = Observer.new(
