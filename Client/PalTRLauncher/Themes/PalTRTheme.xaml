@@ -35,6 +35,11 @@
         <GradientStop Color="#FC112E40" Offset="0" />
         <GradientStop Color="#FC071620" Offset="1" />
     </LinearGradientBrush>
+    <LinearGradientBrush x:Key="SidebarSurfaceBrush" StartPoint="0,0" EndPoint="1,0">
+        <GradientStop Color="#FC020A10" Offset="0" />
+        <GradientStop Color="#FA04131D" Offset="0.72" />
+        <GradientStop Color="#F7071A25" Offset="1" />
+    </LinearGradientBrush>
     <LinearGradientBrush x:Key="CardSurfaceBrush" StartPoint="0,0" EndPoint="1,1">
         <GradientStop Color="#E8173342" Offset="0" />
         <GradientStop Color="#E80B1A24" Offset="0.72" />

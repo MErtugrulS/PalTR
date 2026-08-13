@@ -132,9 +132,10 @@
                 </Grid.ColumnDefinitions>
 
                 <!-- Değiştirilebilir navigasyon -->
-                <Border Grid.Column="0" Background="#D8051722" BorderBrush="#6EC9A25A" BorderThickness="0,0,1,0" Padding="17,22">
+                <Border Grid.Column="0" Background="{StaticResource SidebarSurfaceBrush}" BorderBrush="#745C5033" BorderThickness="0,0,1,0" Padding="17,22">
                     <Grid>
                         <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+                        <Rectangle Grid.RowSpan="3" Fill="{StaticResource OrnamentBrush}" Opacity="0.22" IsHitTestVisible="False" />
                         <StackPanel>
                             <TextBlock Text="MENÜ" Style="{StaticResource Eyebrow}" Margin="12,0,0,13" />
                             <RadioButton Content="Ana Sayfa" Tag="⌂" Style="{StaticResource NavButton}" GroupName="Navigation"
