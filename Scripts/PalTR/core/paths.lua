@@ -23,6 +23,7 @@ function Paths.new(root)
         conquest_damage_policy = join(root, "conquest_damage_policy.tsv"),
         conquest_zone_policy = join(root, "conquest_zone_policy.tsv"),
         territory_snapshot = join(root, "territory_snapshot.tsv"),
+        territory_boundaries = join(root, "territory_boundaries.tsv"),
         conquest_runtime_events = join(root, "conquest_runtime_events.tsv"),
         relations = join(root, "diplomacy_relations.tsv"),
         events = join(root, "diplomacy_events.tsv"),

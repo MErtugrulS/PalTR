@@ -1,4 +1,5 @@
 local States = require("PalTR.domain.conquest_states")
+local Geometry = require("PalTR.domain.territory_geometry")
 
 local Rules = {}
 
@@ -56,47 +57,63 @@ local function eligible(node, config)
         and Rules.radius_for(node, config) > 0
 end
 
-function Rules.resolve(location, nodes, config, current_node_id)
+function Rules.resolve(location, nodes, config, current_node_id, atlas)
     config = config or {}
     if point(location) == nil then return nil end
 
     local current = nodes and nodes[tostring(current_node_id or "")]
     if eligible(current, config) then
-        local distance = Rules.horizontal_distance(location, current)
         local hysteresis = finite_number(
             config.territory_exit_hysteresis_meters
         ) or 0
         hysteresis = math.max(0, hysteresis)
         local radius = Rules.radius_for(current, config)
-        if distance ~= nil and distance <= radius + hysteresis then
-            return current, radius, distance
+        local measure = Geometry.node_measure(
+            location,
+            current,
+            radius,
+            config,
+            hysteresis
+        )
+        if measure ~= nil and measure.ratio <= 1 then
+            return current, radius, measure.distance
         end
     end
 
-    local selected, selected_radius, selected_distance = nil, nil, nil
-    local selected_ratio = math.huge
+    local guild_key = atlas and Geometry.guild_at(atlas, location) or nil
+    if atlas ~= nil and guild_key == nil then return nil end
+    local selected, selected_radius, measure = Geometry.best_node(
+        location,
+        nodes,
+        config,
+        Rules.radius_for,
+        guild_key
+    )
+    if selected == nil or measure == nil then return nil end
+    if atlas == nil and measure.ratio > 1 then return nil end
+    return selected, selected_radius, measure.distance
+end
 
-    for _, node in pairs(nodes or {}) do
-        if eligible(node, config) then
-            local radius = Rules.radius_for(node, config)
-            local distance = Rules.horizontal_distance(location, node)
-            local ratio = distance and distance / radius or math.huge
-            local node_id = tostring(node.node_id)
-            local selected_id = selected and tostring(selected.node_id) or ""
+function Rules.build_atlas(nodes, config, terrain_sampler)
+    return Geometry.build_atlas(
+        nodes,
+        config or {},
+        Rules.radius_for,
+        terrain_sampler
+    )
+end
 
-            if ratio <= 1 and (
-                ratio < selected_ratio
-                or (ratio == selected_ratio and node_id < selected_id)
-            ) then
-                selected = node
-                selected_radius = radius
-                selected_distance = distance
-                selected_ratio = ratio
-            end
-        end
-    end
+function Rules.organic_radius_for(node, config, angle)
+    return Geometry.organic_radius(
+        node,
+        Rules.radius_for(node, config or {}),
+        finite_number(angle) or 0,
+        config or {}
+    )
+end
 
-    return selected, selected_radius, selected_distance
+function Rules.contains(component, location)
+    return Geometry.contains(component, location)
 end
 
 return Rules

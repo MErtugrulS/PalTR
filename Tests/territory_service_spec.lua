@@ -15,6 +15,7 @@ local function equal(actual, expected, message)
 end
 
 local path = TempPath.prefix("paltr_territory") .. ".tsv"
+local boundary_path = TempPath.prefix("paltr_territory_boundaries") .. ".tsv"
 local player = {
     key = "PLAYER", online = true, controller = {}, pawn = {},
     location = { x = 0, y = 0, z = 0 }
@@ -42,11 +43,17 @@ local conquest = { nodes = {
 } }
 local messages = {}
 local service = Territory.new(
-    { territory_snapshot = path },
+    {
+        territory_snapshot = path,
+        territory_boundaries = boundary_path
+    },
     { conquest = {
         territory_default_capital_radius_meters = 250,
         territory_default_outpost_radius_meters = 150,
-        territory_exit_hysteresis_meters = 20
+        territory_exit_hysteresis_meters = 20,
+        territory_border_irregularity = 0.06,
+        territory_boundary_sample_meters = 8,
+        territory_boundary_max_cells = 50000
     } },
     registry,
     conquest,
@@ -78,6 +85,14 @@ equal(snapshot:find("\t125\t", 1, true) ~= nil, true,
 equal(snapshot:find("\tMISSING", 1, true) ~= nil, true,
     "missing flag territory remains visible")
 
+local boundary_file = assert(io.open(boundary_path, "r"))
+local boundaries = boundary_file:read("*a")
+boundary_file:close()
+equal(boundaries:find("A::001", 1, true) ~= nil, true,
+    "boundary snapshot includes stable component id")
+equal(boundaries:find(";", 1, true) ~= nil, true,
+    "boundary snapshot includes polygon points")
+
 equal(os.remove(path), true, "snapshot removed for recreation test")
 equal(service:refresh().ok, true, "missing unchanged snapshot recreated")
 local recreated = io.open(path, "r")
@@ -88,5 +103,6 @@ player.online = false
 service:refresh()
 equal(service.player_nodes.PLAYER, nil, "offline player state cleared")
 os.remove(path)
+os.remove(boundary_path)
 
 print("territory_service_spec: ok")

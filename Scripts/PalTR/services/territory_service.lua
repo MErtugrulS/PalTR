@@ -11,6 +11,8 @@ Territory.__index = Territory
 
 local SNAPSHOT_HEADER =
     "node_id\tdisplay_name\tnode_type\tcontroller_guild\tcontroller_name\tcenter_x_meters\tcenter_y_meters\tcenter_z_meters\tradius_meters\tstate\tflag_state"
+local BOUNDARY_SNAPSHOT_HEADER =
+    "boundary_id\tcontroller_guild\tcontroller_name\tcomponent_index\tmin_x_meters\tmin_y_meters\tmax_x_meters\tmax_y_meters\tpoint_count\tboundary_points"
 
 local function text(value)
     return tostring(value or "")
@@ -44,9 +46,27 @@ function Territory.new(paths, config, registry, conquest, logger, options)
         logger = logger,
         position_reader = options.position_reader or PlayerLocation.read,
         announce = options.announce or Announcer.send,
+        terrain_sampler = options.terrain_sampler,
         player_nodes = {},
-        snapshot_signature = nil
+        snapshot_signature = nil,
+        boundary_snapshot_signature = nil,
+        atlas_signature = nil,
+        atlas = nil
     }, Territory)
+end
+
+function Territory:set_world_context(context)
+    local sampler = self.terrain_sampler
+    if sampler == nil or type(sampler.set_context) ~= "function" then
+        return false
+    end
+    local before = tonumber(sampler.revision) or 0
+    local ready = sampler:set_context(context)
+    if ready and (tonumber(sampler.revision) or 0) ~= before then
+        self.atlas = nil
+        self.atlas_signature = nil
+    end
+    return ready
 end
 
 function Territory:_guild_name(guild_key)
@@ -102,17 +122,95 @@ function Territory:_snapshot_lines()
     return lines
 end
 
+function Territory:_geometry_signature()
+    local values = {
+        text(self.config.territory_border_irregularity),
+        text(self.config.territory_boundary_sample_meters),
+        text(self.config.territory_boundary_max_cells),
+        text(self.config.territory_boundary_min_component_area_square_meters)
+    }
+    table.insert(values, text(
+        self.terrain_sampler and self.terrain_sampler.revision or 0
+    ))
+    for _, node_id in ipairs(Tables.sorted_keys(self.conquest.nodes)) do
+        local node = self.conquest.nodes[node_id]
+        table.insert(values, table.concat({
+            text(node.node_id),
+            text(node.node_type),
+            text(node.current_controller),
+            text(node.x),
+            text(node.y),
+            text(Rules.radius_for(node, self.config))
+        }, "|"))
+    end
+    return table.concat(values, "\n")
+end
+
+function Territory:_ensure_atlas()
+    local signature = self:_geometry_signature()
+    if self.atlas == nil or self.atlas_signature ~= signature then
+        self.atlas = Rules.build_atlas(
+            self.conquest.nodes,
+            self.config,
+            self.terrain_sampler
+        )
+        self.atlas_signature = signature
+    end
+    return self.atlas
+end
+
+local function encode_points(points)
+    local encoded = {}
+    for _, value in ipairs(points or {}) do
+        table.insert(encoded, string.format("%.3f,%.3f", value.x, value.y))
+    end
+    return table.concat(encoded, ";")
+end
+
+function Territory:_boundary_snapshot_lines(atlas)
+    local lines = { BOUNDARY_SNAPSHOT_HEADER }
+    for _, component in ipairs(atlas and atlas.components or {}) do
+        local bounds = component.bounds
+        table.insert(lines, TSV.encode({
+            component.boundary_id,
+            component.controller_guild,
+            self:_guild_name(component.controller_guild),
+            component.component_index,
+            string.format("%.3f", bounds.min_x),
+            string.format("%.3f", bounds.min_y),
+            string.format("%.3f", bounds.max_x),
+            string.format("%.3f", bounds.max_y),
+            #component.points,
+            encode_points(component.points)
+        }))
+    end
+    return lines
+end
+
 function Territory:write_snapshot()
+    local atlas = self:_ensure_atlas()
     local lines = self:_snapshot_lines()
     local signature = table.concat(lines, "\n")
-    if signature == self.snapshot_signature
-        and FileIO.exists(self.paths.territory_snapshot) then
-        return { ok = true }
+    if signature ~= self.snapshot_signature
+        or not FileIO.exists(self.paths.territory_snapshot) then
+        local result = FileIO.overwrite(self.paths.territory_snapshot, lines)
+        if not result.ok then return result end
+        self.snapshot_signature = signature
     end
 
-    local result = FileIO.overwrite(self.paths.territory_snapshot, lines)
-    if result.ok then self.snapshot_signature = signature end
-    return result
+    local boundary_path = self.paths.territory_boundaries
+    if text(boundary_path) ~= "" then
+        local boundary_lines = self:_boundary_snapshot_lines(atlas)
+        local boundary_signature = table.concat(boundary_lines, "\n")
+        if boundary_signature ~= self.boundary_snapshot_signature
+            or not FileIO.exists(boundary_path) then
+            local result = FileIO.overwrite(boundary_path, boundary_lines)
+            if not result.ok then return result end
+            self.boundary_snapshot_signature = boundary_signature
+        end
+    end
+
+    return { ok = true }
 end
 
 function Territory:_refresh_player(player)
@@ -124,7 +222,8 @@ function Territory:_refresh_player(player)
         location,
         self.conquest.nodes,
         self.config,
-        previous
+        previous,
+        self:_ensure_atlas()
     )
     local current = node and node.node_id or nil
     self.player_nodes[player.key] = current
@@ -139,6 +238,7 @@ function Territory:_refresh_player(player)
 end
 
 function Territory:refresh()
+    self:_ensure_atlas()
     local active = {}
     for key, player in pairs(self.registry.runtime_players or {}) do
         if player.online and player.controller ~= nil and player.pawn ~= nil then

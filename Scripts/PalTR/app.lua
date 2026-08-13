@@ -16,6 +16,12 @@ local DamagePolicy = require("PalTR.services.damage_policy")
 local ProtectionService = require("PalTR.services.protection_service")
 local ConquestService = require("PalTR.services.conquest_service")
 local TerritoryService = require("PalTR.services.territory_service")
+local TerritoryTerrainSampler = require(
+    "PalTR.runtime.territory_terrain_sampler"
+)
+local UIActionService = require("PalTR.services.ui_action_service")
+local UISnapshotService = require("PalTR.services.ui_snapshot_service")
+local UISnapshotPublisher = require("PalTR.services.ui_snapshot_publisher")
 local Scheduler = require("PalTR.services.scheduler")
 
 local App = {}
@@ -61,12 +67,26 @@ function App.new(config)
         Logger.new("Conquest")
     )
 
+    local terrain_sampler = TerritoryTerrainSampler.new(config.conquest)
     local territory = TerritoryService.new(
         paths,
         config,
         registry,
         conquest,
-        Logger.new("Territory")
+        Logger.new("Territory"),
+        { terrain_sampler = terrain_sampler }
+    )
+
+    local ui_actions = UIActionService.new(config)
+    local ui_snapshot = UISnapshotService.new(
+        registry,
+        diplomacy,
+        ui_actions,
+        paths
+    )
+    local ui_publisher = UISnapshotPublisher.new(
+        ui_snapshot,
+        Logger.new("UITransport")
     )
 
     return setmetatable({
@@ -81,6 +101,9 @@ function App.new(config)
         protection = protection,
         conquest = conquest,
         territory = territory,
+        ui_actions = ui_actions,
+        ui_snapshot = ui_snapshot,
+        ui_publisher = ui_publisher,
 
         commands = CommandService.new(
             paths,
@@ -88,7 +111,12 @@ function App.new(config)
             diplomacy,
             status,
             Logger.new("Commands"),
-            conquest
+            conquest,
+            nil,
+            nil,
+            function(player)
+                return ui_publisher:publish(player, true)
+            end
         ),
 
         damage = DamageObserver.new(
@@ -155,6 +183,9 @@ function App:_headers()
 
         [self.paths.territory_snapshot] =
             "node_id\tdisplay_name\tnode_type\tcontroller_guild\tcontroller_name\tcenter_x_meters\tcenter_y_meters\tcenter_z_meters\tradius_meters\tstate\tflag_state",
+
+        [self.paths.territory_boundaries] =
+            "boundary_id\tcontroller_guild\tcontroller_name\tcomponent_index\tmin_x_meters\tmin_y_meters\tmax_x_meters\tmax_y_meters\tpoint_count\tboundary_points",
 
         [self.paths.conquest_runtime_events] =
             "timestamp\tmarker\tflag_reference",
@@ -294,6 +325,8 @@ function App:_register_hooks()
                     pawn
                 )
 
+            self.territory:set_world_context(player and player.pawn or pawn)
+
             self.registry:scan_guilds()
             self.protection:refresh()
 
@@ -301,6 +334,7 @@ function App:_register_hooks()
                 player,
                 "Oyuncu baglandi"
             )
+            self.ui_publisher:publish(player, true)
         end
     ) and registered
 
@@ -316,12 +350,14 @@ function App:_register_hooks()
                 )
 
             if player then
+                self.territory:set_world_context(player.pawn or context)
                 self.protection:refresh()
 
                 self.status:build(
                     player,
                     "Oyuncu-klan eslemesi guncellendi"
                 )
+                self.ui_publisher:publish(player, true)
             end
         end
     ) and registered
@@ -433,6 +469,10 @@ function App:_tick()
             Result.describe(territory_result)
         )
     end
+
+    self.ui_publisher:publish_all(
+        self.registry.runtime_players
+    )
 end
 
 function App:start()
