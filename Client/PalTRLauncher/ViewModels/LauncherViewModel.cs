@@ -7,10 +7,8 @@ namespace PalTRLauncher.ViewModels;
 
 public sealed class LauncherViewModel : ObservableObject
 {
-    public const string DemoUsername = "Herakles";
-    public const string DemoPassword = "PalTRDemo2026!";
-
     private readonly ILauncherService service;
+    private readonly IAccountService accountService;
     private readonly IExternalLinkService externalLinkService;
     private readonly IRememberedSessionStore rememberedSessionStore;
     private readonly ISteamAccountLinkService steamAccountLinkService;
@@ -36,15 +34,18 @@ public sealed class LauncherViewModel : ObservableObject
     private string signedInAccountName = string.Empty;
     private SteamAccountLinkSnapshot steamAccountLink = SteamAccountLinkSnapshot.BackendUnavailable;
     private InstallationSnapshot installation = InstallationSnapshot.Checking;
+    private AccountSession? accountSession;
 
     public LauncherViewModel(
         ILauncherService service,
+        IAccountService accountService,
         IExternalLinkService externalLinkService,
         IRememberedSessionStore rememberedSessionStore,
         ISteamAccountLinkService steamAccountLinkService,
         IInstallationService installationService)
     {
         this.service = service;
+        this.accountService = accountService;
         this.externalLinkService = externalLinkService;
         this.rememberedSessionStore = rememberedSessionStore;
         this.steamAccountLinkService = steamAccountLinkService;
@@ -59,9 +60,9 @@ public sealed class LauncherViewModel : ObservableObject
         OpenSlideLinkCommand = new RelayCommand(_ => OpenCurrentSlideLink());
         ShowLoginCommand = new RelayCommand(_ => ShowAuthenticationMode(false));
         ShowRegisterCommand = new RelayCommand(_ => ShowAuthenticationMode(true));
-        LoginCommand = new RelayCommand(_ => Login());
-        RegisterCommand = new RelayCommand(_ => Register());
-        LogoutCommand = new RelayCommand(_ => Logout());
+        LoginCommand = new AsyncRelayCommand(LoginAsync);
+        RegisterCommand = new AsyncRelayCommand(RegisterAsync);
+        LogoutCommand = new AsyncRelayCommand(LogoutAsync);
         RefreshSteamLinkCommand = new AsyncRelayCommand(RefreshSteamLinkAsync);
         BeginSteamLinkCommand = new AsyncRelayCommand(BeginSteamLinkAsync);
         UnlinkSteamCommand = new AsyncRelayCommand(UnlinkSteamAsync);
@@ -259,18 +260,19 @@ public sealed class LauncherViewModel : ObservableObject
     {
         Installation = await installationService.InspectAsync();
         await RefreshAsync();
-        string? rememberedAccountName = rememberedSessionStore.LoadAccountName();
-        if (rememberedAccountName is null)
+        AccountSession? rememberedSession = rememberedSessionStore.Load();
+        if (rememberedSession is null)
         {
             return;
         }
-
-        signedInAccountName = rememberedAccountName;
-        isAuthenticated = true;
-        RaisePropertyChanged(nameof(IsLauncherVisible));
-        RaisePropertyChanged(nameof(IsAuthenticationVisible));
-        RaisePropertyChanged(nameof(AccountDisplayName));
-        SetStatus(true, "Hatırlanan PalTR oturumu açıldı.");
+        AccountOperationResult refresh = await accountService.RefreshAsync(rememberedSession.RefreshToken);
+        if (!refresh.Success || refresh.Session is null)
+        {
+            rememberedSessionStore.Clear();
+            SetAuthenticationMessage(true, refresh.Message);
+            return;
+        }
+        CompleteAuthentication(refresh.Session, "PalTR oturumun güvenli biçimde yenilendi.", true);
         await RefreshSteamLinkAsync();
     }
 
@@ -285,18 +287,17 @@ public sealed class LauncherViewModel : ObservableObject
         }
 
         await RefreshAsync();
-        string? rememberedAccountName = rememberedSessionStore.LoadAccountName();
-        if (rememberedAccountName is null)
+        AccountSession? rememberedSession = rememberedSessionStore.Load();
+        if (rememberedSession is null)
         {
             return;
         }
-
-        signedInAccountName = rememberedAccountName;
-        isAuthenticated = true;
-        RaisePropertyChanged(nameof(IsLauncherVisible));
-        RaisePropertyChanged(nameof(IsAuthenticationVisible));
-        RaisePropertyChanged(nameof(AccountDisplayName));
-        await RefreshSteamLinkAsync();
+        AccountOperationResult refresh = await accountService.RefreshAsync(rememberedSession.RefreshToken);
+        if (refresh.Success && refresh.Session is not null)
+        {
+            CompleteAuthentication(refresh.Session, "PalTR oturumun güvenli biçimde yenilendi.", true);
+            await RefreshSteamLinkAsync();
+        }
     }
 
     private async Task RefreshAsync()
@@ -457,7 +458,7 @@ public sealed class LauncherViewModel : ObservableObject
         RaisePropertyChanged(nameof(IsRegisterMode));
     }
 
-    private void Login()
+    public async Task LoginAsync()
     {
         string identifier = LoginIdentifier.Trim();
         if (identifier.Length < 3)
@@ -466,20 +467,17 @@ public sealed class LauncherViewModel : ObservableObject
             return;
         }
 
-        if (!string.Equals(identifier, DemoUsername, StringComparison.OrdinalIgnoreCase) ||
-            LoginPassword != DemoPassword)
+        AccountOperationResult result = await accountService.LoginAsync(identifier, LoginPassword);
+        if (!result.Success || result.Session is null)
         {
-            SetAuthenticationMessage(true, "Kullanıcı adı veya parola hatalı. Demo hesap bilgilerini kullan.");
+            SetAuthenticationMessage(true, result.Message);
             return;
         }
-
-        signedInAccountName = DemoUsername;
-        CompleteAuthentication(
-            "Demo oturumu açıldı. Gerçek hesap servisi henüz bağlı değil.",
-            RememberMe);
+        CompleteAuthentication(result.Session, "PalTR hesabına giriş yapıldı.", RememberMe);
+        await RefreshSteamLinkAsync();
     }
 
-    private void Register()
+    public async Task RegisterAsync()
     {
         string username = RegisterUsername.Trim();
         string email = RegisterEmail.Trim();
@@ -495,9 +493,10 @@ public sealed class LauncherViewModel : ObservableObject
             return;
         }
 
-        if (RegisterPassword.Length < 8)
+        if (RegisterPassword.Length < 10 || !RegisterPassword.Any(char.IsUpper) ||
+            !RegisterPassword.Any(char.IsLower) || !RegisterPassword.Any(char.IsDigit))
         {
-            SetAuthenticationMessage(true, "Yeni parola en az 8 karakter olmalı.");
+            SetAuthenticationMessage(true, "Parola en az 10 karakter olmalı; büyük harf, küçük harf ve rakam içermeli.");
             return;
         }
 
@@ -513,16 +512,27 @@ public sealed class LauncherViewModel : ObservableObject
             return;
         }
 
-        signedInAccountName = username;
-        CompleteAuthentication("Demo hesabı hazırlandı. Bilgiler sunucuya kaydedilmedi.", true);
+        AccountOperationResult result = await accountService.RegisterAsync(username, email, RegisterPassword);
+        if (!result.Success)
+        {
+            SetAuthenticationMessage(true, result.Message);
+            return;
+        }
+        RegisterPassword = string.Empty;
+        RegisterPasswordConfirmation = string.Empty;
+        LoginIdentifier = username;
+        ShowAuthenticationMode(false);
+        SetAuthenticationMessage(false, result.Message);
     }
 
-    private void CompleteAuthentication(string message, bool persistSession)
+    private void CompleteAuthentication(AccountSession session, string message, bool persistSession)
     {
+        accountSession = session;
+        signedInAccountName = session.Username;
         isAuthenticated = true;
         if (persistSession)
         {
-            rememberedSessionStore.SaveAccountName(signedInAccountName);
+            rememberedSessionStore.Save(session);
         }
         else
         {
@@ -537,9 +547,15 @@ public sealed class LauncherViewModel : ObservableObject
         SetStatus(true, message);
     }
 
-    private void Logout()
+    public async Task LogoutAsync()
     {
+        AccountSession? session = accountSession ?? rememberedSessionStore.Load();
+        if (session is not null)
+        {
+            await accountService.LogoutAsync(session.RefreshToken);
+        }
         rememberedSessionStore.Clear();
+        accountSession = null;
         isAuthenticated = false;
         signedInAccountName = string.Empty;
         SteamAccountLink = SteamAccountLinkSnapshot.BackendUnavailable;

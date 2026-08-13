@@ -580,19 +580,6 @@
 
                             <Grid Grid.Row="2" Visibility="{Binding IsLoginMode, Converter={StaticResource BooleanToVisibilityConverter}}">
                                 <StackPanel>
-                                    <Border Background="#A5102935" BorderBrush="#83705B36" BorderThickness="1" CornerRadius="8" Padding="13,10" Margin="0,0,0,17">
-                                        <Grid>
-                                            <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-                                            <StackPanel>
-                                                <TextBlock Text="DEMO HESABI" Style="{StaticResource Eyebrow}" Foreground="{StaticResource CyanBrush}" />
-                                                <TextBlock Margin="0,5,0,0"><Run Text="Kullanıcı adı: "/><Run Text="Herakles" FontWeight="Bold" Foreground="{StaticResource GoldLightBrush}"/></TextBlock>
-                                            </StackPanel>
-                                            <StackPanel Grid.Column="1" Margin="24,0,0,0">
-                                                <TextBlock Text="DEMO PAROLA" Style="{StaticResource Eyebrow}" />
-                                                <TextBlock Text="PalTRDemo2026!" FontWeight="Bold" Foreground="{StaticResource GoldLightBrush}" Margin="0,5,0,0" />
-                                            </StackPanel>
-                                        </Grid>
-                                    </Border>
                                     <TextBlock Text="KULLANICI ADI" Style="{StaticResource Eyebrow}" Margin="0,0,0,7" />
                                     <TextBox Style="{StaticResource AuthTextInput}" Text="{Binding LoginIdentifier, UpdateSourceTrigger=PropertyChanged}" />
                                     <TextBlock Text="PAROLA" Style="{StaticResource Eyebrow}" Margin="0,18,0,7" />
@@ -600,7 +587,7 @@
                                     <Grid Margin="0,14,0,0">
                                         <CheckBox Content="Beni hatırla" Style="{StaticResource AuthCheckBox}"
                                                   IsChecked="{Binding RememberMe}" VerticalAlignment="Center" />
-                                        <Button Content="PAROLAMI UNUTTUM" Style="{StaticResource GhostButton}" HorizontalAlignment="Right" Padding="11,6" FontSize="11" IsEnabled="False" />
+                                        <TextBlock Text="E-posta doğrulaması zorunludur" Style="{StaticResource Caption}" HorizontalAlignment="Right" VerticalAlignment="Center" />
                                     </Grid>
                                     <Button Content="PALTR'YE GİRİŞ YAP" Style="{StaticResource PrimaryButton}" Margin="0,24,0,0" Click="Login_OnClick" />
                                 </StackPanel>

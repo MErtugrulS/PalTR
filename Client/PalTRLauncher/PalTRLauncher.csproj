@@ -10,6 +10,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="6.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Resource Include="Assets\*.png" />
     <Content Include="..\PalTRUI\Package\Info.json" Link="Payload\PalTRUI\Info.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>

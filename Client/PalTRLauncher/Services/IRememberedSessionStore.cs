@@ -1,8 +1,10 @@
+using PalTRLauncher.Models;
+
 namespace PalTRLauncher.Services;
 
 public interface IRememberedSessionStore
 {
-    string? LoadAccountName();
-    void SaveAccountName(string accountName);
+    AccountSession? Load();
+    void Save(AccountSession session);
     void Clear();
 }

@@ -1,19 +1,23 @@
 using System.IO;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
+using PalTRLauncher.Models;
 
 namespace PalTRLauncher.Services;
 
 public sealed class LocalRememberedSessionStore : IRememberedSessionStore
 {
+    private static readonly byte[] Entropy = Encoding.UTF8.GetBytes("PalTRLauncher.AccountSession.v1");
     private readonly string sessionFilePath;
 
-    public LocalRememberedSessionStore()
+    public LocalRememberedSessionStore(string? sessionFilePath = null)
     {
         string applicationData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-        sessionFilePath = Path.Combine(applicationData, "PalTRLauncher", "session.json");
+        this.sessionFilePath = sessionFilePath ?? Path.Combine(applicationData, "PalTRLauncher", "session.json");
     }
 
-    public string? LoadAccountName()
+    public AccountSession? Load()
     {
         try
         {
@@ -22,11 +26,10 @@ public sealed class LocalRememberedSessionStore : IRememberedSessionStore
                 return null;
             }
 
-            RememberedSession? session = JsonSerializer.Deserialize<RememberedSession>(
-                File.ReadAllText(sessionFilePath));
-            return string.IsNullOrWhiteSpace(session?.AccountName)
-                ? null
-                : session.AccountName.Trim();
+            byte[] encrypted = File.ReadAllBytes(sessionFilePath);
+            byte[] json = ProtectedData.Unprotect(encrypted, Entropy, DataProtectionScope.CurrentUser);
+            AccountSession? session = JsonSerializer.Deserialize<AccountSession>(json);
+            return string.IsNullOrWhiteSpace(session?.RefreshToken) ? null : session;
         }
         catch (IOException)
         {
@@ -40,21 +43,30 @@ public sealed class LocalRememberedSessionStore : IRememberedSessionStore
         {
             return null;
         }
+        catch (CryptographicException)
+        {
+            Clear();
+            return null;
+        }
     }
 
-    public void SaveAccountName(string accountName)
+    public void Save(AccountSession session)
     {
         try
         {
             string directory = Path.GetDirectoryName(sessionFilePath)!;
             Directory.CreateDirectory(directory);
-            string json = JsonSerializer.Serialize(new RememberedSession(accountName.Trim()));
-            File.WriteAllText(sessionFilePath, json);
+            byte[] json = JsonSerializer.SerializeToUtf8Bytes(session);
+            byte[] encrypted = ProtectedData.Protect(json, Entropy, DataProtectionScope.CurrentUser);
+            File.WriteAllBytes(sessionFilePath, encrypted);
         }
         catch (IOException)
         {
         }
         catch (UnauthorizedAccessException)
+        {
+        }
+        catch (CryptographicException)
         {
         }
     }
@@ -76,5 +88,4 @@ public sealed class LocalRememberedSessionStore : IRememberedSessionStore
         }
     }
 
-    private sealed record RememberedSession(string AccountName);
 }

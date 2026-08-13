@@ -18,6 +18,7 @@ public partial class MainWindow : Window
         LocalPalTRInstallationService embeddedInstaller = new(installLocator);
         viewModel = new LauncherViewModel(
             new DemoLauncherService(),
+            new HttpAccountService(),
             new SystemExternalLinkService(),
             new LocalRememberedSessionStore(),
             new UnavailableSteamAccountLinkService(),
@@ -67,25 +68,20 @@ public partial class MainWindow : Window
     private void RegisterPasswordConfirmation_OnPasswordChanged(object sender, RoutedEventArgs e)
         => viewModel.RegisterPasswordConfirmation = ((PasswordBox)sender).Password;
 
-    private void Login_OnClick(object sender, RoutedEventArgs e)
+    private async void Login_OnClick(object sender, RoutedEventArgs e)
     {
-        viewModel.LoginCommand.Execute(null);
+        await viewModel.LoginAsync();
         ClearAuthenticationPasswordsWhenComplete();
     }
 
-    private void Register_OnClick(object sender, RoutedEventArgs e)
+    private async void Register_OnClick(object sender, RoutedEventArgs e)
     {
-        viewModel.RegisterCommand.Execute(null);
+        await viewModel.RegisterAsync();
         ClearAuthenticationPasswordsWhenComplete();
     }
 
     private void ClearAuthenticationPasswordsWhenComplete()
     {
-        if (!viewModel.IsLauncherVisible)
-        {
-            return;
-        }
-
         LoginPasswordBox.Clear();
         RegisterPasswordBox.Clear();
         RegisterPasswordConfirmationBox.Clear();
