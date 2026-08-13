@@ -267,12 +267,9 @@
                                 </Grid>
                                 <Grid Grid.Row="4" Margin="0,10,0,0">
                                     <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-                                    <StackPanel VerticalAlignment="Center">
-                                        <TextBlock Text="PALTR KURULUMU" Style="{StaticResource Eyebrow}" />
-                                        <TextBlock Text="{Binding Installation.Detail}" Style="{StaticResource Caption}"
-                                                   Margin="0,3,10,0" TextTrimming="CharacterEllipsis" />
-                                    </StackPanel>
-                                    <Button Grid.Column="1" Content="KUR / GÜNCELLE / ONAR" Style="{StaticResource SecondaryButton}"
+                                    <TextBlock Text="PALTR KURULUMU" Style="{StaticResource Eyebrow}"
+                                               VerticalAlignment="Center" />
+                                    <Button Grid.Column="1" Content="{Binding InstallationActionText}" Style="{StaticResource SecondaryButton}"
                                             Padding="12,8" Command="{Binding InstallOrRepairCommand}"
                                             IsEnabled="{Binding CanInstallOrRepair}" />
                                 </Grid>

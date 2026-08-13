@@ -115,11 +115,19 @@ public sealed class LauncherViewModel : ObservableObject
                 RaisePropertyChanged(nameof(IsLauncherVisible));
                 RaisePropertyChanged(nameof(IsAuthenticationVisible));
                 RaisePropertyChanged(nameof(CanInstallOrRepair));
+                RaisePropertyChanged(nameof(InstallationActionText));
             }
         }
     }
 
     public bool CanInstallOrRepair => Installation.CanInstall || Installation.CanRetry;
+
+    public string InstallationActionText => Installation.State switch
+    {
+        InstallationState.Ready => "GÜNCEL",
+        InstallationState.Checking => "KONTROL EDİLİYOR",
+        _ => "GÜNCELLE"
+    };
 
     public string LoginIdentifier
     {
