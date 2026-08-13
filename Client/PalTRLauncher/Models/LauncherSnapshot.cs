@@ -23,7 +23,7 @@ public sealed record LauncherSlide(
     string Category,
     string Title,
     string Summary,
-    string LinkLabel,
+    string ImagePath,
     string TargetUrl);
 
 public sealed record LauncherNews(string Category, string Title, string Summary, string PublishedAt);

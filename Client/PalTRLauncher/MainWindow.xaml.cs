@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Input;
+using System.Windows.Media;
 using PalTRLauncher.Services;
 using PalTRLauncher.ViewModels;
 
@@ -32,4 +33,22 @@ public partial class MainWindow : Window
 
     private void Close_OnClick(object sender, RoutedEventArgs e)
         => Close();
+
+    private void Slider_OnMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    {
+        DependencyObject? source = e.OriginalSource as DependencyObject;
+        while (source is not null)
+        {
+            if (source is System.Windows.Controls.Button)
+            {
+                return;
+            }
+            source = VisualTreeHelper.GetParent(source);
+        }
+
+        if (viewModel.OpenSlideLinkCommand.CanExecute(null))
+        {
+            viewModel.OpenSlideLinkCommand.Execute(null);
+        }
+    }
 }

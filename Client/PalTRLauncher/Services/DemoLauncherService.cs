@@ -25,19 +25,19 @@ public sealed class DemoLauncherService : ILauncherService
                     "ÖNE ÇIKAN DUYURU",
                     "PalTR dünyasındaki yenilikleri keşfet.",
                     "Etkinlikler, topluluk duyuruları ve önemli bağlantılar yönetim panelinden bu alanda yayınlanacak.",
-                    "DETAYI AÇ",
+                    "Assets/paltr-logo.png",
                     "https://www.palworldgame.com/"),
                 new LauncherSlide(
                     "TOPLULUK PAYLAŞIMI",
                     "Yeni etkinlikler için hazırlıklar başladı.",
                     "Yönetim ekibinin görsel, başlık, açıklama ve bağlantıyla hazırladığı paylaşımlar burada dönecek.",
-                    "DETAYI AÇ",
+                    "Assets/paltr-logo.png",
                     "https://www.palworldgame.com/"),
                 new LauncherSlide(
                     "SUNUCU HABERİ",
                     "Haftanın gelişmeleri tek vitrinde.",
                     "Sunucu haberleri ve dış bağlantılı tanıtımlar oyunculara launcher açılışında gösterilecek.",
-                    "PAYLAŞIMI AÇ",
+                    "Assets/paltr-logo.png",
                     "https://www.palworldgame.com/")
             },
             News = new[]
