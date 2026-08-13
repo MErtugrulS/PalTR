@@ -440,21 +440,10 @@
                                     <Grid>
                                         <Grid.ColumnDefinitions><ColumnDefinition Width="96"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                                         <Border Width="76" Height="76" CornerRadius="12" Background="#FF162B38"
-                                                BorderBrush="#C4C9A25A" BorderThickness="1" VerticalAlignment="Top">
-                                            <Viewbox Width="54" Height="54" HorizontalAlignment="Center" VerticalAlignment="Center">
-                                                <Canvas Width="64" Height="64">
-                                                    <Path Data="M17,47 L43,27" Stroke="#FFF4F8FA" StrokeThickness="8"
-                                                          StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
-                                                    <Ellipse Canvas.Left="34" Canvas.Top="8" Width="25" Height="25"
-                                                             Fill="#FF162B38" Stroke="#FFF4F8FA" StrokeThickness="5" />
-                                                    <Ellipse Canvas.Left="40.5" Canvas.Top="14.5" Width="12" Height="12"
-                                                             Fill="#FFF4F8FA" />
-                                                    <Ellipse Canvas.Left="7" Canvas.Top="38" Width="22" Height="22"
-                                                             Fill="#FF162B38" Stroke="#FFF4F8FA" StrokeThickness="5" />
-                                                    <Path Data="M7,43 C12,49 17,52 26,52" Stroke="#FFF4F8FA" StrokeThickness="5"
-                                                          StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
-                                                </Canvas>
-                                            </Viewbox>
+                                                BorderBrush="#C4C9A25A" BorderThickness="1" VerticalAlignment="Top"
+                                                ClipToBounds="True">
+                                            <Image Source="Assets/steam-logo.png" Width="84" Height="84"
+                                                   Stretch="UniformToFill" HorizontalAlignment="Center" VerticalAlignment="Center" />
                                         </Border>
                                         <StackPanel Grid.Column="1" Margin="4,0,24,0">
                                             <TextBlock Text="Steam" Style="{StaticResource DisplayTitle}" FontSize="26" />
