@@ -5,6 +5,8 @@ package.path = table.concat({
 }, ";")
 
 local Repositories = require("PalTR.storage.repositories")
+local FileIO = require("PalTR.storage.file_io")
+local Result = require("PalTR.core.result")
 local TempPath = dofile("Tests/support/temp_path.lua")
 
 local function equal(actual, expected, message)
@@ -47,6 +49,22 @@ equal(
     tostring(error_message):find("Bos registry dosyasi", 1, true) ~= nil,
     true,
     "empty registry reports useful error"
+)
+
+local original_read_lines = FileIO.read_lines
+FileIO.read_lines = function()
+    return Result.err("READ_FAILED", "access denied")
+end
+ok, error_message = pcall(function()
+    Repositories.load_guilds(path)
+end)
+FileIO.read_lines = original_read_lines
+equal(ok, false, "registry read failure stops loading")
+equal(
+    tostring(error_message):find("READ_FAILED: access denied", 1, true)
+        ~= nil,
+    true,
+    "registry read failure reports useful error"
 )
 
 os.remove(path)

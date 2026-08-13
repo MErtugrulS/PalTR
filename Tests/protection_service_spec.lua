@@ -74,6 +74,12 @@ equal(service:refresh(3400), true, "missing unchanged snapshot recreated")
 local recreated = io.open(snapshot_path, "r")
 equal(recreated ~= nil, true, "recreated protection snapshot exists")
 if recreated then recreated:close() end
+
+local invalid_activity = assert(io.open(activity_path, "w"))
+invalid_activity:write("wrong_header\n")
+invalid_activity:close()
+equal(service:refresh(3401), false, "invalid activity header fails closed")
+
 os.remove(snapshot_path)
 os.remove(activity_path)
 

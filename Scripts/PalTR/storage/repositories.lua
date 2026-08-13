@@ -2,6 +2,7 @@ local FileIO = require("PalTR.storage.file_io")
 local TSV = require("PalTR.storage.tsv")
 local Tables = require("PalTR.core.table_utils")
 local Text = require("PalTR.core.text")
+local Result = require("PalTR.core.result")
 
 local Repositories = {}
 
@@ -13,7 +14,12 @@ end
 local function load_table(path, expected_header_prefix, mapper)
     local result = {}
     local lines = FileIO.read_lines(path)
-    if not lines.ok then return result end
+    if not lines.ok then
+        error(
+            "Registry dosyasi okunamadi: " .. tostring(path) ..
+            " | " .. Result.describe(lines)
+        )
+    end
     if #(lines.value or {}) == 0 then
         if FileIO.exists(path) then
             error("Bos registry dosyasi: " .. tostring(path))

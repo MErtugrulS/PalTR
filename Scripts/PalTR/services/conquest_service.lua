@@ -1199,13 +1199,22 @@ function Conquest:process_runtime_events(now)
 
     local loaded = FileIO.read_lines(processing_path)
     if not loaded.ok then return loaded end
+    local runtime_lines = loaded.value or {}
+    if #runtime_lines == 0
+        or runtime_lines[1] ~= "timestamp\tmarker\tflag_reference" then
+
+        return Result.err(
+            "INVALID_RUNTIME_EVENT_HEADER",
+            "Fetih runtime event basligi gecersiz"
+        )
+    end
 
     local processed = 0
     local cleared_legacy_reference = false
     local changed_occupations = false
     local changed_nodes = false
 
-    for index, line in ipairs(loaded.value or {}) do
+    for index, line in ipairs(runtime_lines) do
         if index > 1 and line ~= "" then
             local columns = TSV.decode(line)
             local event_at = number(columns[1])

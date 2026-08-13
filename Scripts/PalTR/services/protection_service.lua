@@ -1,6 +1,7 @@
 local Clock = require("PalTR.core.clock")
 local FileIO = require("PalTR.storage.file_io")
 local Tables = require("PalTR.core.table_utils")
+local Result = require("PalTR.core.result")
 local TSV = require("PalTR.storage.tsv")
 
 local Protection = {}
@@ -89,11 +90,26 @@ function Protection:_load_activity()
         self.paths.protection_activity
     )
 
-    if not result.ok then
-        return activity
+    if not result.ok then return result end
+
+    local lines = result.value or {}
+    if #lines == 0 then
+        if FileIO.exists(self.paths.protection_activity) then
+            return Result.err(
+                "INVALID_PROTECTION_ACTIVITY",
+                "Combat activity dosyasi bos"
+            )
+        end
+        return Result.ok(activity)
+    end
+    if lines[1] ~= "guild_key\tlast_hostile_at" then
+        return Result.err(
+            "INVALID_PROTECTION_ACTIVITY",
+            "Combat activity basligi gecersiz"
+        )
     end
 
-    for index, line in ipairs(result.value or {}) do
+    for index, line in ipairs(lines) do
         if index > 1 and line ~= "" then
             local columns = TSV.decode(line)
             local guild_key = tostring(columns[1] or "")
@@ -108,7 +124,7 @@ function Protection:_load_activity()
         end
     end
 
-    return activity
+    return Result.ok(activity)
 end
 
 function Protection:_online_counts()
@@ -154,7 +170,15 @@ end
 function Protection:refresh(now)
     now = non_negative(now or Clock.now())
 
-    local activity = self:_load_activity()
+    local activity_result = self:_load_activity()
+    if not activity_result.ok then
+        self.logger:error(
+            "Koruma activity dosyasi okunamadi: " ..
+            Result.describe(activity_result)
+        )
+        return false
+    end
+    local activity = activity_result.value
     local online_counts = self:_online_counts()
     local last_online_times =
         self:_last_online_times()

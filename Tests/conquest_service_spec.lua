@@ -215,6 +215,18 @@ local limit = service:register_node({
 equal(limit.ok, false, "N outpost limit blocks")
 equal(limit.error.code, "OUTPOST_LIMIT_REACHED", "N limit reason")
 
+local invalid_runtime_file = assert(io.open(paths.conquest_runtime_events, "w"))
+invalid_runtime_file:write("wrong_header\n")
+invalid_runtime_file:close()
+local invalid_runtime = service:process_runtime_events(3)
+equal(invalid_runtime.ok, false, "invalid runtime event header rejected")
+equal(
+    invalid_runtime.error.code,
+    "INVALID_RUNTIME_EVENT_HEADER",
+    "invalid runtime event header reason"
+)
+os.remove(paths.conquest_runtime_events .. ".processing")
+
 local own_dispose_file = assert(io.open(paths.conquest_runtime_events, "w"))
 own_dispose_file:write(
     "timestamp\tmarker\tflag_reference\n" ..
