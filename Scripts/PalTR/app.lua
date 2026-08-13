@@ -4,6 +4,7 @@ local Paths = require("PalTR.core.paths")
 local Clock = require("PalTR.core.clock")
 local FileIO = require("PalTR.storage.file_io")
 local TSV = require("PalTR.storage.tsv")
+local Result = require("PalTR.core.result")
 local HookRegistry = require("PalTR.runtime.hook_registry")
 local Announcer = require("PalTR.runtime.announcer")
 local RegistryService = require("PalTR.services.registry_service")
@@ -381,7 +382,7 @@ function App:_tick()
     if not runtime_events.ok then
         self.logger:error(
             "FAZ05_RUNTIME_EVENT_FAILED | " ..
-            tostring(runtime_events.error)
+            Result.describe(runtime_events)
         )
     end
 
@@ -390,7 +391,7 @@ function App:_tick()
     if not conquest_result.ok then
         self.logger:error(
             "FAZ05_CONQUEST_TICK_FAILED | " ..
-            tostring(conquest_result.error)
+            Result.describe(conquest_result)
         )
     end
 
@@ -399,7 +400,7 @@ function App:_tick()
     if not policy_result.ok then
         self.logger:error(
             "FAZ05_DAMAGE_POLICY_WRITE_FAILED | " ..
-            tostring(policy_result.error)
+            Result.describe(policy_result)
         )
     end
 
@@ -407,7 +408,7 @@ function App:_tick()
     if not territory_result.ok then
         self.logger:error(
             "FAZ05_TERRITORY_REFRESH_FAILED | " ..
-            tostring(territory_result.error)
+            Result.describe(territory_result)
         )
     end
 end

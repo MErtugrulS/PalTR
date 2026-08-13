@@ -6,6 +6,7 @@ package.path = table.concat({
 
 local App = require("PalTR.app")
 local FileIO = require("PalTR.storage.file_io")
+local Result = require("PalTR.core.result")
 
 local function equal(actual, expected, message)
     if actual ~= expected then
@@ -40,6 +41,11 @@ FileIO.overwrite = original_overwrite
 io.open = original_open
 equal(headers.ok, false, "mandatory header write failure is returned")
 equal(headers.error.code, "WRITE_FAILED", "header failure code preserved")
+equal(
+    Result.describe(headers),
+    "WRITE_FAILED: read only",
+    "structured failure renders actionable log text"
+)
 
 local registrations = 0
 app.hooks = {
