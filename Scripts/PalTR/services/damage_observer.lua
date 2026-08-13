@@ -73,15 +73,28 @@ function Observer.new(
     path,
     registry,
     policy,
-    logger
+    logger,
+    options
 )
+    options = options or {}
     return setmetatable({
         path = path,
         registry = registry,
         policy = policy,
         logger = logger,
-        last_write_error_at = 0
+        audit_enabled = options.audit_enabled == true,
+        last_write_error_at = 0,
+        last_decision_log_at = {}
     }, Observer)
+end
+
+function Observer:_log_decision(level, key, message)
+    local now = Clock.now()
+    local last = self.last_decision_log_at[key] or 0
+    if now - last < 5 then return end
+
+    self.last_decision_log_at[key] = now
+    self.logger[level](self.logger, message)
 end
 
 function Observer:_append(
@@ -138,15 +151,17 @@ function Observer:on_enemy_player_damage_request(
         ) == true
 
     if not is_pvp then
-        self:_append(
-            defender_path,
-            defender_player,
-            {
-                "Hook=EnemyPlayerDamagePolicy",
-                "Policy=SKIP",
-                "Reason=NOT_PLAYER_VS_PLAYER"
-            }
-        )
+        if self.audit_enabled then
+            self:_append(
+                defender_path,
+                defender_player,
+                {
+                    "Hook=EnemyPlayerDamagePolicy",
+                    "Policy=SKIP",
+                    "Reason=NOT_PLAYER_VS_PLAYER"
+                }
+            )
+        end
 
         return
     end
@@ -249,30 +264,29 @@ function Observer:on_enemy_player_damage_request(
         )
     end
 
-    self:_append(
-        defender_path,
-        defender_player,
-        fields
-    )
+    if self.audit_enabled then
+        self:_append(
+            defender_path,
+            defender_player,
+            fields
+        )
+    end
 
     if result.block and applied then
-        self.logger:info(
+        self:_log_decision(
+            "info",
+            result.reason .. "|" .. result.state,
             "Oyuncu hasari engellendi: " ..
             result.reason ..
             " | " ..
             result.state
         )
     elseif result.block then
-        self.logger:error(
+        self:_log_decision(
+            "error",
+            "APPLY_FAILED|" .. result.reason,
             "Oyuncu hasari engellenemedi: " ..
             apply_error
-        )
-    else
-        self.logger:info(
-            "Oyuncu hasarina izin verildi: " ..
-            result.reason ..
-            " | " ..
-            result.state
         )
     end
 end

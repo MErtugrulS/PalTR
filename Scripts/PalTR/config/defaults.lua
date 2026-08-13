@@ -6,7 +6,9 @@ return {
         guild_scan_seconds = 60,
         player_validity_poll = true,
         -- Faz-04 oyuncu hasar politikasini uygular.
-        enable_damage_enforcement = true
+        enable_damage_enforcement = true,
+        -- Ayrintili her-vurus TSV audit'i yalniz sorun ayiklamada acilir.
+        enable_damage_audit = false
     },
 
     diplomacy = {

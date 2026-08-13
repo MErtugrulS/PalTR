@@ -5,7 +5,8 @@ return {
     },
 
     runtime = {
-        enable_damage_enforcement = true
+        enable_damage_enforcement = true,
+        enable_damage_audit = false
     },
 
     protection = {

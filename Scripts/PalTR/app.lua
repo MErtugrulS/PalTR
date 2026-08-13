@@ -95,7 +95,10 @@ function App.new(config)
             paths.damage,
             registry,
             damage_policy,
-            Logger.new("Damage")
+            Logger.new("Damage"),
+            {
+                audit_enabled = config.runtime.enable_damage_audit == true
+            }
         ),
 
         scheduler = Scheduler.new(
@@ -165,12 +168,14 @@ function App:_headers()
         [self.paths.responses] =
             "timestamp\tplayer_name\tguild_key\tcommand\tsuccess\tmessage",
 
-        [self.paths.damage] =
-            "timestamp\ttarget_path\tplayer_name\tguild_key\tdetail",
-
         [self.paths.health] =
             "timestamp\tversion\tstatus"
     }
+
+    if self.config.runtime.enable_damage_audit == true then
+        files[self.paths.damage] =
+            "timestamp\ttarget_path\tplayer_name\tguild_key\tdetail"
+    end
 
     for path, header in pairs(files) do
         local file = io.open(path, "r")
