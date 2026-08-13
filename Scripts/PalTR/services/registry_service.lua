@@ -3,6 +3,7 @@ local PlayerAdapter = require("PalTR.runtime.player_adapter")
 local Repositories = require("PalTR.storage.repositories")
 local Clock = require("PalTR.core.clock")
 local Text = require("PalTR.core.text")
+local Tables = require("PalTR.core.table_utils")
 local UE = require("PalTR.runtime.ue")
 
 local Registry = {}
@@ -19,10 +20,33 @@ function Registry.new(paths, logger)
     }, Registry)
 end
 
+function Registry:_write_failed(label, result)
+    if result.ok then return false end
+    self.logger:error(
+        label .. ": " ..
+        tostring(result.error and result.error.message or "")
+    )
+    return true
+end
+
 function Registry:save()
-    Repositories.save_guilds(self.paths.guilds, self.guilds)
-    Repositories.save_players(self.paths.players, self.players)
-    self:save_online()
+    local guilds = Repositories.save_guilds(
+        self.paths.guilds,
+        self.guilds
+    )
+    if self:_write_failed("Klan registry yazilamadi", guilds) then
+        return guilds
+    end
+
+    local players = Repositories.save_players(
+        self.paths.players,
+        self.players
+    )
+    if self:_write_failed("Oyuncu registry yazilamadi", players) then
+        return players
+    end
+
+    return self:save_online()
 end
 
 function Registry:save_online()
@@ -30,7 +54,8 @@ function Registry:save_online()
         "player_key\tplayer_name\tguild_key\tconnected_at\tlast_seen"
     }
 
-    for key, player in pairs(self.runtime_players) do
+    for _, key in ipairs(Tables.sorted_keys(self.runtime_players)) do
+        local player = self.runtime_players[key]
         if player.online then
             table.insert(lines, table.concat({
                 Text.clean(key),
@@ -43,7 +68,9 @@ function Registry:save_online()
     end
 
     local FileIO = require("PalTR.storage.file_io")
-    FileIO.overwrite(self.paths.online, lines)
+    local result = FileIO.overwrite(self.paths.online, lines)
+    self:_write_failed("Online oyuncu snapshot'i yazilamadi", result)
+    return result
 end
 
 function Registry:scan_guilds()
@@ -58,10 +85,17 @@ function Registry:scan_guilds()
         self.guilds[key] = record
     end
 
-    Repositories.save_guilds(self.paths.guilds, self.guilds)
+    local saved = Repositories.save_guilds(
+        self.paths.guilds,
+        self.guilds
+    )
+    if self:_write_failed("Klan taramasi yazilamadi", saved) then
+        return saved
+    end
     self.logger:info("Klan sayisi: " .. tostring(
         require("PalTR.core.table_utils").count(self.guilds)
     ))
+    return saved
 end
 
 function Registry:on_connected(context, pawn)

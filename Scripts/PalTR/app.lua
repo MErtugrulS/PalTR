@@ -420,7 +420,10 @@ function App:start()
             tostring(headers.error and headers.error.message or "")
         )
     end
-    self.registry:scan_guilds()
+    local registry_scan = self.registry:scan_guilds()
+    if not registry_scan.ok then
+        error("Klan registry ilk taramasi kaydedilemedi")
+    end
     self.last_guild_scan = Clock.now()
     if not self.protection:refresh(self.last_guild_scan) then
         error("Offline koruma snapshot'i baslatilamadi")
