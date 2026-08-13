@@ -14,12 +14,14 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        PalworldInstallLocator installLocator = new();
+        LocalPalTRInstallationService embeddedInstaller = new(installLocator);
         viewModel = new LauncherViewModel(
             new DemoLauncherService(),
             new SystemExternalLinkService(),
             new LocalRememberedSessionStore(),
             new UnavailableSteamAccountLinkService(),
-            new LocalPalTRInstallationService(new PalworldInstallLocator()));
+            new GitHubPalTRInstallationService(installLocator, embeddedInstaller));
         DataContext = viewModel;
         Loaded += async (_, _) => await viewModel.InitializeAsync();
     }
