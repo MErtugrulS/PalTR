@@ -142,7 +142,10 @@ namespace PalTR
             return false;
         }
 
-        m_last_persisted_at[target_guild_key] = current;
+        for (const auto& [guild_key, value] : m_last_hostile_at)
+        {
+            m_last_persisted_at[guild_key] = value;
+        }
         return true;
     }
 

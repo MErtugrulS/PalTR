@@ -4,6 +4,7 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <iterator>
 #include <string>
 
 namespace
@@ -12,6 +13,14 @@ namespace
     {
         std::ofstream output(path, std::ios::trunc);
         output << contents;
+    }
+
+    std::string read_file(const std::filesystem::path& path)
+    {
+        std::ifstream input(path);
+        return {
+            std::istreambuf_iterator<char>(input),
+            std::istreambuf_iterator<char>()};
     }
 
     bool expect(bool condition, const char* message)
@@ -298,6 +307,16 @@ int main()
     ok &= expect(
         activity.last_hostile_at("GUILD_A") == 103,
         "throttled combat activity retained in memory");
+    ok &= expect(
+        activity.record("GUILD_B", 104, error),
+        "second guild persists pending combat activity");
+    const auto shared_persist = read_file(activity_path);
+    ok &= expect(
+        activity.record("GUILD_A", 105, error),
+        "shared persistence advances every guild throttle");
+    ok &= expect(
+        read_file(activity_path) == shared_persist,
+        "shared persistence avoids a redundant follow-up write");
     ok &= expect(
         activity.record("GUILD_A", 108, error),
         "later combat activity persists");
