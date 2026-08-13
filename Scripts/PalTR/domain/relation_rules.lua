@@ -4,13 +4,21 @@ local Result = require("PalTR.core.result")
 
 local Rules = {}
 
+local function valid_previous_state(value)
+    return value == States.NEUTRAL
+        or value == States.WAR
+        or value == States.CEASEFIRE
+end
+
 local function reset_request(relation)
     relation.requested_by = ""
     relation.accepted_by = ""
 end
 
 local function restore_previous_state(relation)
-    local restored = relation.previous_state or States.NEUTRAL
+    local restored = valid_previous_state(relation.previous_state)
+        and relation.previous_state
+        or States.NEUTRAL
     local now = Clock.now()
 
     relation.state = restored

@@ -95,4 +95,24 @@ equal(
 equal(defeated.state, States.NEUTRAL, "capital defeat returns neutral")
 equal(defeated.active_at, 0, "capital defeat clears war clock")
 
+local malformed_pending = {
+    state = States.ALLIANCE_PENDING,
+    previous_state = "",
+    requested_by = "GUILD_A",
+    accepted_by = "",
+    active_at = 0,
+    expires_at = 1,
+    updated_at = 1
+}
+equal(
+    Rules.tick(malformed_pending, config),
+    "PROPOSAL_EXPIRED",
+    "malformed legacy proposal expires"
+)
+equal(
+    malformed_pending.state,
+    States.NEUTRAL,
+    "empty previous state fails safe to neutral"
+)
+
 print("relation_rules_spec: ok")
