@@ -7,8 +7,12 @@ namespace PalTRLauncher.ViewModels;
 
 public sealed class LauncherViewModel : ObservableObject
 {
+    public const string DemoUsername = "Herakles";
+    public const string DemoPassword = "PalTRDemo2026!";
+
     private readonly ILauncherService service;
     private readonly IExternalLinkService externalLinkService;
+    private readonly IRememberedSessionStore rememberedSessionStore;
     private string selectedPage = "Ana Sayfa";
     private string statusMessage = "Launcher hazırlanıyor...";
     private bool isStatusSuccess = true;
@@ -19,21 +23,24 @@ public sealed class LauncherViewModel : ObservableObject
     private bool isRegisterMode;
     private string loginIdentifier = string.Empty;
     private string loginPassword = string.Empty;
-    private string registerDisplayName = string.Empty;
+    private string registerUsername = string.Empty;
     private string registerEmail = string.Empty;
     private string registerPassword = string.Empty;
     private string registerPasswordConfirmation = string.Empty;
     private bool hasAcceptedTerms;
+    private bool rememberMe = true;
     private string authenticationMessage = "PalTR hesabınla devam et.";
     private bool isAuthenticationMessageError;
     private string signedInAccountName = string.Empty;
 
     public LauncherViewModel(
         ILauncherService service,
-        IExternalLinkService externalLinkService)
+        IExternalLinkService externalLinkService,
+        IRememberedSessionStore rememberedSessionStore)
     {
         this.service = service;
         this.externalLinkService = externalLinkService;
+        this.rememberedSessionStore = rememberedSessionStore;
         RefreshCommand = new AsyncRelayCommand(RefreshAsync);
         JoinServerCommand = new AsyncRelayCommand(JoinServerAsync);
         CheckUpdatesCommand = new AsyncRelayCommand(CheckUpdatesAsync);
@@ -80,10 +87,10 @@ public sealed class LauncherViewModel : ObservableObject
         set => SetProperty(ref loginPassword, value);
     }
 
-    public string RegisterDisplayName
+    public string RegisterUsername
     {
-        get => registerDisplayName;
-        set => SetProperty(ref registerDisplayName, value);
+        get => registerUsername;
+        set => SetProperty(ref registerUsername, value);
     }
 
     public string RegisterEmail
@@ -108,6 +115,12 @@ public sealed class LauncherViewModel : ObservableObject
     {
         get => hasAcceptedTerms;
         set => SetProperty(ref hasAcceptedTerms, value);
+    }
+
+    public bool RememberMe
+    {
+        get => rememberMe;
+        set => SetProperty(ref rememberMe, value);
     }
 
     public string AuthenticationMessage
@@ -184,7 +197,22 @@ public sealed class LauncherViewModel : ObservableObject
     public ICommand RegisterCommand { get; }
     public ICommand LogoutCommand { get; }
 
-    public async Task InitializeAsync() => await RefreshAsync();
+    public async Task InitializeAsync()
+    {
+        await RefreshAsync();
+        string? rememberedAccountName = rememberedSessionStore.LoadAccountName();
+        if (rememberedAccountName is null)
+        {
+            return;
+        }
+
+        signedInAccountName = rememberedAccountName;
+        isAuthenticated = true;
+        RaisePropertyChanged(nameof(IsLauncherVisible));
+        RaisePropertyChanged(nameof(IsAuthenticationVisible));
+        RaisePropertyChanged(nameof(AccountDisplayName));
+        SetStatus(true, "Hatırlanan PalTR oturumu açıldı.");
+    }
 
     private async Task RefreshAsync()
     {
@@ -281,29 +309,30 @@ public sealed class LauncherViewModel : ObservableObject
         string identifier = LoginIdentifier.Trim();
         if (identifier.Length < 3)
         {
-            SetAuthenticationMessage(true, "Kullanıcı adı veya e-posta alanını doldur.");
+            SetAuthenticationMessage(true, "Kullanıcı adı alanını doldur.");
             return;
         }
 
-        if (LoginPassword.Length < 6)
+        if (!string.Equals(identifier, DemoUsername, StringComparison.OrdinalIgnoreCase) ||
+            LoginPassword != DemoPassword)
         {
-            SetAuthenticationMessage(true, "Parola en az 6 karakter olmalı.");
+            SetAuthenticationMessage(true, "Kullanıcı adı veya parola hatalı. Demo hesap bilgilerini kullan.");
             return;
         }
 
-        signedInAccountName = identifier.Contains('@')
-            ? identifier.Split('@', 2)[0]
-            : identifier;
-        CompleteAuthentication("Demo oturumu açıldı. Gerçek hesap servisi henüz bağlı değil.");
+        signedInAccountName = DemoUsername;
+        CompleteAuthentication(
+            "Demo oturumu açıldı. Gerçek hesap servisi henüz bağlı değil.",
+            RememberMe);
     }
 
     private void Register()
     {
-        string displayName = RegisterDisplayName.Trim();
+        string username = RegisterUsername.Trim();
         string email = RegisterEmail.Trim();
-        if (displayName.Length < 3)
+        if (username.Length < 3)
         {
-            SetAuthenticationMessage(true, "Oyuncu adı en az 3 karakter olmalı.");
+            SetAuthenticationMessage(true, "Kullanıcı adı en az 3 karakter olmalı.");
             return;
         }
 
@@ -331,13 +360,21 @@ public sealed class LauncherViewModel : ObservableObject
             return;
         }
 
-        signedInAccountName = displayName;
-        CompleteAuthentication("Demo hesabı hazırlandı. Bilgiler sunucuya kaydedilmedi.");
+        signedInAccountName = username;
+        CompleteAuthentication("Demo hesabı hazırlandı. Bilgiler sunucuya kaydedilmedi.", true);
     }
 
-    private void CompleteAuthentication(string message)
+    private void CompleteAuthentication(string message, bool persistSession)
     {
         isAuthenticated = true;
+        if (persistSession)
+        {
+            rememberedSessionStore.SaveAccountName(signedInAccountName);
+        }
+        else
+        {
+            rememberedSessionStore.Clear();
+        }
         LoginPassword = string.Empty;
         RegisterPassword = string.Empty;
         RegisterPasswordConfirmation = string.Empty;
@@ -349,6 +386,7 @@ public sealed class LauncherViewModel : ObservableObject
 
     private void Logout()
     {
+        rememberedSessionStore.Clear();
         isAuthenticated = false;
         signedInAccountName = string.Empty;
         SelectedPage = "Ana Sayfa";

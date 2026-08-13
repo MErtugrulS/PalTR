@@ -16,7 +16,8 @@ public partial class MainWindow : Window
         InitializeComponent();
         viewModel = new LauncherViewModel(
             new DemoLauncherService(),
-            new SystemExternalLinkService());
+            new SystemExternalLinkService(),
+            new LocalRememberedSessionStore());
         DataContext = viewModel;
         Loaded += async (_, _) => await viewModel.InitializeAsync();
     }
