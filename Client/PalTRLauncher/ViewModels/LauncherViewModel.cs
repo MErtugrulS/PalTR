@@ -13,6 +13,7 @@ public sealed class LauncherViewModel : ObservableObject
     private readonly ILauncherService service;
     private readonly IExternalLinkService externalLinkService;
     private readonly IRememberedSessionStore rememberedSessionStore;
+    private readonly ISteamAccountLinkService steamAccountLinkService;
     private string selectedPage = "Ana Sayfa";
     private string statusMessage = "Launcher hazırlanıyor...";
     private bool isStatusSuccess = true;
@@ -32,15 +33,18 @@ public sealed class LauncherViewModel : ObservableObject
     private string authenticationMessage = "PalTR hesabınla devam et.";
     private bool isAuthenticationMessageError;
     private string signedInAccountName = string.Empty;
+    private SteamAccountLinkSnapshot steamAccountLink = SteamAccountLinkSnapshot.BackendUnavailable;
 
     public LauncherViewModel(
         ILauncherService service,
         IExternalLinkService externalLinkService,
-        IRememberedSessionStore rememberedSessionStore)
+        IRememberedSessionStore rememberedSessionStore,
+        ISteamAccountLinkService steamAccountLinkService)
     {
         this.service = service;
         this.externalLinkService = externalLinkService;
         this.rememberedSessionStore = rememberedSessionStore;
+        this.steamAccountLinkService = steamAccountLinkService;
         RefreshCommand = new AsyncRelayCommand(RefreshAsync);
         JoinServerCommand = new AsyncRelayCommand(JoinServerAsync);
         CheckUpdatesCommand = new AsyncRelayCommand(CheckUpdatesAsync);
@@ -54,6 +58,9 @@ public sealed class LauncherViewModel : ObservableObject
         LoginCommand = new RelayCommand(_ => Login());
         RegisterCommand = new RelayCommand(_ => Register());
         LogoutCommand = new RelayCommand(_ => Logout());
+        RefreshSteamLinkCommand = new AsyncRelayCommand(RefreshSteamLinkAsync);
+        BeginSteamLinkCommand = new AsyncRelayCommand(BeginSteamLinkAsync);
+        UnlinkSteamCommand = new AsyncRelayCommand(UnlinkSteamAsync);
     }
 
     public LauncherSnapshot Snapshot { get; private set; } = new();
@@ -74,6 +81,24 @@ public sealed class LauncherViewModel : ObservableObject
     public string AccountDisplayName => string.IsNullOrWhiteSpace(signedInAccountName)
         ? Snapshot.AccountName
         : signedInAccountName;
+
+    public SteamAccountLinkSnapshot SteamAccountLink
+    {
+        get => steamAccountLink;
+        private set
+        {
+            if (SetProperty(ref steamAccountLink, value))
+            {
+                RaisePropertyChanged(nameof(IsSteamLinked));
+                RaisePropertyChanged(nameof(IsSteamUnlinked));
+                RaisePropertyChanged(nameof(HasSteamIdentity));
+            }
+        }
+    }
+
+    public bool IsSteamLinked => SteamAccountLink.State == SteamAccountLinkState.Linked;
+    public bool IsSteamUnlinked => !IsSteamLinked;
+    public bool HasSteamIdentity => !string.IsNullOrWhiteSpace(SteamAccountLink.SteamId64);
 
     public string LoginIdentifier
     {
@@ -196,6 +221,9 @@ public sealed class LauncherViewModel : ObservableObject
     public ICommand LoginCommand { get; }
     public ICommand RegisterCommand { get; }
     public ICommand LogoutCommand { get; }
+    public ICommand RefreshSteamLinkCommand { get; }
+    public ICommand BeginSteamLinkCommand { get; }
+    public ICommand UnlinkSteamCommand { get; }
 
     public async Task InitializeAsync()
     {
@@ -212,6 +240,7 @@ public sealed class LauncherViewModel : ObservableObject
         RaisePropertyChanged(nameof(IsAuthenticationVisible));
         RaisePropertyChanged(nameof(AccountDisplayName));
         SetStatus(true, "Hatırlanan PalTR oturumu açıldı.");
+        await RefreshSteamLinkAsync();
     }
 
     private async Task RefreshAsync()
@@ -250,6 +279,35 @@ public sealed class LauncherViewModel : ObservableObject
             SupportSubject = string.Empty;
             SupportMessage = string.Empty;
         }
+    }
+
+    private async Task RefreshSteamLinkAsync()
+    {
+        SteamAccountLink = await steamAccountLinkService.GetStatusAsync();
+    }
+
+    private async Task BeginSteamLinkAsync()
+    {
+        SteamAccountLinkActionResult result = await steamAccountLinkService.BeginLinkAsync();
+        SteamAccountLink = result.Snapshot;
+        SetStatus(result.Success, result.Message);
+
+        if (!result.Success || string.IsNullOrWhiteSpace(result.AuthorizationUrl))
+        {
+            return;
+        }
+
+        LauncherActionResult openResult = externalLinkService.Open(result.AuthorizationUrl);
+        SetStatus(openResult.Success, openResult.Success
+            ? "Steam doğrulama sayfası açıldı. İşlemi tamamladıktan sonra durumu yenile."
+            : openResult.Message);
+    }
+
+    private async Task UnlinkSteamAsync()
+    {
+        SteamAccountLinkActionResult result = await steamAccountLinkService.UnlinkAsync();
+        SteamAccountLink = result.Snapshot;
+        SetStatus(result.Success, result.Message);
     }
 
     private void SetStatus(bool success, string message)
@@ -382,6 +440,7 @@ public sealed class LauncherViewModel : ObservableObject
         RaisePropertyChanged(nameof(IsAuthenticationVisible));
         RaisePropertyChanged(nameof(AccountDisplayName));
         SetStatus(true, message);
+        _ = RefreshSteamLinkAsync();
     }
 
     private void Logout()
@@ -389,6 +448,7 @@ public sealed class LauncherViewModel : ObservableObject
         rememberedSessionStore.Clear();
         isAuthenticated = false;
         signedInAccountName = string.Empty;
+        SteamAccountLink = SteamAccountLinkSnapshot.BackendUnavailable;
         SelectedPage = "Ana Sayfa";
         SetAuthenticationMessage(false, "Oturum kapatıldı. Yeniden giriş yapabilirsin.");
         RaisePropertyChanged(nameof(IsLauncherVisible));

@@ -17,7 +17,8 @@ public partial class MainWindow : Window
         viewModel = new LauncherViewModel(
             new DemoLauncherService(),
             new SystemExternalLinkService(),
-            new LocalRememberedSessionStore());
+            new LocalRememberedSessionStore(),
+            new UnavailableSteamAccountLinkService());
         DataContext = viewModel;
         Loaded += async (_, _) => await viewModel.InitializeAsync();
     }

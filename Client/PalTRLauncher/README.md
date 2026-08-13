@@ -39,6 +39,25 @@ Bu nedenle **Sunucuya Katıl** butonu oyunu çalıştırmaz.
 kaydedilir; parola diske yazılmaz. Hesap sayfasındaki **Oturumu Kapat** işlemi
 hatırlanan oturumu temizler.
 
+## Steam hesap eşleştirme sözleşmesi
+
+Launcher SteamID64 değerini yerel Steam dosyalarından okuyup doğrulanmış kabul
+etmez. Güvenli bağlantı akışı PalTR hesap sunucusunda tamamlanmalıdır:
+
+1. Oturum açmış hesap için tek kullanımlık, süreli ve hesaba bağlı bir bağlantı
+   isteği oluşturulur.
+2. Launcher yalnız sunucunun döndürdüğü Steam OpenID adresini tarayıcıda açar.
+3. OpenID dönüşü sunucuda doğrulanır; dönen claimed ID içindeki SteamID64 hesaba
+   benzersiz olarak bağlanır.
+4. Launcher durum uç noktasından yalnız sunucunun doğruladığı SteamID64 ve
+   görünen Steam adını alır.
+5. Bağlantıyı kaldırma işlemi yeniden kimlik doğrulama ve sunucu yetkisi ister.
+
+Steam publisher/Web API anahtarı launcher içine veya yerel ayarlara konmaz.
+`ISteamAccountLinkService` bu backend sözleşmesinin istemci sınırıdır. Gerçek
+hesap API'si yapılandırılana kadar `UnavailableSteamAccountLinkService` sahte
+bir Steam kimliği üretmeden bekleme durumunu gösterir.
+
 ## Derleme
 
 PowerShell:
