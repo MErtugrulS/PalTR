@@ -135,6 +135,20 @@ Asagidakiler oyun icinde henuz gecmis sayilmadi:
   vermesi; logda `KOMUT_RESPONSE_WRITE_FAILED` veya
   `FAZ05_EVENT_WRITE_FAILED` bulunmamasi. Salt-okunur/disk-dolu hata senaryolari
   otomatik testte kapsanir, canli veri klasorunde elle hata uretilmeyecek.
+- Varsayilan `enable_damage_audit=false` ayariyla tarafsiz oyuncu PvP'sinde
+  `passive_damage_events.tsv` dosyasinin her vurusla buyumemesi ve konsolda
+  `Oyuncu hasarina izin verildi` spam'i olusmamasi. Ayni pakette ittifakli
+  oyuncu hasarinin halen engellenmesi; tekrarlanan engel logunun en fazla bes
+  saniyede bir gorunmesi.
+- Diplomasi veya offline koruma snapshot'i normal oyun akisi ile degistiginde
+  native politikanin yaklasik bir saniye icinde yeni durumu almasi. Snapshot
+  degisimi sirasinda `guard failing open` mesaji gorulmemeli; gecici okuma
+  yarisi olursa son gecerli politika korunmali ve sonraki yenileme basarili
+  olmali. Canli TSV dosyalari elle bozulmayacak veya silinmeyecek.
+- Normal calisma ve temiz yeniden baslatma sonrasinda veri klasorunde kalici
+  `.next`/`.backup` dosyasi bulunmamasi. Bir onceki kesintiden kalirsa server
+  hedef TSV'yi otomatik toparlamali; bu kontrol icin calisan sunucunun veri
+  dosyalari elle degistirilmeyecek.
 - Gercek direkli faction bayraklarindan birini kurup `!bayrakaday` ile sinif,
   model kimligi, klan sahipligi ve konum cozumunun runtime dogrulanmasi; ardindan
   ayni bayrakla baskent/karakol, yeniden baglama ve karsi saldiri kaydi.
