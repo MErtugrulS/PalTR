@@ -283,14 +283,30 @@ public sealed class LauncherViewModel : ObservableObject
 
     private async Task RefreshSteamLinkAsync()
     {
-        SteamAccountLink = await steamAccountLinkService.GetStatusAsync();
+        try
+        {
+            SteamAccountLink = await steamAccountLinkService.GetStatusAsync();
+        }
+        catch (Exception exception)
+        {
+            SetSteamLinkFailure("Steam bağlantı durumu alınamadı.", exception);
+        }
     }
 
     private async Task BeginSteamLinkAsync()
     {
-        SteamAccountLinkActionResult result = await steamAccountLinkService.BeginLinkAsync();
-        SteamAccountLink = result.Snapshot;
-        SetStatus(result.Success, result.Message);
+        SteamAccountLinkActionResult result;
+        try
+        {
+            result = await steamAccountLinkService.BeginLinkAsync();
+            SteamAccountLink = result.Snapshot;
+            SetStatus(result.Success, result.Message);
+        }
+        catch (Exception exception)
+        {
+            SetSteamLinkFailure("Steam bağlantısı başlatılamadı.", exception);
+            return;
+        }
 
         if (!result.Success || string.IsNullOrWhiteSpace(result.AuthorizationUrl))
         {
@@ -305,9 +321,25 @@ public sealed class LauncherViewModel : ObservableObject
 
     private async Task UnlinkSteamAsync()
     {
-        SteamAccountLinkActionResult result = await steamAccountLinkService.UnlinkAsync();
-        SteamAccountLink = result.Snapshot;
-        SetStatus(result.Success, result.Message);
+        try
+        {
+            SteamAccountLinkActionResult result = await steamAccountLinkService.UnlinkAsync();
+            SteamAccountLink = result.Snapshot;
+            SetStatus(result.Success, result.Message);
+        }
+        catch (Exception exception)
+        {
+            SetSteamLinkFailure("Steam bağlantısı kaldırılamadı.", exception);
+        }
+    }
+
+    private void SetSteamLinkFailure(string message, Exception exception)
+    {
+        SteamAccountLink = new SteamAccountLinkSnapshot(
+            SteamAccountLinkState.Failed,
+            "Bağlantı hatası",
+            message);
+        SetStatus(false, $"{message} {exception.Message}");
     }
 
     private void SetStatus(bool success, string message)
@@ -440,7 +472,6 @@ public sealed class LauncherViewModel : ObservableObject
         RaisePropertyChanged(nameof(IsAuthenticationVisible));
         RaisePropertyChanged(nameof(AccountDisplayName));
         SetStatus(true, message);
-        _ = RefreshSteamLinkAsync();
     }
 
     private void Logout()

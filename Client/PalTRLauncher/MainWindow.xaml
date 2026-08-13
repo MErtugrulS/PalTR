@@ -405,7 +405,7 @@
 
                     <!-- Hesap -->
                     <Grid Visibility="{Binding IsAccountPage, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <Grid.ColumnDefinitions><ColumnDefinition Width="440"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="390"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
                         <Border Style="{StaticResource OrnatePanel}" Margin="0,0,16,0">
                             <StackPanel>
                                 <TextBlock Text="Hesabım" Style="{StaticResource DisplayTitle}" FontSize="31" />
@@ -414,18 +414,69 @@
                                 </Border>
                                 <TextBlock Text="{Binding AccountDisplayName}" Style="{StaticResource DisplayTitle}" FontSize="27" />
                                 <TextBlock Text="{Binding Snapshot.Membership}" Foreground="{StaticResource GoldLightBrush}" Margin="0,4,0,18" />
-                                <TextBlock Text="Kimlik doğrulama ve güvenlik seçenekleri gerçek API bağlantısından sonra gösterilecek." Style="{StaticResource Caption}" TextWrapping="Wrap" />
+                                <TextBlock Text="PalTR hesabın launcher, destek sistemi ve oyun içi kimliğinin merkezidir. Steam bağlantısı doğrulandıktan sonra oyun verilerin SteamID64 üzerinden eşleştirilir."
+                                           Style="{StaticResource Caption}" TextWrapping="Wrap" />
+                                <Border Height="1" Background="#607C663A" Margin="0,24" />
+                                <Button Content="OTURUMU KAPAT" Style="{StaticResource SecondaryButton}"
+                                        Command="{Binding LogoutCommand}" />
                             </StackPanel>
                         </Border>
                         <Border Grid.Column="1" Style="{StaticResource OrnatePanel}">
-                            <StackPanel>
-                                <TextBlock Text="Hesap Yönetimi" Style="{StaticResource SectionTitle}" />
-                                <Button Content="ŞİFRE VE GÜVENLİK" Style="{StaticResource SecondaryButton}" Margin="0,20,0,9" IsEnabled="False" />
-                                <Button Content="BAĞLI OYUN HESAPLARI" Style="{StaticResource SecondaryButton}" Margin="0,0,0,9" IsEnabled="False" />
-                                <Button Content="OTURUM GEÇMİŞİ" Style="{StaticResource SecondaryButton}" IsEnabled="False" />
-                                <Button Content="OTURUMU KAPAT" Style="{StaticResource SecondaryButton}" Margin="0,22,0,0"
-                                        Command="{Binding LogoutCommand}" />
-                            </StackPanel>
+                            <Grid>
+                                <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+                                <Grid>
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                    <StackPanel>
+                                        <TextBlock Text="Bağlı Oyun Hesapları" Style="{StaticResource SectionTitle}" />
+                                        <TextBlock Text="Oyun içi oyuncu kimliğini PalTR hesabına güvenli biçimde bağla."
+                                                   Style="{StaticResource Caption}" Margin="0,7,0,0" />
+                                    </StackPanel>
+                                    <Button Grid.Column="1" Content="DURUMU YENİLE" Style="{StaticResource GhostButton}"
+                                            Padding="14,8" Command="{Binding RefreshSteamLinkCommand}" />
+                                </Grid>
+
+                                <Border Grid.Row="1" Background="#C5081923" BorderBrush="#877B653C" BorderThickness="1"
+                                        CornerRadius="11" Padding="22" Margin="0,24,0,20">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions><ColumnDefinition Width="96"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                        <Border Width="76" Height="76" CornerRadius="12" Background="#FF162B38"
+                                                BorderBrush="#C4C9A25A" BorderThickness="1" VerticalAlignment="Top">
+                                            <TextBlock Text="STEAM" FontSize="14" FontWeight="Bold" Foreground="#FFE7F0F5"
+                                                       HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                        </Border>
+                                        <StackPanel Grid.Column="1" Margin="4,0,24,0">
+                                            <TextBlock Text="Steam" Style="{StaticResource DisplayTitle}" FontSize="26" />
+                                            <TextBlock Text="{Binding SteamAccountLink.StatusLabel}" Foreground="{StaticResource GoldLightBrush}"
+                                                       FontWeight="SemiBold" FontSize="15" Margin="0,5,0,0" />
+                                            <TextBlock Text="{Binding SteamAccountLink.Detail}" Style="{StaticResource Caption}"
+                                                       TextWrapping="Wrap" Margin="0,9,0,0" MaxWidth="520" />
+                                            <StackPanel Margin="0,18,0,0" Visibility="{Binding HasSteamIdentity, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                                <TextBlock Text="STEAM GÖRÜNEN ADI" Style="{StaticResource Eyebrow}" />
+                                                <TextBlock Text="{Binding SteamAccountLink.PersonaName}" FontSize="16" Margin="0,4,0,12" />
+                                                <TextBlock Text="STEAMID64" Style="{StaticResource Eyebrow}" />
+                                                <TextBlock Text="{Binding SteamAccountLink.SteamId64}" FontFamily="Consolas" FontSize="15" Margin="0,4,0,0" />
+                                            </StackPanel>
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="2" Width="190" VerticalAlignment="Top">
+                                            <Button Content="STEAM İLE BAĞLA" Style="{StaticResource PrimaryButton}"
+                                                    Command="{Binding BeginSteamLinkCommand}"
+                                                    Visibility="{Binding IsSteamUnlinked, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                            <Button Content="BAĞLANTIYI KALDIR" Style="{StaticResource SecondaryButton}"
+                                                    Command="{Binding UnlinkSteamCommand}"
+                                                    Visibility="{Binding IsSteamLinked, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                        </StackPanel>
+                                    </Grid>
+                                </Border>
+
+                                <Border Grid.Row="2" Background="#80112631" BorderBrush="#50705D3B" BorderThickness="1"
+                                        CornerRadius="8" Padding="15,12">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="GÜVENLİK" Style="{StaticResource Eyebrow}" Foreground="{StaticResource CyanBrush}" Margin="0,0,16,0" />
+                                        <TextBlock Text="Steam parolan launcher'a girilmez. Doğrulama Steam'in resmî sayfasında yapılır; PalTR yalnız doğrulanmış SteamID64 sonucunu saklar."
+                                                   Style="{StaticResource Caption}" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </Border>
+                            </Grid>
                         </Border>
                     </Grid>
                 </Grid>
