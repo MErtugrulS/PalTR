@@ -7,7 +7,7 @@
         WindowStartupLocation="CenterScreen"
         WindowStyle="None"
         ResizeMode="CanResizeWithGrip"
-        Background="#02070B">
+        Background="{StaticResource WindowSurfaceBrush}">
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
 
@@ -52,8 +52,8 @@
         </DataTemplate>
     </Window.Resources>
 
-    <Border Margin="22" Background="{StaticResource WindowSurfaceBrush}" BorderBrush="#E0C9A25A"
-            BorderThickness="1" CornerRadius="18" Effect="{StaticResource DeepShadow}">
+    <Border Margin="0" Background="{StaticResource WindowSurfaceBrush}" BorderBrush="#E0C9A25A"
+            BorderThickness="1" CornerRadius="12">
         <Grid ClipToBounds="True">
             <Grid.RowDefinitions>
                 <RowDefinition Height="92" />
