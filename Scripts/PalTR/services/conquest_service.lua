@@ -99,12 +99,6 @@ function Conquest:_event(marker, detail)
     end
 end
 
-function Conquest:_save_nodes_and_edges()
-    local nodes = self.repository:save_nodes(self.nodes)
-    if not nodes.ok then return nodes end
-    return self.repository:save_edges(self.edges)
-end
-
 function Conquest:_save_campaigns()
     return self.repository:save_campaigns(self.campaigns)
 end
@@ -462,6 +456,7 @@ function Conquest:register_node(request)
         updated_at = now
     }
 
+    local registered_edge_id = ""
     if node_type == States.NODE_TYPE.CAPITAL then
         if self:_capital_for(guild_key) then
             return Result.err("CAPITAL_ALREADY_EXISTS", "Klanin baskenti zaten var")
@@ -488,10 +483,10 @@ function Conquest:register_node(request)
         end
 
         node.parent_node_id = parent.node_id
-        local id = edge_id(parent.node_id, node.node_id)
-        self.edges[id] = {
-            key = id,
-            edge_id = id,
+        registered_edge_id = edge_id(parent.node_id, node.node_id)
+        self.edges[registered_edge_id] = {
+            key = registered_edge_id,
+            edge_id = registered_edge_id,
             node_a = parent.node_id,
             node_b = node.node_id,
             created_at = now
@@ -499,8 +494,31 @@ function Conquest:register_node(request)
     end
 
     self.nodes[node_id] = node
-    local saved = self:_save_nodes_and_edges()
-    if not saved.ok then return saved end
+    local nodes_saved = self.repository:save_nodes(self.nodes)
+    if not nodes_saved.ok then
+        self.nodes[node_id] = nil
+        if registered_edge_id ~= "" then
+            self.edges[registered_edge_id] = nil
+        end
+        return nodes_saved
+    end
+
+    if registered_edge_id ~= "" then
+        local edges_saved = self.repository:save_edges(self.edges)
+        if not edges_saved.ok then
+            self.nodes[node_id] = nil
+            self.edges[registered_edge_id] = nil
+
+            local rollback = self.repository:save_nodes(self.nodes)
+            if not rollback.ok and self.logger then
+                self.logger:error(
+                    "FAZ05_NODE_ROLLBACK_WRITE_FAILED | " ..
+                    Result.describe(rollback)
+                )
+            end
+            return edges_saved
+        end
+    end
 
     self:_event("FAZ05_FLAG_REGISTERED", node_id .. "|" .. node_type)
     return Result.ok(node)
@@ -535,10 +553,16 @@ function Conquest:rename_territory(request)
         )
     end
 
+    local previous_name = node.display_name
+    local previous_updated_at = node.updated_at
     node.display_name = name
     node.updated_at = self:_now(request.now)
     local saved = self.repository:save_nodes(self.nodes)
-    if not saved.ok then return saved end
+    if not saved.ok then
+        node.display_name = previous_name
+        node.updated_at = previous_updated_at
+        return saved
+    end
     self:_event("FAZ05_TERRITORY_RENAMED", node.node_id .. "|" .. name)
     return Result.ok(node)
 end
@@ -572,10 +596,16 @@ function Conquest:set_territory_radius(request)
         )
     end
 
+    local previous_radius = node.territory_radius_meters
+    local previous_updated_at = node.updated_at
     node.territory_radius_meters = radius
     node.updated_at = self:_now(request.now)
     local saved = self.repository:save_nodes(self.nodes)
-    if not saved.ok then return saved end
+    if not saved.ok then
+        node.territory_radius_meters = previous_radius
+        node.updated_at = previous_updated_at
+        return saved
+    end
     self:_event(
         "FAZ05_TERRITORY_RADIUS_CHANGED",
         node.node_id .. "|" .. tostring(radius)
@@ -628,6 +658,15 @@ function Conquest:rebind_missing_flag(request)
         )
     end
 
+    local previous = {
+        flag_reference = nearest.flag_reference,
+        flag_state = nearest.flag_state,
+        x = nearest.x,
+        y = nearest.y,
+        z = nearest.z,
+        updated_at = nearest.updated_at
+    }
+
     nearest.flag_reference = reference
     nearest.flag_state = States.FLAG.BOUND
     nearest.x = number(flag.x)
@@ -636,7 +675,15 @@ function Conquest:rebind_missing_flag(request)
     nearest.updated_at = now
 
     local saved = self.repository:save_nodes(self.nodes)
-    if not saved.ok then return saved end
+    if not saved.ok then
+        nearest.flag_reference = previous.flag_reference
+        nearest.flag_state = previous.flag_state
+        nearest.x = previous.x
+        nearest.y = previous.y
+        nearest.z = previous.z
+        nearest.updated_at = previous.updated_at
+        return saved
+    end
 
     self:_event("FAZ05_FLAG_REBOUND", nearest.node_id .. "|" .. reference)
     return Result.ok(nearest)
