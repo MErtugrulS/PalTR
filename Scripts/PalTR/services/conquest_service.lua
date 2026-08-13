@@ -21,6 +21,17 @@ local function text(value)
     return tostring(value or "")
 end
 
+local function copy_record(record)
+    local copy = {}
+    for key, value in pairs(record or {}) do copy[key] = value end
+    return copy
+end
+
+local function restore_record(record, snapshot)
+    for key in pairs(record or {}) do record[key] = nil end
+    for key, value in pairs(snapshot or {}) do record[key] = value end
+end
+
 local function flag_bound(node)
     return node ~= nil and node.flag_state == States.FLAG.BOUND
 end
@@ -1320,10 +1331,14 @@ function Conquest:record_target_damage(campaign_id, target_node_id, attacker, no
         or States.NODE.UNDER_ATTACK
 
     if target.state ~= next_state then
+        local previous = copy_record(target)
         target.state = next_state
         target.updated_at = self:_now(now)
         local saved = self.repository:save_nodes(self.nodes)
-        if not saved.ok then return saved end
+        if not saved.ok then
+            restore_record(target, previous)
+            return saved
+        end
         self:_event("FAZ05_TARGET_DAMAGE_ALLOW", target.node_id)
     end
 
@@ -1747,6 +1762,7 @@ function Conquest:start_counter_attack(node_id, guild_key, actor_role, flag, now
         )
     end
 
+    local previous = copy_record(occupation)
     occupation.state = States.OCCUPATION.COUNTER_ATTACK
     occupation.frontline_state = "COUNTER_ATTACK"
     occupation.counter_flag_reference = reference
@@ -1757,7 +1773,10 @@ function Conquest:start_counter_attack(node_id, guild_key, actor_role, flag, now
     occupation.counter_flag_z = number(flag.z)
     occupation.updated_at = now
     local saved = self:_save_occupations()
-    if not saved.ok then return saved end
+    if not saved.ok then
+        restore_record(occupation, previous)
+        return saved
+    end
     self:_event("FAZ05_COUNTER_ATTACK", node_id .. "|" .. reference)
     return Result.ok(occupation)
 end
@@ -1859,10 +1878,21 @@ function Conquest:mark_loot_in_transit(manifest_id, guild_key)
         return Result.err("WRONG_LOOT_OWNER", "Loot sahibi farkli")
     end
 
+    local previous = copy_record(manifest)
     local result = Loot.mark_in_transit(manifest)
     if not result.ok then return result end
     local saved = self:_save_loot()
-    if not saved.ok then return saved end
+    if not saved.ok then
+        restore_record(manifest, previous)
+        local rollback = self:_save_loot()
+        if not rollback.ok and self.logger then
+            self.logger:error(
+                "FAZ05_LOOT_ROLLBACK_WRITE_FAILED | " ..
+                Result.describe(rollback)
+            )
+        end
+        return saved
+    end
     return result
 end
 
@@ -1892,10 +1922,21 @@ function Conquest:extract_loot(manifest_id, guild_key, now)
         )
     end
 
+    local previous = copy_record(manifest)
     local result = Loot.extract(manifest, guild_key, self:_now(now))
     if not result.ok then return result end
     local saved = self:_save_loot()
-    if not saved.ok then return saved end
+    if not saved.ok then
+        restore_record(manifest, previous)
+        local rollback = self:_save_loot()
+        if not rollback.ok and self.logger then
+            self.logger:error(
+                "FAZ05_LOOT_ROLLBACK_WRITE_FAILED | " ..
+                Result.describe(rollback)
+            )
+        end
+        return saved
+    end
     self:_event("FAZ05_LOOT_EXTRACTED", manifest_id)
     return result
 end

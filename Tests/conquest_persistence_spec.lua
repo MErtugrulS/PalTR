@@ -45,8 +45,11 @@ local capital = {
 local fail_edges_once = true
 local fail_nodes_once = false
 local fail_campaigns_once = false
+local fail_occupations_once = false
+local fail_loot_items_once = false
 local last_nodes = nil
 local last_edges = nil
+local last_loot_manifests = nil
 local repository = {
     load_nodes = function() return { CAPITAL = copy(capital) } end,
     load_edges = function() return {} end,
@@ -77,9 +80,24 @@ local repository = {
         end
         return Result.ok(true)
     end,
-    save_occupations = function() return Result.ok(true) end,
-    save_loot_manifests = function() return Result.ok(true) end,
-    save_loot_items = function() return Result.ok(true) end
+    save_occupations = function()
+        if fail_occupations_once then
+            fail_occupations_once = false
+            return Result.err("WRITE_FAILED", "disk full")
+        end
+        return Result.ok(true)
+    end,
+    save_loot_manifests = function(_, records)
+        last_loot_manifests = copy(records)
+        return Result.ok(true)
+    end,
+    save_loot_items = function()
+        if fail_loot_items_once then
+            fail_loot_items_once = false
+            return Result.err("WRITE_FAILED", "disk full")
+        end
+        return Result.ok(true)
+    end
 }
 
 local service = Conquest.new(
@@ -95,6 +113,11 @@ local service = Conquest.new(
             siege_min_distance_from_target_meters = 250,
             siege_max_distance_from_target_meters = 600,
             siege_min_distance_from_other_enemy_node_meters = 100,
+            raid_window_start = "00:00",
+            raid_window_end = "00:00",
+            raid_utc_offset_minutes = 0,
+            counter_attack_flag_radius_meters = 30,
+            counter_attack_hold_seconds = 10,
             operator_roles = { LEADER = true }
         }
     },
@@ -237,5 +260,84 @@ equal(service.campaigns[campaign_id].active_target_node_id, "", "target id rolle
 equal(service.campaigns[campaign_id].siege_camp_reference, "", "siege camp rolled back")
 equal(service.campaigns[campaign_id].updated_at, 1, "campaign timestamp rolled back")
 equal(last_nodes.B_OUTPOST.state, States.NODE.PROTECTED, "target node file compensated")
+
+service.nodes.B_OUTPOST.state = States.NODE.TARGETABLE
+service.nodes.B_OUTPOST.updated_at = 1
+service.campaigns[campaign_id].active_target_node_id = "B_OUTPOST"
+service.campaigns[campaign_id].siege_camp_reference = "SIEGE_CAMP"
+service.campaigns[campaign_id].siege_x = 300
+fail_nodes_once = true
+local damage_result = service:record_target_damage(
+    campaign_id,
+    "B_OUTPOST",
+    "GUILD_A",
+    21
+)
+equal(damage_result.ok, false, "target damage write failure returned")
+equal(service.nodes.B_OUTPOST.state, States.NODE.TARGETABLE, "damage state rolled back")
+equal(service.nodes.B_OUTPOST.updated_at, 1, "damage timestamp rolled back")
+
+service.campaigns.COUNTER = {
+    key = "COUNTER",
+    campaign_id = "COUNTER",
+    war_id = "COUNTER_WAR",
+    attacker_guild = "GUILD_B",
+    defender_guild = "GUILD_A",
+    state = States.CAMPAIGN.ACTIVE,
+    active_target_node_id = "",
+    siege_camp_reference = "COUNTER_CAMP",
+    updated_at = 1
+}
+service.occupations.B_OUTPOST = {
+    key = "B_OUTPOST",
+    node_id = "B_OUTPOST",
+    original_owner = "GUILD_A",
+    occupying_guild = "GUILD_B",
+    war_id = "COUNTER_WAR",
+    state = States.OCCUPATION.OCCUPIED,
+    remaining_seconds = 1000,
+    last_resumed_at = 1,
+    frontline_state = "HELD",
+    updated_at = 1
+}
+fail_occupations_once = true
+local counter_result = service:start_counter_attack(
+    "B_OUTPOST",
+    "GUILD_A",
+    "LEADER",
+    { flag_reference = "COUNTER_FLAG", guild_key = "GUILD_A", x = 0, y = 0, z = 0 },
+    22
+)
+equal(counter_result.ok, false, "counter attack write failure returned")
+equal(service.occupations.B_OUTPOST.state, States.OCCUPATION.OCCUPIED,
+    "counter attack state rolled back")
+equal(service.occupations.B_OUTPOST.counter_flag_reference, nil,
+    "counter flag rolled back")
+
+service.loot_manifests.LOOT = {
+    key = "LOOT",
+    manifest_id = "LOOT",
+    war_id = "GUILD_A::GUILD_B@10",
+    owner_guild = "GUILD_A",
+    state = States.LOOT.CREATED,
+    extracted_at = 0
+}
+fail_loot_items_once = true
+local transit_result = service:mark_loot_in_transit("LOOT", "GUILD_A")
+equal(transit_result.ok, false, "loot transit write failure returned")
+equal(service.loot_manifests.LOOT.state, States.LOOT.CREATED,
+    "loot transit state rolled back")
+equal(last_loot_manifests.LOOT.state, States.LOOT.CREATED,
+    "loot transit file compensated")
+
+fail_loot_items_once = true
+local extract_result = service:extract_loot("LOOT", "GUILD_A", 23)
+equal(extract_result.ok, false, "loot extraction write failure returned")
+equal(service.loot_manifests.LOOT.state, States.LOOT.CREATED,
+    "loot extraction state rolled back")
+equal(service.loot_manifests.LOOT.extracted_at, 0,
+    "loot extraction timestamp rolled back")
+equal(last_loot_manifests.LOOT.state, States.LOOT.CREATED,
+    "loot extraction file compensated")
 
 print("conquest_persistence_spec: ok")
