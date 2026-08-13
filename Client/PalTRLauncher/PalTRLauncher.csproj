@@ -11,5 +11,17 @@
 
   <ItemGroup>
     <Resource Include="Assets\*.png" />
+    <Content Include="..\PalTRUI\Package\Info.json" Link="Payload\PalTRUI\Info.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
+    <Content Include="..\PalTRUI\Package\Scripts\**\*.lua" Link="Payload\PalTRUI\Scripts\%(RecursiveDir)%(Filename)%(Extension)">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
+    <Content Include="..\PalTRUI\Package\LogicMods\PalTRUI.pak" Link="Payload\PalTRUI\LogicMods\PalTRUI.pak">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
   </ItemGroup>
 </Project>

@@ -18,7 +18,8 @@ public partial class MainWindow : Window
             new DemoLauncherService(),
             new SystemExternalLinkService(),
             new LocalRememberedSessionStore(),
-            new UnavailableSteamAccountLinkService());
+            new UnavailableSteamAccountLinkService(),
+            new LocalPalTRInstallationService(new PalworldInstallLocator()));
         DataContext = viewModel;
         Loaded += async (_, _) => await viewModel.InitializeAsync();
     }

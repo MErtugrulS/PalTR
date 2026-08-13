@@ -30,6 +30,28 @@ Uygulama şu anda `DemoLauncherService` kullanır. Gerçek API adresi, kimlik
 doğrulama, güncelleme manifesti veya oyun başlatma komutu tahmin edilmemiştir.
 Bu nedenle **Sunucuya Katıl** butonu oyunu çalıştırmaz.
 
+## Yerel kurulum ve güncelleme
+
+Launcher açılışı ve hesap girişi güncellemeye bağlı değildir. Kullanıcı launcher'a
+girebilir; PalTR kurulumu yalnız **Sunucuya Katıl** işleminden önce zorunlu tutulur.
+Ana sayfadaki **Kur / Güncelle / Onar** işlemi isteğe bağlı olarak çalıştırılır.
+
+`LocalPalTRInstallationService`:
+
+- Steam kayıtları ve `libraryfolders.vdf` üzerinden Palworld kurulumunu bulur.
+- Publish çıktısındaki `Payload/PalTRUI` içeriğini kaynak kabul eder.
+- PalTRUI pak, Lua ve `Info.json` dosyalarını SHA-256 ile doğrular.
+- UE4SS `mods.txt` içindeki yalnız `PalTRUI` kaydını etkinleştirir; diğer modların
+  durumunu ve yerleşik `Keybinds` sırasını korur.
+- Yalnız değişen dosyaları yedekleyerek geçici dosya üzerinden atomik değiştirir.
+- Bir hata oluşursa o işlemde değiştirdiği dosyaları geri alır.
+- Palworld çalışırken mod dosyalarını değiştirmez.
+
+PalTRUI payload'ı proje publish edilirken otomatik eklenir. UE4SS ve
+`UE4SSExperimentalPW` üçüncü taraf bağımlılıklardır; lisansı ve dağıtım kaynağı
+onaylanmadan launcher paketine gömülmez. Eksiklerse launcher kapanmaz, yalnız
+kurulum durumu açıkça engelli görünür ve sunucuya katılma başlatılmaz.
+
 ## Demo giriş
 
 - Kullanıcı adı: `Herakles`

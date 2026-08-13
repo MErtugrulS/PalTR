@@ -14,6 +14,7 @@ public sealed class LauncherViewModel : ObservableObject
     private readonly IExternalLinkService externalLinkService;
     private readonly IRememberedSessionStore rememberedSessionStore;
     private readonly ISteamAccountLinkService steamAccountLinkService;
+    private readonly IInstallationService installationService;
     private string selectedPage = "Ana Sayfa";
     private string statusMessage = "Launcher hazırlanıyor...";
     private bool isStatusSuccess = true;
@@ -34,17 +35,20 @@ public sealed class LauncherViewModel : ObservableObject
     private bool isAuthenticationMessageError;
     private string signedInAccountName = string.Empty;
     private SteamAccountLinkSnapshot steamAccountLink = SteamAccountLinkSnapshot.BackendUnavailable;
+    private InstallationSnapshot installation = InstallationSnapshot.Checking;
 
     public LauncherViewModel(
         ILauncherService service,
         IExternalLinkService externalLinkService,
         IRememberedSessionStore rememberedSessionStore,
-        ISteamAccountLinkService steamAccountLinkService)
+        ISteamAccountLinkService steamAccountLinkService,
+        IInstallationService installationService)
     {
         this.service = service;
         this.externalLinkService = externalLinkService;
         this.rememberedSessionStore = rememberedSessionStore;
         this.steamAccountLinkService = steamAccountLinkService;
+        this.installationService = installationService;
         RefreshCommand = new AsyncRelayCommand(RefreshAsync);
         JoinServerCommand = new AsyncRelayCommand(JoinServerAsync);
         CheckUpdatesCommand = new AsyncRelayCommand(CheckUpdatesAsync);
@@ -61,6 +65,7 @@ public sealed class LauncherViewModel : ObservableObject
         RefreshSteamLinkCommand = new AsyncRelayCommand(RefreshSteamLinkAsync);
         BeginSteamLinkCommand = new AsyncRelayCommand(BeginSteamLinkAsync);
         UnlinkSteamCommand = new AsyncRelayCommand(UnlinkSteamAsync);
+        InstallOrRepairCommand = new AsyncRelayCommand(InstallOrRepairAsync);
     }
 
     public LauncherSnapshot Snapshot { get; private set; } = new();
@@ -99,6 +104,22 @@ public sealed class LauncherViewModel : ObservableObject
     public bool IsSteamLinked => SteamAccountLink.State == SteamAccountLinkState.Linked;
     public bool IsSteamUnlinked => !IsSteamLinked;
     public bool HasSteamIdentity => !string.IsNullOrWhiteSpace(SteamAccountLink.SteamId64);
+
+    public InstallationSnapshot Installation
+    {
+        get => installation;
+        private set
+        {
+            if (SetProperty(ref installation, value))
+            {
+                RaisePropertyChanged(nameof(IsLauncherVisible));
+                RaisePropertyChanged(nameof(IsAuthenticationVisible));
+                RaisePropertyChanged(nameof(CanInstallOrRepair));
+            }
+        }
+    }
+
+    public bool CanInstallOrRepair => Installation.CanInstall || Installation.CanRetry;
 
     public string LoginIdentifier
     {
@@ -224,9 +245,11 @@ public sealed class LauncherViewModel : ObservableObject
     public ICommand RefreshSteamLinkCommand { get; }
     public ICommand BeginSteamLinkCommand { get; }
     public ICommand UnlinkSteamCommand { get; }
+    public ICommand InstallOrRepairCommand { get; }
 
     public async Task InitializeAsync()
     {
+        Installation = await installationService.InspectAsync();
         await RefreshAsync();
         string? rememberedAccountName = rememberedSessionStore.LoadAccountName();
         if (rememberedAccountName is null)
@@ -240,6 +263,31 @@ public sealed class LauncherViewModel : ObservableObject
         RaisePropertyChanged(nameof(IsAuthenticationVisible));
         RaisePropertyChanged(nameof(AccountDisplayName));
         SetStatus(true, "Hatırlanan PalTR oturumu açıldı.");
+        await RefreshSteamLinkAsync();
+    }
+
+    private async Task InstallOrRepairAsync()
+    {
+        Installation = InstallationSnapshot.Checking;
+        InstallationActionResult result = await installationService.InstallOrRepairAsync();
+        Installation = result.Snapshot;
+        if (!result.Success)
+        {
+            return;
+        }
+
+        await RefreshAsync();
+        string? rememberedAccountName = rememberedSessionStore.LoadAccountName();
+        if (rememberedAccountName is null)
+        {
+            return;
+        }
+
+        signedInAccountName = rememberedAccountName;
+        isAuthenticated = true;
+        RaisePropertyChanged(nameof(IsLauncherVisible));
+        RaisePropertyChanged(nameof(IsAuthenticationVisible));
+        RaisePropertyChanged(nameof(AccountDisplayName));
         await RefreshSteamLinkAsync();
     }
 
@@ -258,14 +306,21 @@ public sealed class LauncherViewModel : ObservableObject
 
     private async Task JoinServerAsync()
     {
+        Installation = await installationService.InspectAsync();
+        if (!Installation.IsReady)
+        {
+            SetStatus(false, $"Sunucuya katılmadan önce PalTR kurulumu gerekli: {Installation.Detail}");
+            return;
+        }
+
         LauncherActionResult result = await service.PrepareDirectJoinAsync();
         SetStatus(result.Success, result.Message);
     }
 
     private async Task CheckUpdatesAsync()
     {
-        LauncherActionResult result = await service.CheckForUpdatesAsync();
-        SetStatus(result.Success, result.Message);
+        Installation = await installationService.InspectAsync();
+        SetStatus(Installation.IsReady, $"{Installation.Title}: {Installation.Detail}");
     }
 
     private async Task SubmitTicketAsync()
