@@ -38,7 +38,8 @@ function App.new(config)
     local status = StatusService.new(
         paths,
         registry,
-        diplomacy
+        diplomacy,
+        Logger.new("Status")
     )
 
     local damage_policy = DamagePolicy.new(
@@ -195,6 +196,24 @@ function App:_guild_name(guild_key)
     return guild_key
 end
 
+function App:_event(marker, pair_key, detail)
+    local result = FileIO.append(
+        self.paths.events,
+        TSV.encode({
+            Clock.now(),
+            marker or "",
+            pair_key or "",
+            detail or ""
+        })
+    )
+    if not result.ok then
+        self.logger:error(
+            "APP_EVENT_WRITE_FAILED | " .. Result.describe(result)
+        )
+    end
+    return result
+end
+
 function App:_announce_relation(relation, message)
     for _, player in pairs(
         self.registry.runtime_players or {}
@@ -348,14 +367,10 @@ function App:_tick()
     if self.config.runtime.player_validity_poll then
         self.registry:poll_validity(
             function(player)
-                FileIO.append(
-                    self.paths.events,
-                    TSV.encode({
-                        Clock.now(),
-                        "PLAYER_DISCONNECTED_POLL",
-                        player.guild_key,
-                        player.name
-                    })
+                self:_event(
+                    "PLAYER_DISCONNECTED_POLL",
+                    player.guild_key,
+                    player.name
                 )
 
                 self.status:build(

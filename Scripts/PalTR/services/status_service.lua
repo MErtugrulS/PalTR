@@ -1,15 +1,17 @@
 local FileIO = require("PalTR.storage.file_io")
 local Clock = require("PalTR.core.clock")
 local Tables = require("PalTR.core.table_utils")
+local Result = require("PalTR.core.result")
 
 local Status = {}
 Status.__index = Status
 
-function Status.new(paths, registry, diplomacy)
+function Status.new(paths, registry, diplomacy, logger)
     return setmetatable({
         paths = paths,
         registry = registry,
-        diplomacy = diplomacy
+        diplomacy = diplomacy,
+        logger = logger
     }, Status)
 end
 
@@ -58,7 +60,13 @@ function Status:build(player, response)
         end
     end
 
-    FileIO.overwrite(self.paths.latest_status, lines)
+    local result = FileIO.overwrite(self.paths.latest_status, lines)
+    if not result.ok and self.logger then
+        self.logger:error(
+            "STATUS_WRITE_FAILED | " .. Result.describe(result)
+        )
+    end
+    return result
 end
 
 return Status

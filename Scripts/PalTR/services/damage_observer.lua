@@ -2,6 +2,7 @@ local UE = require("PalTR.runtime.ue")
 local FileIO = require("PalTR.storage.file_io")
 local TSV = require("PalTR.storage.tsv")
 local Clock = require("PalTR.core.clock")
+local Result = require("PalTR.core.result")
 
 local Observer = {}
 Observer.__index = Observer
@@ -78,7 +79,8 @@ function Observer.new(
         path = path,
         registry = registry,
         policy = policy,
-        logger = logger
+        logger = logger,
+        last_write_error_at = 0
     }, Observer)
 end
 
@@ -87,13 +89,24 @@ function Observer:_append(
     player,
     fields
 )
-    FileIO.append(self.path, TSV.encode({
-        Clock.now(),
+    local now = Clock.now()
+    local result = FileIO.append(self.path, TSV.encode({
+        now,
         target_path or "",
         player and player.name or "",
         player and player.guild_key or "",
         table.concat(fields or {}, ";")
     }))
+    if not result.ok
+        and self.logger
+        and now - self.last_write_error_at >= 60 then
+
+        self.last_write_error_at = now
+        self.logger:error(
+            "DAMAGE_AUDIT_WRITE_FAILED | " .. Result.describe(result)
+        )
+    end
+    return result
 end
 
 function Observer:on_enemy_player_damage_request(

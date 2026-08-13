@@ -5,10 +5,13 @@ package.path = table.concat({
 }, ";")
 
 local Announcer = require("PalTR.runtime.announcer")
+local App = require("PalTR.app")
 local CommandService = require("PalTR.services.command_service")
 local Conquest = require("PalTR.services.conquest_service")
+local DamageObserver = require("PalTR.services.damage_observer")
 local FileIO = require("PalTR.storage.file_io")
 local Result = require("PalTR.core.result")
+local Status = require("PalTR.services.status_service")
 
 local function equal(actual, expected, message)
     if actual ~= expected then
@@ -26,8 +29,12 @@ local logger = {
 }
 
 local original_append = FileIO.append
+local original_overwrite = FileIO.overwrite
 local original_send = Announcer.send
 FileIO.append = function()
+    return Result.err("WRITE_FAILED", "disk full")
+end
+FileIO.overwrite = function()
     return Result.err("WRITE_FAILED", "disk full")
 end
 Announcer.send = function() return true end
@@ -54,7 +61,43 @@ equal(
     "command audit failure is actionable"
 )
 
+App._event({
+    paths = { events = "unused.tsv" },
+    logger = logger
+}, "TEST_EVENT", "GUILD_A", "detail")
+equal(
+    errors[3],
+    "APP_EVENT_WRITE_FAILED | WRITE_FAILED: disk full",
+    "app audit failure is actionable"
+)
+
+local observer = DamageObserver.new("unused.tsv", {}, {}, logger)
+observer.last_write_error_at = -60
+observer:_append("Target", nil, { "detail" })
+observer:_append("Target", nil, { "detail" })
+equal(
+    errors[4],
+    "DAMAGE_AUDIT_WRITE_FAILED | WRITE_FAILED: disk full",
+    "damage audit failure is actionable"
+)
+equal(#errors, 4, "damage audit errors are throttled")
+
+local status = Status.new(
+    { latest_status = "unused.txt" },
+    { guilds = {} },
+    { relations_for = function() return {} end },
+    logger
+)
+local status_result = status:build(nil, "test")
+equal(status_result.ok, false, "status write failure is returned")
+equal(
+    errors[5],
+    "STATUS_WRITE_FAILED | WRITE_FAILED: disk full",
+    "status failure is actionable"
+)
+
 FileIO.append = original_append
+FileIO.overwrite = original_overwrite
 Announcer.send = original_send
 
 print("audit_write_spec: ok")
