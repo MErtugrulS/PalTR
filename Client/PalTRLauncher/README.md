@@ -30,6 +30,15 @@ Uygulama şu anda `DemoLauncherService` kullanır. Gerçek API adresi, kimlik
 doğrulama, güncelleme manifesti veya oyun başlatma komutu tahmin edilmemiştir.
 Bu nedenle **Sunucuya Katıl** butonu oyunu çalıştırmaz.
 
+## Demo giriş
+
+- Kullanıcı adı: `Herakles`
+- Parola: `PalTRDemo2026!`
+
+`Beni hatırla` seçildiğinde yalnız kullanıcı adı yerel uygulama verisine
+kaydedilir; parola diske yazılmaz. Hesap sayfasındaki **Oturumu Kapat** işlemi
+hatırlanan oturumu temizler.
+
 ## Derleme
 
 PowerShell:

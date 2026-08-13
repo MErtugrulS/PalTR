@@ -281,4 +281,36 @@
             </Setter.Value>
         </Setter>
     </Style>
+    <Style x:Key="AuthCheckBox" TargetType="CheckBox">
+        <Setter Property="Foreground" Value="{StaticResource TextMutedBrush}" />
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="CheckBox">
+                    <Grid Background="Transparent">
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="24"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                        <Border x:Name="Box" Width="18" Height="18" HorizontalAlignment="Left" VerticalAlignment="Center"
+                                Background="#E207151D" BorderBrush="#B8A98758" BorderThickness="1" CornerRadius="4">
+                            <TextBlock x:Name="CheckMark" Text="✓" FontSize="14" FontWeight="Bold"
+                                       Foreground="#FFB8F5E8" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                       Visibility="Collapsed" />
+                        </Border>
+                        <ContentPresenter Grid.Column="1" VerticalAlignment="Center" Margin="5,0,0,0" />
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Box" Property="BorderBrush" Value="{StaticResource CyanBrush}" />
+                            <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+                        </Trigger>
+                        <Trigger Property="IsChecked" Value="True">
+                            <Setter TargetName="Box" Property="Background" Value="#FF0E6973" />
+                            <Setter TargetName="Box" Property="BorderBrush" Value="#FF63DCE5" />
+                            <Setter TargetName="CheckMark" Property="Visibility" Value="Visible" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
 </ResourceDictionary>

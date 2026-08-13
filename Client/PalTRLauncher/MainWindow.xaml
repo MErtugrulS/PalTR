@@ -515,12 +515,26 @@
 
                             <Grid Grid.Row="2" Visibility="{Binding IsLoginMode, Converter={StaticResource BooleanToVisibilityConverter}}">
                                 <StackPanel>
-                                    <TextBlock Text="KULLANICI ADI VEYA E-POSTA" Style="{StaticResource Eyebrow}" Margin="0,0,0,7" />
+                                    <Border Background="#A5102935" BorderBrush="#83705B36" BorderThickness="1" CornerRadius="8" Padding="13,10" Margin="0,0,0,17">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                            <StackPanel>
+                                                <TextBlock Text="DEMO HESABI" Style="{StaticResource Eyebrow}" Foreground="{StaticResource CyanBrush}" />
+                                                <TextBlock Margin="0,5,0,0"><Run Text="Kullanıcı adı: "/><Run Text="Herakles" FontWeight="Bold" Foreground="{StaticResource GoldLightBrush}"/></TextBlock>
+                                            </StackPanel>
+                                            <StackPanel Grid.Column="1" Margin="24,0,0,0">
+                                                <TextBlock Text="DEMO PAROLA" Style="{StaticResource Eyebrow}" />
+                                                <TextBlock Text="PalTRDemo2026!" FontWeight="Bold" Foreground="{StaticResource GoldLightBrush}" Margin="0,5,0,0" />
+                                            </StackPanel>
+                                        </Grid>
+                                    </Border>
+                                    <TextBlock Text="KULLANICI ADI" Style="{StaticResource Eyebrow}" Margin="0,0,0,7" />
                                     <TextBox Style="{StaticResource AuthTextInput}" Text="{Binding LoginIdentifier, UpdateSourceTrigger=PropertyChanged}" />
                                     <TextBlock Text="PAROLA" Style="{StaticResource Eyebrow}" Margin="0,18,0,7" />
                                     <PasswordBox x:Name="LoginPasswordBox" Style="{StaticResource PasswordInput}" PasswordChanged="LoginPassword_OnPasswordChanged" />
                                     <Grid Margin="0,14,0,0">
-                                        <CheckBox Content="Beni hatırla" Foreground="{StaticResource TextMutedBrush}" VerticalAlignment="Center" />
+                                        <CheckBox Content="Beni hatırla" Style="{StaticResource AuthCheckBox}"
+                                                  IsChecked="{Binding RememberMe}" VerticalAlignment="Center" />
                                         <Button Content="PAROLAMI UNUTTUM" Style="{StaticResource GhostButton}" HorizontalAlignment="Right" Padding="11,6" FontSize="11" IsEnabled="False" />
                                     </Grid>
                                     <Button Content="PALTR'YE GİRİŞ YAP" Style="{StaticResource PrimaryButton}" Margin="0,24,0,0" Click="Login_OnClick" />
@@ -530,8 +544,8 @@
                             <ScrollViewer Grid.Row="2" Visibility="{Binding IsRegisterMode, Converter={StaticResource BooleanToVisibilityConverter}}"
                                           VerticalScrollBarVisibility="Auto">
                                 <StackPanel Margin="0,0,8,0">
-                                    <TextBlock Text="OYUNCU ADI" Style="{StaticResource Eyebrow}" Margin="0,0,0,7" />
-                                    <TextBox Style="{StaticResource AuthTextInput}" Text="{Binding RegisterDisplayName, UpdateSourceTrigger=PropertyChanged}" />
+                                    <TextBlock Text="KULLANICI ADI" Style="{StaticResource Eyebrow}" Margin="0,0,0,7" />
+                                    <TextBox Style="{StaticResource AuthTextInput}" Text="{Binding RegisterUsername, UpdateSourceTrigger=PropertyChanged}" />
                                     <TextBlock Text="E-POSTA" Style="{StaticResource Eyebrow}" Margin="0,16,0,7" />
                                     <TextBox Style="{StaticResource AuthTextInput}" Text="{Binding RegisterEmail, UpdateSourceTrigger=PropertyChanged}" />
                                     <Grid Margin="0,16,0,0">
@@ -545,8 +559,9 @@
                                             <PasswordBox x:Name="RegisterPasswordConfirmationBox" Style="{StaticResource PasswordInput}" PasswordChanged="RegisterPasswordConfirmation_OnPasswordChanged" />
                                         </StackPanel>
                                     </Grid>
-                                    <CheckBox Content="Kullanım koşullarını ve gizlilik politikasını kabul ediyorum."
-                                              IsChecked="{Binding HasAcceptedTerms}" Foreground="{StaticResource TextMutedBrush}" Margin="0,18,0,0" />
+                                    <CheckBox Style="{StaticResource AuthCheckBox}" IsChecked="{Binding HasAcceptedTerms}" Margin="0,18,0,0">
+                                        <TextBlock Text="Kullanım koşullarını ve gizlilik politikasını kabul ediyorum." TextWrapping="Wrap" />
+                                    </CheckBox>
                                     <Button Content="HESABIMI OLUŞTUR" Style="{StaticResource PrimaryButton}" Margin="0,20,0,0" Click="Register_OnClick" />
                                 </StackPanel>
                             </ScrollViewer>
