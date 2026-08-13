@@ -54,6 +54,7 @@ public sealed class LauncherViewModel : ObservableObject
                 RaisePropertyChanged(nameof(IsNewsPage));
                 RaisePropertyChanged(nameof(IsNotificationsPage));
                 RaisePropertyChanged(nameof(IsSupportPage));
+                RaisePropertyChanged(nameof(IsStorePage));
                 RaisePropertyChanged(nameof(IsAccountPage));
             }
         }
@@ -63,6 +64,7 @@ public sealed class LauncherViewModel : ObservableObject
     public bool IsNewsPage => SelectedPage == "Haberler";
     public bool IsNotificationsPage => SelectedPage == "Bildirimler";
     public bool IsSupportPage => SelectedPage == "Destek";
+    public bool IsStorePage => SelectedPage == "Mağaza";
     public bool IsAccountPage => SelectedPage == "Hesabım";
 
     public string StatusMessage
