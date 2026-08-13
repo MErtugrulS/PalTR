@@ -1,6 +1,7 @@
 #include "PolicySnapshot.hpp"
 
 #include <algorithm>
+#include <array>
 #include <cctype>
 #include <cmath>
 #include <fstream>
@@ -246,6 +247,49 @@ namespace
             return false;
         }
     }
+
+    bool snapshot_signature(
+        const std::filesystem::path& root,
+        std::string& signature,
+        std::string& error)
+    {
+        constexpr std::array filenames{
+            "player_registry.tsv",
+            "guild_registry.tsv",
+            "diplomacy_relations.tsv",
+            "guild_protection.tsv",
+            "conquest_damage_policy.tsv",
+            "conquest_zone_policy.tsv"};
+
+        std::ostringstream output;
+        for (const auto* filename : filenames)
+        {
+            const auto path = root / filename;
+            std::error_code filesystem_error;
+            const auto size = std::filesystem::file_size(path, filesystem_error);
+            if (filesystem_error)
+            {
+                error = "cannot stat " + path.string();
+                return false;
+            }
+
+            const auto modified = std::filesystem::last_write_time(
+                path,
+                filesystem_error);
+            if (filesystem_error)
+            {
+                error = "cannot stat " + path.string();
+                return false;
+            }
+
+            output << filename << ':' << size << ':'
+                   << modified.time_since_epoch().count() << ';';
+        }
+
+        signature = output.str();
+        error.clear();
+        return true;
+    }
 }
 
 namespace PalTR
@@ -257,10 +301,28 @@ namespace PalTR
 
     bool PolicySnapshot::refresh_if_changed(std::string& error)
     {
-        return reload(error);
+        std::string signature;
+        if (!snapshot_signature(m_data_root, signature, error))
+        {
+            return false;
+        }
+        if (!m_snapshot_signature.empty() && signature == m_snapshot_signature)
+        {
+            error.clear();
+            return true;
+        }
+        if (!reload(signature, error))
+        {
+            return false;
+        }
+
+        m_snapshot_signature = std::move(signature);
+        return true;
     }
 
-    bool PolicySnapshot::reload(std::string& error)
+    bool PolicySnapshot::reload(
+        const std::string& expected_signature,
+        std::string& error)
     {
         std::vector<std::vector<std::string>> player_rows;
         std::vector<std::vector<std::string>> guild_rows;
@@ -418,6 +480,17 @@ namespace PalTR
                 center_y,
                 center_z,
                 radius_squared});
+        }
+
+        std::string current_signature;
+        if (!snapshot_signature(m_data_root, current_signature, error))
+        {
+            return false;
+        }
+        if (current_signature != expected_signature)
+        {
+            error = "policy snapshots changed during reload";
+            return false;
         }
 
         m_player_guild_by_uid = std::move(player_guild_by_uid);

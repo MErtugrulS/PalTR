@@ -114,7 +114,7 @@ int main()
         !snapshot.refresh_if_changed(error),
         "missing protection snapshot is rejected");
     ok &= expect(
-        error.find("cannot open") != std::string::npos,
+        error.find("cannot stat") != std::string::npos,
         "missing protection snapshot reports a useful error");
     ok &= expect(
         snapshot.is_guild_offline_protected("GUILD_A"),

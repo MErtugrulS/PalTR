@@ -81,7 +81,7 @@ namespace PalTR
             double radius_squared{};
         };
 
-        bool reload(std::string& error);
+        bool reload(const std::string& expected_signature, std::string& error);
 
         std::filesystem::path m_data_root;
         std::unordered_map<std::string, std::string> m_player_guild_by_uid;
@@ -92,5 +92,6 @@ namespace PalTR
         std::unordered_map<std::string, std::string> m_conquest_flag_owner;
         std::unordered_set<std::string> m_conquest_allowed_attackers;
         std::vector<ConquestZone> m_conquest_zones;
+        std::string m_snapshot_signature;
     };
 }
