@@ -61,7 +61,9 @@
         </DataTemplate>
     </Window.Resources>
 
-    <Border Margin="0" Background="{StaticResource WindowSurfaceBrush}" BorderBrush="#E0C9A25A"
+    <Grid>
+    <Border Visibility="{Binding IsLauncherVisible, Converter={StaticResource BooleanToVisibilityConverter}}"
+            Margin="0" Background="{StaticResource WindowSurfaceBrush}" BorderBrush="#E0C9A25A"
             BorderThickness="1" CornerRadius="12">
         <Grid ClipToBounds="True">
             <Grid.RowDefinitions>
@@ -156,7 +158,7 @@
                                     <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                                     <StackPanel>
                                         <TextBlock Text="HESABIM" Style="{StaticResource Eyebrow}" />
-                                        <TextBlock Text="{Binding Snapshot.AccountName}" FontSize="17" FontWeight="SemiBold" Margin="0,7,0,1" />
+                                        <TextBlock Text="{Binding AccountDisplayName}" FontSize="17" FontWeight="SemiBold" Margin="0,7,0,1" />
                                         <TextBlock Text="{Binding Snapshot.Membership}" Foreground="{StaticResource GoldLightBrush}" FontSize="12" />
                                     </StackPanel>
                                     <TextBlock Grid.Column="1" Text="›" FontSize="24" Foreground="{StaticResource CyanBrush}"
@@ -410,7 +412,7 @@
                                 <Border Width="92" Height="92" CornerRadius="46" Background="#A50E5963" BorderBrush="{StaticResource GoldBrush}" BorderThickness="2" HorizontalAlignment="Left" Margin="0,24,0,16">
                                     <TextBlock Text="P" Style="{StaticResource DisplayTitle}" FontSize="42" HorizontalAlignment="Center" VerticalAlignment="Center" />
                                 </Border>
-                                <TextBlock Text="{Binding Snapshot.AccountName}" Style="{StaticResource DisplayTitle}" FontSize="27" />
+                                <TextBlock Text="{Binding AccountDisplayName}" Style="{StaticResource DisplayTitle}" FontSize="27" />
                                 <TextBlock Text="{Binding Snapshot.Membership}" Foreground="{StaticResource GoldLightBrush}" Margin="0,4,0,18" />
                                 <TextBlock Text="Kimlik doğrulama ve güvenlik seçenekleri gerçek API bağlantısından sonra gösterilecek." Style="{StaticResource Caption}" TextWrapping="Wrap" />
                             </StackPanel>
@@ -421,6 +423,8 @@
                                 <Button Content="ŞİFRE VE GÜVENLİK" Style="{StaticResource SecondaryButton}" Margin="0,20,0,9" IsEnabled="False" />
                                 <Button Content="BAĞLI OYUN HESAPLARI" Style="{StaticResource SecondaryButton}" Margin="0,0,0,9" IsEnabled="False" />
                                 <Button Content="OTURUM GEÇMİŞİ" Style="{StaticResource SecondaryButton}" IsEnabled="False" />
+                                <Button Content="OTURUMU KAPAT" Style="{StaticResource SecondaryButton}" Margin="0,22,0,0"
+                                        Command="{Binding LogoutCommand}" />
                             </StackPanel>
                         </Border>
                     </Grid>
@@ -438,4 +442,139 @@
             </Border>
         </Grid>
     </Border>
+
+    <!-- Giriş ve kayıt kapısı -->
+    <Border Visibility="{Binding IsAuthenticationVisible, Converter={StaticResource BooleanToVisibilityConverter}}"
+            Background="#FF030A0F" BorderBrush="#E0C9A25A" BorderThickness="1" CornerRadius="12">
+        <Grid ClipToBounds="True">
+            <Image Source="Assets/slider-diplomacy.png" Stretch="UniformToFill" Opacity="0.48" />
+            <Rectangle>
+                <Rectangle.Fill>
+                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                        <GradientStop Color="#C8030B11" Offset="0" />
+                        <GradientStop Color="#E4071620" Offset="0.52" />
+                        <GradientStop Color="#FC030A0F" Offset="1" />
+                    </LinearGradientBrush>
+                </Rectangle.Fill>
+            </Rectangle>
+            <Rectangle Fill="{StaticResource OrnamentBrush}" Opacity="0.30" IsHitTestVisible="False" />
+
+            <Grid Margin="38">
+                <Grid.RowDefinitions><RowDefinition Height="70"/><RowDefinition Height="*"/><RowDefinition Height="38"/></Grid.RowDefinitions>
+
+                <Grid MouseLeftButtonDown="TitleBar_OnMouseLeftButtonDown">
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <Image Source="Assets/paltr-logo.png" Width="62" Height="62" Stretch="Uniform" />
+                        <StackPanel Margin="14,0,0,0" VerticalAlignment="Center">
+                            <TextBlock Text="PALTR LAUNCHER" Style="{StaticResource DisplayTitle}" FontSize="27" />
+                            <TextBlock Text="OYUN VE SUNUCU MERKEZİ" Style="{StaticResource Eyebrow}" Margin="2,4,0,0" />
+                        </StackPanel>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Top">
+                        <Button Content="—" Style="{StaticResource GhostButton}" Width="44" Height="40" Padding="0" Margin="0,0,7,0" Click="Minimize_OnClick" />
+                        <Button Content="×" Style="{StaticResource SecondaryButton}" Width="44" Height="40" Padding="0"
+                                Background="#C16E2D27" BorderBrush="#CE9C6D55" FontSize="18" Click="Close_OnClick" />
+                    </StackPanel>
+                </Grid>
+
+                <Grid Grid.Row="1" Margin="20,20,20,26">
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="1.15*"/><ColumnDefinition Width="560"/></Grid.ColumnDefinitions>
+
+                    <StackPanel VerticalAlignment="Center" Margin="42,0,80,0">
+                        <TextBlock Text="PALTR DÜNYASINA HOŞ GELDİN" Style="{StaticResource Eyebrow}" Foreground="{StaticResource CyanBrush}" />
+                        <TextBlock Text="Tek hesapla bütün PalTR deneyimine katıl."
+                                   Style="{StaticResource DisplayTitle}" FontSize="43" TextWrapping="Wrap" Margin="0,15,0,15" />
+                        <TextBlock Text="Launcher, sunucu ve oyun içi sistemler için hazırlanan hesabınla giriş yap. Klan diplomasisi, destek talepleri, güncellemeler ve gelecekteki mağaza hizmetleri aynı kimlik altında birleşecek."
+                                   Style="{StaticResource Caption}" FontSize="16" LineHeight="26" TextWrapping="Wrap" MaxWidth="650" HorizontalAlignment="Left" />
+                        <StackPanel Orientation="Horizontal" Margin="0,30,0,0">
+                            <Border Style="{StaticResource SoftPanel}" Padding="15,10" Margin="0,0,10,0">
+                                <TextBlock Text="●  Güvenli hesap altyapısı" Foreground="{StaticResource GoldLightBrush}" />
+                            </Border>
+                            <Border Style="{StaticResource SoftPanel}" Padding="15,10">
+                                <TextBlock Text="●  Tek launcher, tek kimlik" Foreground="{StaticResource GoldLightBrush}" />
+                            </Border>
+                        </StackPanel>
+                    </StackPanel>
+
+                    <Border Grid.Column="1" Background="#F408151E" BorderBrush="#D0C9A25A" BorderThickness="1"
+                            CornerRadius="14" Padding="38" Effect="{StaticResource DeepShadow}">
+                        <Grid>
+                            <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+                            <StackPanel>
+                                <TextBlock Text="PalTR Hesabı" Style="{StaticResource DisplayTitle}" FontSize="31" />
+                                <TextBlock Text="Devam etmek için giriş yap veya yeni hesabını oluştur." Style="{StaticResource Caption}" Margin="0,7,0,20" />
+                            </StackPanel>
+
+                            <Grid Grid.Row="1" Margin="0,0,0,24">
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                <RadioButton Content="GİRİŞ YAP" Style="{StaticResource AuthTab}" GroupName="AuthMode" Margin="0,0,5,0"
+                                             IsChecked="{Binding IsLoginMode, Mode=OneWay}" Command="{Binding ShowLoginCommand}" />
+                                <RadioButton Grid.Column="1" Content="KAYIT OL" Style="{StaticResource AuthTab}" GroupName="AuthMode" Margin="5,0,0,0"
+                                             IsChecked="{Binding IsRegisterMode, Mode=OneWay}" Command="{Binding ShowRegisterCommand}" />
+                            </Grid>
+
+                            <Grid Grid.Row="2" Visibility="{Binding IsLoginMode, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                <StackPanel>
+                                    <TextBlock Text="KULLANICI ADI VEYA E-POSTA" Style="{StaticResource Eyebrow}" Margin="0,0,0,7" />
+                                    <TextBox Style="{StaticResource AuthTextInput}" Text="{Binding LoginIdentifier, UpdateSourceTrigger=PropertyChanged}" />
+                                    <TextBlock Text="PAROLA" Style="{StaticResource Eyebrow}" Margin="0,18,0,7" />
+                                    <PasswordBox x:Name="LoginPasswordBox" Style="{StaticResource PasswordInput}" PasswordChanged="LoginPassword_OnPasswordChanged" />
+                                    <Grid Margin="0,14,0,0">
+                                        <CheckBox Content="Beni hatırla" Foreground="{StaticResource TextMutedBrush}" VerticalAlignment="Center" />
+                                        <Button Content="PAROLAMI UNUTTUM" Style="{StaticResource GhostButton}" HorizontalAlignment="Right" Padding="11,6" FontSize="11" IsEnabled="False" />
+                                    </Grid>
+                                    <Button Content="PALTR'YE GİRİŞ YAP" Style="{StaticResource PrimaryButton}" Margin="0,24,0,0" Click="Login_OnClick" />
+                                </StackPanel>
+                            </Grid>
+
+                            <ScrollViewer Grid.Row="2" Visibility="{Binding IsRegisterMode, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                          VerticalScrollBarVisibility="Auto">
+                                <StackPanel Margin="0,0,8,0">
+                                    <TextBlock Text="OYUNCU ADI" Style="{StaticResource Eyebrow}" Margin="0,0,0,7" />
+                                    <TextBox Style="{StaticResource AuthTextInput}" Text="{Binding RegisterDisplayName, UpdateSourceTrigger=PropertyChanged}" />
+                                    <TextBlock Text="E-POSTA" Style="{StaticResource Eyebrow}" Margin="0,16,0,7" />
+                                    <TextBox Style="{StaticResource AuthTextInput}" Text="{Binding RegisterEmail, UpdateSourceTrigger=PropertyChanged}" />
+                                    <Grid Margin="0,16,0,0">
+                                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                        <StackPanel Margin="0,0,6,0">
+                                            <TextBlock Text="PAROLA" Style="{StaticResource Eyebrow}" Margin="0,0,0,7" />
+                                            <PasswordBox x:Name="RegisterPasswordBox" Style="{StaticResource PasswordInput}" PasswordChanged="RegisterPassword_OnPasswordChanged" />
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="1" Margin="6,0,0,0">
+                                            <TextBlock Text="PAROLA TEKRARI" Style="{StaticResource Eyebrow}" Margin="0,0,0,7" />
+                                            <PasswordBox x:Name="RegisterPasswordConfirmationBox" Style="{StaticResource PasswordInput}" PasswordChanged="RegisterPasswordConfirmation_OnPasswordChanged" />
+                                        </StackPanel>
+                                    </Grid>
+                                    <CheckBox Content="Kullanım koşullarını ve gizlilik politikasını kabul ediyorum."
+                                              IsChecked="{Binding HasAcceptedTerms}" Foreground="{StaticResource TextMutedBrush}" Margin="0,18,0,0" />
+                                    <Button Content="HESABIMI OLUŞTUR" Style="{StaticResource PrimaryButton}" Margin="0,20,0,0" Click="Register_OnClick" />
+                                </StackPanel>
+                            </ScrollViewer>
+
+                            <Border Grid.Row="3" Background="#A10B1B24" BorderBrush="#57786647" BorderThickness="1" CornerRadius="7" Padding="12,9" Margin="0,18,0,0">
+                                <TextBlock Text="{Binding AuthenticationMessage}" TextWrapping="Wrap">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock" BasedOn="{StaticResource Caption}">
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsAuthenticationMessageError}" Value="True">
+                                                    <Setter Property="Foreground" Value="#FFFF9B83" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                            </Border>
+                        </Grid>
+                    </Border>
+                </Grid>
+
+                <Grid Grid.Row="2">
+                    <TextBlock Text="PalTR hesabı demo doğrulaması • Bilgiler uzak sunucuya gönderilmez"
+                               Style="{StaticResource Caption}" VerticalAlignment="Center" />
+                    <TextBlock Text="PALTR LAUNCHER  •  UI FAZ-00" Style="{StaticResource Eyebrow}" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                </Grid>
+            </Grid>
+        </Grid>
+    </Border>
+    </Grid>
 </Window>

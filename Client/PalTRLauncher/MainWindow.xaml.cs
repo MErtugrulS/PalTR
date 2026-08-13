@@ -1,6 +1,7 @@
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Controls;
 using PalTRLauncher.Services;
 using PalTRLauncher.ViewModels;
 
@@ -50,5 +51,38 @@ public partial class MainWindow : Window
         {
             viewModel.OpenSlideLinkCommand.Execute(null);
         }
+    }
+
+    private void LoginPassword_OnPasswordChanged(object sender, RoutedEventArgs e)
+        => viewModel.LoginPassword = ((PasswordBox)sender).Password;
+
+    private void RegisterPassword_OnPasswordChanged(object sender, RoutedEventArgs e)
+        => viewModel.RegisterPassword = ((PasswordBox)sender).Password;
+
+    private void RegisterPasswordConfirmation_OnPasswordChanged(object sender, RoutedEventArgs e)
+        => viewModel.RegisterPasswordConfirmation = ((PasswordBox)sender).Password;
+
+    private void Login_OnClick(object sender, RoutedEventArgs e)
+    {
+        viewModel.LoginCommand.Execute(null);
+        ClearAuthenticationPasswordsWhenComplete();
+    }
+
+    private void Register_OnClick(object sender, RoutedEventArgs e)
+    {
+        viewModel.RegisterCommand.Execute(null);
+        ClearAuthenticationPasswordsWhenComplete();
+    }
+
+    private void ClearAuthenticationPasswordsWhenComplete()
+    {
+        if (!viewModel.IsLauncherVisible)
+        {
+            return;
+        }
+
+        LoginPasswordBox.Clear();
+        RegisterPasswordBox.Clear();
+        RegisterPasswordConfirmationBox.Clear();
     }
 }

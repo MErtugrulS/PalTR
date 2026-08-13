@@ -241,4 +241,44 @@
         <Setter Property="FontSize" Value="14" />
         <Setter Property="CaretBrush" Value="{StaticResource CyanBrush}" />
     </Style>
+    <Style x:Key="PasswordInput" TargetType="PasswordBox">
+        <Setter Property="Background" Value="#E407141D" />
+        <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+        <Setter Property="BorderBrush" Value="#8C7D673D" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="Padding" Value="13,11" />
+        <Setter Property="FontSize" Value="14" />
+        <Setter Property="CaretBrush" Value="{StaticResource CyanBrush}" />
+    </Style>
+    <Style x:Key="AuthTextInput" TargetType="TextBox" BasedOn="{StaticResource TextInput}">
+        <Setter Property="Background" Value="#E407141D" />
+        <Setter Property="Padding" Value="13,11" />
+    </Style>
+    <Style x:Key="AuthTab" TargetType="RadioButton">
+        <Setter Property="Foreground" Value="{StaticResource TextMutedBrush}" />
+        <Setter Property="FontSize" Value="14" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="RadioButton">
+                    <Border x:Name="Chrome" Background="#66132935" BorderBrush="#557B6A43"
+                            BorderThickness="1" CornerRadius="8" Padding="20,11">
+                        <ContentPresenter HorizontalAlignment="Center" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Chrome" Property="Background" Value="#A1153B48" />
+                            <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+                        </Trigger>
+                        <Trigger Property="IsChecked" Value="True">
+                            <Setter TargetName="Chrome" Property="Background" Value="#D00E5866" />
+                            <Setter TargetName="Chrome" Property="BorderBrush" Value="{StaticResource CyanBrush}" />
+                            <Setter Property="Foreground" Value="#FFF8F1DF" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
 </ResourceDictionary>
