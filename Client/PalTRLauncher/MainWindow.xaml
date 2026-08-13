@@ -442,8 +442,12 @@
                                         <Border Width="76" Height="76" CornerRadius="12" Background="#FF162B38"
                                                 BorderBrush="#C4C9A25A" BorderThickness="1" VerticalAlignment="Top"
                                                 ClipToBounds="True">
-                                            <Image Source="Assets/steam-logo.png" Width="84" Height="84"
-                                                   Stretch="UniformToFill" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                            <Image Width="58" Height="58" Stretch="Uniform"
+                                                   HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                <Image.Source>
+                                                    <CroppedBitmap Source="Assets/steam-logo.png" SourceRect="920,0,2240,2160" />
+                                                </Image.Source>
+                                            </Image>
                                         </Border>
                                         <StackPanel Grid.Column="1" Margin="4,0,24,0">
                                             <TextBlock Text="Steam" Style="{StaticResource DisplayTitle}" FontSize="26" />
