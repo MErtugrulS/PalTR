@@ -2,6 +2,18 @@ local Result = require("PalTR.core.result")
 
 local FileIO = {}
 
+local function write_line(file, line, error_code, path)
+    local written, message = file:write(tostring(line), "\n")
+    if written then return nil end
+    return Result.err(error_code, message or path)
+end
+
+local function close_file(file, error_code, path)
+    local closed, message = file:close()
+    if closed then return nil end
+    return Result.err(error_code, message or path)
+end
+
 function FileIO.read_lines(path)
     local file = io.open(path, "r")
     if not file then return Result.ok({}) end
@@ -15,17 +27,27 @@ function FileIO.overwrite(path, lines)
     local file = io.open(path, "w")
     if not file then return Result.err("WRITE_FAILED", path) end
     for _, line in ipairs(lines or {}) do
-        file:write(tostring(line), "\n")
+        local failure = write_line(file, line, "WRITE_FAILED", path)
+        if failure then
+            file:close()
+            return failure
+        end
     end
-    file:close()
+    local failure = close_file(file, "WRITE_FAILED", path)
+    if failure then return failure end
     return Result.ok(true)
 end
 
 function FileIO.append(path, line)
     local file = io.open(path, "a")
     if not file then return Result.err("APPEND_FAILED", path) end
-    file:write(tostring(line), "\n")
-    file:close()
+    local failure = write_line(file, line, "APPEND_FAILED", path)
+    if failure then
+        file:close()
+        return failure
+    end
+    failure = close_file(file, "APPEND_FAILED", path)
+    if failure then return failure end
     return Result.ok(true)
 end
 
