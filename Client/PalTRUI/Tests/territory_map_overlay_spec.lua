@@ -42,7 +42,8 @@ end
 near(anchored.anchor_x, 0.3, "normalized segment anchor x")
 near(anchored.anchor_y, 0.5, "normalized segment anchor y")
 near(anchored.width, 0.8, "normalized boundary marker width")
-near(Overlay.NORMALIZED_NODE_SIZE, 2.0, "normalized node stays compact")
+near(Overlay.NORMALIZED_CAPITAL_SIZE, 2.4, "normalized capital stays compact")
+near(Overlay.NORMALIZED_OUTPOST_SIZE, 1.4, "normalized outpost stays compact")
 
 local projected_input = nil
 local projected_minimum = nil
@@ -144,16 +145,20 @@ local function canvas_slot_probe()
     function slot:SetAlignment(value) state.alignment = value end
     function slot:SetPosition(value) state.position = value end
     function slot:SetSize(value) state.size = value end
+    function slot:SetZOrder(value) state.z_order = value end
     local control = object({ Slot = slot })
     function control:SetRenderTransformPivot() end
     function control:SetRenderTransformAngle() end
-    function control:SetBrushColor() end
+    function control:SetBrushColor(value) state.color = value end
     function control:SetVisibility(value) state.visibility = value end
     return control, state
 end
 
 local segment_control, segment_slot = canvas_slot_probe()
-local segment_inner = object({ SetBrushColor = function() end })
+local segment_inner_color = nil
+local segment_inner = object({
+    SetBrushColor = function(_, value) segment_inner_color = value end
+})
 local node_control, node_slot = canvas_slot_probe()
 local anchor_render_overlay = Overlay.new({ log = function() end })
 anchor_render_overlay.controls = {
@@ -166,10 +171,18 @@ anchor_render_overlay.model = {
         {
             first = { id = "first" },
             second = { id = "second" },
-            color = {}
+            color = { r = 0.7, g = 0.5, b = 0.2, a = 1 }
         }
     },
-    nodes = { { world = { id = "node" }, color = {}, size = 11 } },
+    nodes = {
+        {
+            world = { id = "node" },
+            color = {},
+            size = 18,
+            angle = 45,
+            node_type = "CAPITAL"
+        }
+    },
     segment_count = 1,
     node_count = 1
 }
@@ -189,12 +202,15 @@ near(anchored_segments, 1, "normalized segment renders")
 near(anchored_segment_stats.slots, 1, "normalized segment configures slot")
 near(segment_slot.anchors.Minimum.X, 0.3, "segment slot anchor x")
 near(segment_slot.anchors.Minimum.Y, 0.5, "segment slot anchor y")
+near(segment_slot.color.R, 0.7, "normalized boundary uses clan color")
+near(segment_inner_color.G, 0.5, "normalized boundary inner keeps clan color")
 near(anchored_nodes, 1, "normalized node renders")
 near(anchored_node_stats.slots, 1, "normalized node configures slot")
 near(node_slot.anchors.Minimum.X, 0.7, "node slot anchor x")
 near(node_slot.anchors.Minimum.Y, 0.8, "node slot anchor y")
 near(node_slot.alignment.X, 0.5, "node anchor centers marker")
-near(node_slot.size.X, 2.0, "normalized node avoids map zoom magnification")
+near(node_slot.size.X, 2.4, "normalized capital avoids map zoom magnification")
+near(node_slot.z_order, 40, "capital stays above overlapping outposts")
 
 local cached_projection_calls = 0
 projection_overlay.projected_points = {}

@@ -29,7 +29,10 @@ Overlay.MAX_NODES = 64
 Overlay.Z_ORDER = 10000
 Overlay.BORDER_THICKNESS = 3.2
 Overlay.NORMALIZED_SEGMENT_SIZE = 0.8
-Overlay.NORMALIZED_NODE_SIZE = 2.0
+Overlay.NORMALIZED_CAPITAL_SIZE = 2.4
+Overlay.NORMALIZED_OUTPOST_SIZE = 1.4
+Overlay.CAPITAL_Z_ORDER = 40
+Overlay.OUTPOST_Z_ORDER = 30
 Overlay.VISIBILITY_CHECK_INTERVAL_SECONDS = 0.25
 Overlay.ATTACH_RETRY_INTERVAL_SECONDS = 1.0
 Overlay.ATTACH_MAX_ATTEMPTS = 3
@@ -325,6 +328,9 @@ local function configure_canvas_slot(control, layout)
         end
         slot:SetPosition({ X = layout.x, Y = layout.y })
         slot:SetSize({ X = layout.width, Y = layout.height })
+        if layout.z_order ~= nil then
+            slot:SetZOrder(layout.z_order)
+        end
         control:SetRenderTransformPivot({ X = 0.5, Y = 0.5 })
         control:SetRenderTransformAngle(layout.angle)
     end)
@@ -1251,7 +1257,15 @@ function Overlay:_render_segments()
         )
         if valid_object(control) and valid_object(inner) and layout ~= nil
             and configure_canvas_slot(control, layout) then
-            set_segment_colors(control, inner, segment.color)
+            if layout.normalized == true then
+                -- The packaged segment has an inset colored child. At the tiny
+                -- normalized fallback size that inset disappears completely,
+                -- so color the visible outline itself with the territory color.
+                set_color(control, segment.color)
+                set_color(inner, segment.color)
+            else
+                set_segment_colors(control, inner, segment.color)
+            end
             show(control)
             used = index
             stats.slots = stats.slots + 1
@@ -1274,9 +1288,12 @@ function Overlay:_render_nodes()
         local position = self:_project_cached(node.world)
         if position ~= nil then stats.projected = stats.projected + 1 end
         if valid_object(control) and position ~= nil then
-            local size = position.normalized == true
-                and Overlay.NORMALIZED_NODE_SIZE
-                or (tonumber(node.size) or 11)
+            local is_capital = node.node_type == "CAPITAL"
+            local size = tonumber(node.size) or 11
+            if position.normalized == true then
+                size = is_capital and Overlay.NORMALIZED_CAPITAL_SIZE
+                    or Overlay.NORMALIZED_OUTPOST_SIZE
+            end
             local layout = {
                 normalized = position.normalized == true,
                 anchor_x = position.x,
@@ -1287,7 +1304,9 @@ function Overlay:_render_nodes()
                     or position.y - size / 2,
                 width = size,
                 height = size,
-                angle = tonumber(node.angle) or 0
+                angle = tonumber(node.angle) or 0,
+                z_order = is_capital and Overlay.CAPITAL_Z_ORDER
+                    or Overlay.OUTPOST_Z_ORDER
             }
             local configured = configure_canvas_slot(control, layout)
             if configured then
