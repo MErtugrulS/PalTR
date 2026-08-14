@@ -15,6 +15,7 @@ Overlay.ASSET_NAME = "WBP_PalTRMapOverlay_C"
 Overlay.ASSET_REGISTRY_HELPERS_PATH =
     "/Script/AssetRegistry.Default__AssetRegistryHelpers"
 Overlay.WIDGET_LIBRARY_PATH = "/Script/UMG.Default__WidgetBlueprintLibrary"
+Overlay.SLATE_LIBRARY_PATH = "/Script/UMG.Default__SlateBlueprintLibrary"
 Overlay.PAL_UI_LIBRARY_ASSET_PATH =
     "/Game/Pal/Blueprint/UI/System/BP_PalUIFunctionLibrary.BP_PalUIFunctionLibrary"
 Overlay.PAL_UI_LIBRARY_CLASS_PATH =
@@ -325,6 +326,30 @@ local function default_load_registered_asset(package_name, asset_name)
     return true
 end
 
+local function default_get_local_size(widget)
+    widget = unwrap(widget)
+    if not valid_object(widget) or type(StaticFindObject) ~= "function" then
+        return nil
+    end
+    local geometry_ok, geometry = pcall(function()
+        return widget:GetCachedGeometry()
+    end)
+    local library_ok, library = pcall(
+        StaticFindObject,
+        Overlay.SLATE_LIBRARY_PATH
+    )
+    if geometry_ok and library_ok and valid_object(library) then
+        local size_ok, size = pcall(function()
+            return library:GetLocalSize(geometry)
+        end)
+        if size_ok and vector(size) ~= nil then return vector(size) end
+    end
+    local desired_ok, desired = pcall(function()
+        return widget:GetDesiredSize()
+    end)
+    return desired_ok and vector(desired) or nil
+end
+
 local function default_api()
     return {
         register_hook = type(RegisterHook) == "function" and RegisterHook or nil,
@@ -335,6 +360,7 @@ local function default_api()
         find_object = type(StaticFindObject) == "function" and StaticFindObject or nil,
         load_asset = type(LoadAsset) == "function" and LoadAsset or nil,
         load_registered_asset = default_load_registered_asset,
+        get_local_size = default_get_local_size,
         now = os.clock,
         log = function(message)
             if type(print) == "function" then
@@ -378,9 +404,39 @@ function Overlay.new(api)
         projection_strategy = nil,
         projection_target = nil,
         projection_lookup_attempted = false,
+        projection_size = nil,
         projected_points = {},
         diagnostics = {}
     }, Overlay)
+end
+
+function Overlay:_map_local_size()
+    if self.projection_size ~= nil then return self.projection_size end
+    if type(self.api.get_local_size) ~= "function"
+        or not valid_object(self.parent_canvas) then
+        return nil
+    end
+    local read, size = pcall(self.api.get_local_size, self.parent_canvas)
+    size = read and vector(size) or nil
+    if size == nil or size.x <= 1 or size.y <= 1 then return nil end
+    self.projection_size = size
+    self:_diagnostic("projection_size", string.format(
+        "PALTR_MAP_OVERLAY_LOCAL_SIZE | width=%.2f | height=%.2f",
+        size.x,
+        size.y
+    ))
+    return size
+end
+
+function Overlay:_projection_to_pixels(offset)
+    offset = vector(offset)
+    if offset == nil then return nil, "invalid normalized offset" end
+    local size = self:_map_local_size()
+    if size == nil then return nil, "map local size unavailable" end
+    return {
+        x = offset.x * size.x,
+        y = offset.y * size.y
+    }
 end
 
 local function projection_location(world, scale)
@@ -549,7 +605,10 @@ function Overlay:_world_to_widget(world)
             self.map_body,
             world
         )
-        if converted ~= nil then return converted end
+        if converted ~= nil then
+            local pixels = self:_projection_to_pixels(converted)
+            if pixels ~= nil then return pixels end
+        end
         self.projection_strategy = nil
     end
 
@@ -561,12 +620,16 @@ function Overlay:_world_to_widget(world)
             world
         )
         if converted ~= nil then
-            self.projection_strategy = strategy
-            self:_diagnostic(
-                "projection",
-                "PALTR_MAP_OVERLAY_PROJECTION | strategy=" .. strategy.name
-            )
-            return converted
+            local pixels, scale_error = self:_projection_to_pixels(converted)
+            if pixels ~= nil then
+                self.projection_strategy = strategy
+                self:_diagnostic(
+                    "projection",
+                    "PALTR_MAP_OVERLAY_PROJECTION | strategy=" .. strategy.name
+                )
+                return pixels
+            end
+            project_error = scale_error
         end
         table.insert(errors, strategy.name .. ":" .. tostring(project_error or ""))
     end
@@ -622,6 +685,7 @@ function Overlay:set_snapshot(snapshot)
     self.render_dirty = true
     self.render_attempts = 0
     self.next_render_at = nil
+    self.projection_size = nil
     self.projected_points = {}
     self:_diagnostic("model", string.format(
         "PALTR_MAP_OVERLAY_MODEL | boundaries=%d | segments=%d | nodes=%d",
@@ -1067,6 +1131,7 @@ function Overlay:_clear_runtime(forget_map)
     self.render_dirty = true
     self.render_attempts = 0
     self.next_render_at = nil
+    self.projection_size = nil
     self.projected_points = {}
     if forget_map == true then
         self.known_map_base = nil
@@ -1221,7 +1286,6 @@ function Overlay:_tick()
             tonumber(sample_second and sample_second.y) or -1
         ))
         local retry_needed = (tonumber(self.model.segment_count) or 0) > 0
-            and segment_stats.projected > 0
             and segment_stats.slots == 0
         if retry_needed and self.render_attempts < Overlay.RENDER_MAX_ATTEMPTS then
             self.render_attempts = self.render_attempts + 1

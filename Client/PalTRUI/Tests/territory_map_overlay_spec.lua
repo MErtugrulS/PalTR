@@ -71,15 +71,17 @@ local projection_target = object({
         projected_minimum = minimum
         projected_maximum = maximum
         projected_relative = relative
-        output.X = location.X / 100
-        output.Y = location.Y / 100
+        output.X = location.X / 10000
+        output.Y = location.Y / 10000
     end
 })
 local projection_overlay = Overlay.new({
     log = function() end,
-    find_projection_target = function() return projection_target end
+    find_projection_target = function() return projection_target end,
+    get_local_size = function() return { x = 1000, y = 1000 } end
 })
 local projection_image = object({ name = "Image_MapBody TestImage" })
+projection_overlay.parent_canvas = object({ name = "Canvas MapCanvas" })
 projection_overlay.map_body = object({
     MinLandScapePosition = { X = -100000, Y = -200000 },
     MaxLandScapePosition = { X = 300000, Y = 400000 },
@@ -88,8 +90,8 @@ projection_overlay.map_body = object({
 local projected = projection_overlay:_world_to_widget({
     x = 1200, y = 3400, z = 500
 })
-near(projected.x, 12, "world projection x")
-near(projected.y, 34, "world projection y")
+near(projected.x, 120, "normalized projection x uses canvas width")
+near(projected.y, 340, "normalized projection y uses canvas height")
 near(projected_input.X, 1200, "centimeter x is not scaled twice")
 near(projected_input.Y, 3400, "centimeter y is not scaled twice")
 near(projected_minimum.X, -100000, "landscape minimum is forwarded")
@@ -268,14 +270,16 @@ end
 projected_relative = nil
 local tree_projection_overlay = Overlay.new({
     find_projection_target = function() return projection_target end,
+    get_local_size = function() return { x = 1000, y = 1000 } end,
     log = function() end
 })
 tree_projection_overlay.map_body = tree_body
+tree_projection_overlay.parent_canvas = tree_canvas
 local tree_projected = tree_projection_overlay:_world_to_widget({
     x = 2200, y = 4400, z = 0
 })
-near(tree_projected.x, 22, "tree projection x")
-near(tree_projected.y, 44, "tree projection y")
+near(tree_projected.x, 220, "tree projection x")
+near(tree_projected.y, 440, "tree projection y")
 if projected_relative ~= tree_image then
     error("projection relative widget is resolved through WidgetTree")
 end
