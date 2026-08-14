@@ -42,6 +42,26 @@ local function object(fields)
     return fields
 end
 
+local function widget_object(fields)
+    fields = object(fields)
+    local children = fields.children or {}
+    function fields:GetFName()
+        return { ToString = function() return fields.widget_name or "" end }
+    end
+    function fields:GetClass()
+        return {
+            GetFName = function()
+                return {
+                    ToString = function() return fields.class_name or "" end
+                }
+            end
+        }
+    end
+    function fields:GetChildrenCount() return #children end
+    function fields:GetChildAt(index) return children[index + 1] end
+    return fields
+end
+
 local projection_target = object({
     name = "BP_PalUIFunctionLibrary_C TestDefault",
     WorldLocationToWidgetOffset = function(
@@ -183,6 +203,81 @@ local body_found = body_overlay:_discover_map()
 near(body_found and 1 or 0, 1, "map body fallback succeeds")
 if body_overlay.attachment_strategy ~= "body_canvas" then
     error("map body canvas fallback selected")
+end
+
+local tree_canvas = widget_object({
+    name = "CanvasPanel Canvas_MapBody",
+    widget_name = "Canvas_MapBody",
+    class_name = "CanvasPanel"
+})
+local tree_image = widget_object({
+    name = "Image Image_MapBody",
+    widget_name = "Image_MapBody",
+    class_name = "Image"
+})
+local tree_root = widget_object({
+    name = "Overlay MapRoot",
+    widget_name = "MapRoot",
+    class_name = "Overlay",
+    children = { tree_image, tree_canvas }
+})
+local tree_body = widget_object({
+    name = "WBP_Map_Body_C TreeBody",
+    widget_name = "TreeBody",
+    class_name = "WBP_Map_Body_C",
+    WidgetTree = object({ RootWidget = tree_root }),
+    MinLandScapePosition = { X = -100000, Y = -200000 },
+    MaxLandScapePosition = { X = 300000, Y = 400000 }
+})
+local tree_body_overlay = Overlay.new({
+    find_all = function(class_name)
+        return class_name == "WBP_Map_Body_C" and { tree_body } or {}
+    end,
+    log = function() end
+})
+if not tree_body_overlay:_discover_map()
+    or tree_body_overlay.parent_canvas ~= tree_canvas
+    or tree_body_overlay.attachment_strategy ~= "body_widget_tree" then
+    error("map body canvas is resolved through WidgetTree.RootWidget")
+end
+
+local base_root = widget_object({
+    name = "Overlay BaseRoot",
+    widget_name = "BaseRoot",
+    class_name = "Overlay",
+    children = { tree_body }
+})
+local tree_base = widget_object({
+    name = "WBP_Map_Base_C TreeBase",
+    widget_name = "TreeBase",
+    class_name = "WBP_Map_Base_C",
+    WidgetTree = object({ RootWidget = base_root })
+})
+local tree_base_overlay = Overlay.new({
+    find_all = function(class_name)
+        return class_name == "WBP_Map_Base_C" and { tree_base } or {}
+    end,
+    log = function() end
+})
+if not tree_base_overlay:_discover_map()
+    or tree_base_overlay.map_body ~= tree_body
+    or tree_base_overlay.parent_canvas ~= tree_canvas then
+    error("map base resolves nested body and canvas without blueprint fields")
+end
+
+projected_relative = nil
+local tree_projection_overlay = Overlay.new({
+    find_projection_target = function() return projection_target end,
+    log = function() end
+})
+tree_projection_overlay.map_body = tree_body
+local tree_projected = tree_projection_overlay:_world_to_widget({
+    x = 2200, y = 4400, z = 0
+})
+near(tree_projected.x, 22, "tree projection x")
+near(tree_projected.y, 44, "tree projection y")
+if projected_relative ~= tree_image then
+    error("projection relative widget is resolved through WidgetTree")
 end
 
 local outer_canvas = object({ name = "CanvasPanel_MapBody OuterCanvas" })

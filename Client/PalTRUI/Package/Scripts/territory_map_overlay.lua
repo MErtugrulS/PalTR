@@ -108,11 +108,21 @@ local function same_object(first, second)
     return first_name ~= "" and first_name == second_name
 end
 
-local function collect_widgets(widget, controls, depth)
+local property
+
+local function collect_widgets(widget, controls, depth, visited)
     widget = unwrap(widget)
     if widget == nil or depth > 64 then return end
+    visited = visited or {}
+    if visited[widget] then return end
+    visited[widget] = true
     local name = widget_name(widget)
     if name ~= "" then controls[name] = widget end
+    local tree = property and property(widget, "WidgetTree") or nil
+    local root = valid_object(tree) and property(tree, "RootWidget") or nil
+    if valid_object(root) and not same_object(root, widget) then
+        collect_widgets(root, controls, depth + 1, visited)
+    end
     local counted, count = pcall(function()
         return widget:GetChildrenCount()
     end)
@@ -121,11 +131,11 @@ local function collect_widgets(widget, controls, depth)
         local found, child = pcall(function()
             return widget:GetChildAt(index)
         end)
-        if found then collect_widgets(child, controls, depth + 1) end
+        if found then collect_widgets(child, controls, depth + 1, visited) end
     end
 end
 
-local function property(object, name)
+property = function(object, name)
     object = unwrap(object)
     if object == nil then return nil end
     local direct, value = pcall(function() return object[name] end)
@@ -134,6 +144,91 @@ local function property(object, name)
         return object:GetPropertyValue(name)
     end)
     return read and unwrap(result) or nil
+end
+
+local function find_widget(widget, predicate)
+    local found = nil
+    local visited = {}
+    local function visit(candidate, depth)
+        candidate = unwrap(candidate)
+        if found ~= nil or not valid_object(candidate) or depth > 64
+            or visited[candidate] then
+            return
+        end
+        visited[candidate] = true
+        if predicate(candidate) then
+            found = candidate
+            return
+        end
+        local tree = property(candidate, "WidgetTree")
+        local root = valid_object(tree) and property(tree, "RootWidget") or nil
+        if valid_object(root) and not same_object(root, candidate) then
+            visit(root, depth + 1)
+        end
+        if found ~= nil then return end
+        local counted, count = pcall(function()
+            return candidate:GetChildrenCount()
+        end)
+        if not counted or type(count) ~= "number" then return end
+        for index = 0, count - 1 do
+            local read, child = pcall(function()
+                return candidate:GetChildAt(index)
+            end)
+            if read then visit(child, depth + 1) end
+            if found ~= nil then return end
+        end
+    end
+    visit(widget, 0)
+    return found
+end
+
+local function canvas_from_widget_tree(widget)
+    local function is_canvas(candidate)
+        local class_name = ""
+        pcall(function()
+            class_name = tostring(
+                candidate:GetClass():GetFName():ToString() or ""
+            )
+        end)
+        return class_name == "CanvasPanel"
+            or class_name == "CanvasPanel_C"
+    end
+    local named = find_widget(widget, function(candidate)
+        if not is_canvas(candidate) then return false end
+        local name = widget_name(candidate)
+        return name == "Canvas_MapBody" or name == "CanvasPanel_MapBody"
+    end)
+    return named or find_widget(widget, is_canvas)
+end
+
+local function map_body_from_widget_tree(widget)
+    return find_widget(widget, function(candidate)
+        return map_widget_kind(candidate) == "body"
+    end)
+end
+
+local function body_canvas(body, outer_base)
+    if valid_object(outer_base) then
+        local outer_property = property(outer_base, "CanvasPanel_MapBody")
+        if valid_object(outer_property) then
+            return outer_property, "outer_base_canvas"
+        end
+    end
+    local body_property = property(body, "Canvas_MapBody")
+    if valid_object(body_property) then
+        return body_property, "body_canvas"
+    end
+    local body_tree = canvas_from_widget_tree(body)
+    if valid_object(body_tree) then
+        return body_tree, "body_widget_tree"
+    end
+    if valid_object(outer_base) then
+        local outer_tree = canvas_from_widget_tree(outer_base)
+        if valid_object(outer_tree) then
+            return outer_tree, "outer_widget_tree"
+        end
+    end
+    return nil, nil
 end
 
 local function vector(value)
@@ -308,6 +403,11 @@ local function projection_context(map_body, relative_name)
     end
     local relative = relative_name == nil
         and map_body or property(map_body, relative_name)
+    if not valid_object(relative) and relative_name ~= nil then
+        relative = find_widget(map_body, function(candidate)
+            return widget_name(candidate) == relative_name
+        end)
+    end
     if not valid_object(relative) then
         return nil, "relative widget unavailable: "
             .. tostring(relative_name or "map_body")
@@ -617,10 +717,14 @@ function Overlay:_discover_map(require_rendered)
     local base_fallback = nil
     for _, candidate in ipairs(bases) do
         local body = property(candidate, "MapBody")
-        local parent = property(candidate, "CanvasPanel_MapBody")
+        if not valid_object(body) then
+            body = map_body_from_widget_tree(candidate)
+        end
+        local parent, strategy = body_canvas(body, candidate)
+        if strategy == "outer_base_canvas" then strategy = "base_canvas" end
         if valid_object(candidate) and valid_object(body)
             and valid_object(parent) then
-            local context = { candidate, body, parent }
+            local context = { candidate, body, parent, strategy }
             if rendered_object(candidate) then
                 base_visible = context
                 break
@@ -636,11 +740,9 @@ function Overlay:_discover_map(require_rendered)
     local body_fallback = nil
     for _, body in ipairs(bodies) do
         local outer_base = enclosing_map_base(body)
-        local parent = valid_object(outer_base)
-            and property(outer_base, "CanvasPanel_MapBody")
-            or property(body, "Canvas_MapBody")
+        local parent, strategy = body_canvas(body, outer_base)
         if valid_object(body) and valid_object(parent) then
-            local context = { body, parent, outer_base }
+            local context = { body, parent, outer_base, strategy }
             if rendered_object(body) then
                 body_visible = context
                 break
@@ -658,7 +760,7 @@ function Overlay:_discover_map(require_rendered)
         self.map_base = selected_base[1]
         self.map_body = selected_base[2]
         self.parent_canvas = selected_base[3]
-        self.attachment_strategy = "base_canvas"
+        self.attachment_strategy = selected_base[4] or "base_canvas"
         return true, string.format(
             "base_canvas | base=%s | body=%s",
             full_name(self.map_base),
@@ -670,8 +772,9 @@ function Overlay:_discover_map(require_rendered)
         self.map_base = selected_body[3]
         self.map_body = selected_body[1]
         self.parent_canvas = selected_body[2]
-        self.attachment_strategy = valid_object(self.map_base)
-            and "outer_base_canvas" or "body_canvas"
+        self.attachment_strategy = selected_body[4]
+            or (valid_object(self.map_base)
+                and "outer_base_canvas" or "body_canvas")
         return true, string.format(
             "%s | body=%s",
             self.attachment_strategy,
@@ -823,9 +926,13 @@ function Overlay:_restore_known_map()
     local base_context = nil
     if valid_object(base) then
         local body = property(base, "MapBody")
-        local parent = property(base, "CanvasPanel_MapBody")
+        if not valid_object(body) then
+            body = map_body_from_widget_tree(base)
+        end
+        local parent, strategy = body_canvas(body, base)
+        if strategy == "outer_base_canvas" then strategy = "base_canvas" end
         if valid_object(body) and valid_object(parent) then
-            base_context = { base, body, parent }
+            base_context = { base, body, parent, strategy }
         end
     end
 
@@ -833,11 +940,9 @@ function Overlay:_restore_known_map()
     local body_context = nil
     if valid_object(body) then
         local outer_base = enclosing_map_base(body)
-        local parent = valid_object(outer_base)
-            and property(outer_base, "CanvasPanel_MapBody")
-            or property(body, "Canvas_MapBody")
+        local parent, strategy = body_canvas(body, outer_base)
         if valid_object(parent) then
-            body_context = { body, parent, outer_base }
+            body_context = { body, parent, outer_base, strategy }
         end
     end
 
@@ -846,15 +951,16 @@ function Overlay:_restore_known_map()
         self.map_body = base_context[2]
         self.known_map_body = base_context[2]
         self.parent_canvas = base_context[3]
-        self.attachment_strategy = "base_canvas"
+        self.attachment_strategy = base_context[4] or "base_canvas"
         return true
     end
     if body_context ~= nil and rendered_object(body_context[1]) then
         self.map_base = body_context[3]
         self.map_body = body_context[1]
         self.parent_canvas = body_context[2]
-        self.attachment_strategy = valid_object(self.map_base)
-            and "outer_base_canvas" or "body_canvas"
+        self.attachment_strategy = body_context[4]
+            or (valid_object(self.map_base)
+                and "outer_base_canvas" or "body_canvas")
         return true
     end
     if base_context ~= nil then
@@ -862,15 +968,16 @@ function Overlay:_restore_known_map()
         self.map_body = base_context[2]
         self.known_map_body = base_context[2]
         self.parent_canvas = base_context[3]
-        self.attachment_strategy = "base_canvas"
+        self.attachment_strategy = base_context[4] or "base_canvas"
         return true
     end
     if body_context ~= nil then
         self.map_base = body_context[3]
         self.map_body = body_context[1]
         self.parent_canvas = body_context[2]
-        self.attachment_strategy = valid_object(self.map_base)
-            and "outer_base_canvas" or "body_canvas"
+        self.attachment_strategy = body_context[4]
+            or (valid_object(self.map_base)
+                and "outer_base_canvas" or "body_canvas")
         return true
     end
     return false
