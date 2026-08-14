@@ -44,6 +44,32 @@ near(anchored.anchor_y, 0.5, "normalized segment anchor y")
 near(anchored.width, 0.8, "normalized boundary marker width")
 near(Overlay.NORMALIZED_CAPITAL_SIZE, 2.4, "normalized capital stays compact")
 near(Overlay.NORMALIZED_OUTPOST_SIZE, 1.4, "normalized outpost stays compact")
+local capital_label_layout = Overlay.node_label_layout(
+    { node_type = "CAPITAL" },
+    1,
+    { x = 0.5, y = 0.5, normalized = true },
+    { x = 0.5, y = 0.5, normalized = true }
+)
+near(capital_label_layout.x, 0, "capital label stays centered")
+near(capital_label_layout.y, -3.6, "capital label stays above marker")
+local outpost_label_layout = Overlay.node_label_layout(
+    { node_type = "OUTPOST" },
+    2,
+    { x = 0.7, y = 0.5, normalized = true },
+    { x = 0.5, y = 0.5, normalized = true }
+)
+near(outpost_label_layout.x, 11, "outpost label fans out from cluster")
+near(outpost_label_layout.y, 0, "horizontal outpost label keeps y")
+if Overlay.node_label_text({
+    display_name = "NWO Başkenti", node_type = "CAPITAL"
+}) ~= "NWO Başkenti" then
+    error("snapshot display name is preserved")
+end
+if Overlay.node_label_text({
+    controller_name = "Exceed", node_type = "OUTPOST"
+}) ~= "Exceed Karakolu" then
+    error("missing display name gets a useful fallback")
+end
 
 local projected_input = nil
 local projected_minimum = nil
@@ -160,11 +186,21 @@ local segment_inner = object({
     SetBrushColor = function(_, value) segment_inner_color = value end
 })
 local node_control, node_slot = canvas_slot_probe()
-local anchor_render_overlay = Overlay.new({ log = function() end })
+local node_label, node_label_slot = canvas_slot_probe()
+local node_label_value = nil
+local node_label_text = object({
+    SetText = function(_, value) node_label_value = value end
+})
+local anchor_render_overlay = Overlay.new({
+    log = function() end,
+    make_text = function(value) return "FText:" .. value end
+})
 anchor_render_overlay.controls = {
     TerritorySegment001 = segment_control,
     TerritorySegmentInner001 = segment_inner,
-    TerritoryNode001 = node_control
+    TerritoryNode001 = node_control,
+    TerritoryNodeLabel001 = node_label,
+    TerritoryNodeLabelText001 = node_label_text
 }
 anchor_render_overlay.model = {
     segments = {
@@ -180,7 +216,8 @@ anchor_render_overlay.model = {
             color = {},
             size = 18,
             angle = 45,
-            node_type = "CAPITAL"
+            node_type = "CAPITAL",
+            display_name = "NWO Başkenti"
         }
     },
     segment_count = 1,
@@ -211,6 +248,13 @@ near(node_slot.anchors.Minimum.Y, 0.8, "node slot anchor y")
 near(node_slot.alignment.X, 0.5, "node anchor centers marker")
 near(node_slot.size.X, 2.4, "normalized capital avoids map zoom magnification")
 near(node_slot.z_order, 40, "capital stays above overlapping outposts")
+near(node_label_slot.anchors.Minimum.X, 0.7, "label shares node anchor x")
+near(node_label_slot.position.Y, -3.6, "capital label is offset above marker")
+near(node_label_slot.z_order, 41, "capital label stays above marker")
+if node_label_value ~= "FText:NWO Başkenti" then
+    error("node label receives snapshot display name")
+end
+near(anchored_node_stats.label_slots, 1, "normalized node label renders")
 
 local cached_projection_calls = 0
 projection_overlay.projected_points = {}

@@ -36,6 +36,7 @@
 #include "Misc/Parse.h"
 #include "Misc/PackageName.h"
 #include "Misc/Paths.h"
+#include "PalTRUIMapOverlay.h"
 #include "UObject/Package.h"
 #include "UObject/SavePackage.h"
 #include "WidgetBlueprint.h"
@@ -6158,6 +6159,21 @@ UPalTRUIAssetBuilderCommandlet::UPalTRUIAssetBuilderCommandlet()
 int32 UPalTRUIAssetBuilderCommandlet::Main(const FString& Params)
 {
     using namespace PalTRUIAssetBuilder;
+
+    if (FParse::Param(*Params, TEXT("CreateTerritoryMapOverlay")))
+    {
+        return PalTRUIMapOverlay::CreateTerritoryMapOverlay() ? 0 : 51;
+    }
+
+    if (FParse::Param(*Params, TEXT("UpdateTerritoryMapOverlayLabels")))
+    {
+        return PalTRUIMapOverlay::UpdateTerritoryMapOverlayLabels() ? 0 : 52;
+    }
+
+    if (FParse::Param(*Params, TEXT("VerifyTerritoryMapOverlay")))
+    {
+        return PalTRUIMapOverlay::VerifyTerritoryMapOverlay() ? 0 : 53;
+    }
 
     if (FParse::Param(*Params, TEXT("CreateHeaderDesignTemplate")))
     {

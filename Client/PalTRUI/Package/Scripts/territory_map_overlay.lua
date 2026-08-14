@@ -33,6 +33,9 @@ Overlay.NORMALIZED_CAPITAL_SIZE = 2.4
 Overlay.NORMALIZED_OUTPOST_SIZE = 1.4
 Overlay.CAPITAL_Z_ORDER = 40
 Overlay.OUTPOST_Z_ORDER = 30
+Overlay.NORMALIZED_LABEL_WIDTH = 18.0
+Overlay.NORMALIZED_LABEL_HEIGHT = 3.2
+Overlay.NORMALIZED_LABEL_GAP = 2.0
 Overlay.VISIBILITY_CHECK_INTERVAL_SECONDS = 0.25
 Overlay.ATTACH_RETRY_INTERVAL_SECONDS = 1.0
 Overlay.ATTACH_MAX_ATTEMPTS = 3
@@ -309,6 +312,15 @@ local function set_segment_colors(outline, inner, color)
     set_color(inner, color)
 end
 
+local function set_text(control, value, make_text)
+    if not valid_object(control) or type(make_text) ~= "function" then
+        return false
+    end
+    local made, unreal_text = pcall(make_text, tostring(value or ""))
+    if not made or unreal_text == nil then return false end
+    return pcall(function() control:SetText(unreal_text) end)
+end
+
 local function configure_canvas_slot(control, layout)
     local slot = property(control, "Slot")
     if not valid_object(slot) then return false end
@@ -318,7 +330,10 @@ local function configure_canvas_slot(control, layout)
                 Minimum = { X = layout.anchor_x, Y = layout.anchor_y },
                 Maximum = { X = layout.anchor_x, Y = layout.anchor_y }
             })
-            slot:SetAlignment({ X = 0.5, Y = 0.5 })
+            slot:SetAlignment({
+                X = tonumber(layout.alignment_x) or 0.5,
+                Y = tonumber(layout.alignment_y) or 0.5
+            })
         else
             slot:SetAnchors({
                 Minimum = { X = 0, Y = 0 },
@@ -335,6 +350,77 @@ local function configure_canvas_slot(control, layout)
         control:SetRenderTransformAngle(layout.angle)
     end)
     return updated
+end
+
+function Overlay.node_label_text(node)
+    node = type(node) == "table" and node or {}
+    local display_name = tostring(node.display_name or "")
+    if display_name ~= "" then return display_name end
+    local owner = tostring(node.controller_name or "")
+    if owner == "" then owner = "Klan" end
+    if tostring(node.node_type or "") == "CAPITAL" then
+        return owner .. " Başkenti"
+    end
+    return owner .. " Karakolu"
+end
+
+function Overlay.node_label_layout(node, index, position, centroid)
+    if type(position) ~= "table" then return nil end
+    node = type(node) == "table" and node or {}
+    centroid = type(centroid) == "table" and centroid or position
+    local normalized = position.normalized == true
+    local width = normalized and Overlay.NORMALIZED_LABEL_WIDTH or 144
+    local height = normalized and Overlay.NORMALIZED_LABEL_HEIGHT or 24
+    local gap = normalized and Overlay.NORMALIZED_LABEL_GAP or 10
+    local offset_x, offset_y = 0, 0
+    if tostring(node.node_type or "") == "CAPITAL" then
+        offset_y = -(height / 2 + gap)
+    else
+        local dx = (tonumber(position.x) or 0) - (tonumber(centroid.x) or 0)
+        local dy = (tonumber(position.y) or 0) - (tonumber(centroid.y) or 0)
+        if math.abs(dx) < 0.000001 and math.abs(dy) < 0.000001 then
+            local directions = {
+                { 1, 0 }, { 0, 1 }, { -1, 0 }, { 0, -1 }
+            }
+            local direction = directions[((tonumber(index) or 1) - 1) % 4 + 1]
+            dx, dy = direction[1], direction[2]
+        end
+        if math.abs(dx) >= math.abs(dy) then
+            offset_x = (dx >= 0 and 1 or -1) * (width / 2 + gap)
+        else
+            offset_y = (dy >= 0 and 1 or -1) * (height / 2 + gap)
+        end
+    end
+    return {
+        normalized = normalized,
+        anchor_x = position.x,
+        anchor_y = position.y,
+        alignment_x = normalized and 0.5 or 0,
+        alignment_y = normalized and 0.5 or 0,
+        x = normalized and offset_x
+            or position.x + offset_x - width / 2,
+        y = normalized and offset_y
+            or position.y + offset_y - height / 2,
+        width = width,
+        height = height,
+        angle = 0,
+        z_order = tostring(node.node_type or "") == "CAPITAL" and 41 or 31
+    }
+end
+
+local function default_make_text(value)
+    if type(FText) == "function" then
+        local created, unreal_text = pcall(FText, value)
+        if created then return unreal_text end
+    end
+    local loaded, UEHelpers = pcall(require, "UEHelpers")
+    if not loaded then return nil end
+    local found, library = pcall(UEHelpers.GetKismetTextLibrary)
+    if not found or not valid_object(library) then return nil end
+    local converted, unreal_text = pcall(function()
+        return library:Conv_StringToText(value)
+    end)
+    return converted and unreal_text or nil
 end
 
 local function default_load_registered_asset(package_name, asset_name)
@@ -415,6 +501,7 @@ local function default_api()
         load_asset = type(LoadAsset) == "function" and LoadAsset or nil,
         load_registered_asset = default_load_registered_asset,
         get_local_size = default_get_local_size,
+        make_text = default_make_text,
         now = os.clock,
         log = function(message)
             if type(print) == "function" then
@@ -1281,12 +1368,44 @@ end
 
 function Overlay:_render_nodes()
     local used = 0
-    local stats = { controls = 0, projected = 0, slots = 0 }
+    local stats = {
+        controls = 0, projected = 0, slots = 0,
+        label_controls = 0, label_slots = 0
+    }
+    local positions = {}
+    local centroids = {
+        normalized = { x = 0, y = 0, count = 0, normalized = true },
+        pixels = { x = 0, y = 0, count = 0, normalized = false }
+    }
+    for index, node in ipairs(self.model.nodes or {}) do
+        local position = self:_project_cached(node.world)
+        positions[index] = position
+        if position ~= nil then
+            stats.projected = stats.projected + 1
+            local centroid = position.normalized == true
+                and centroids.normalized or centroids.pixels
+            centroid.x = centroid.x + (tonumber(position.x) or 0)
+            centroid.y = centroid.y + (tonumber(position.y) or 0)
+            centroid.count = centroid.count + 1
+        end
+    end
+    for _, centroid in pairs(centroids) do
+        if centroid.count > 0 then
+            centroid.x = centroid.x / centroid.count
+            centroid.y = centroid.y / centroid.count
+        end
+    end
     for index, node in ipairs(self.model.nodes or {}) do
         local control = self:_control(control_name("TerritoryNode", index))
+        local label = self:_control(control_name("TerritoryNodeLabel", index))
+        local label_text = self:_control(
+            control_name("TerritoryNodeLabelText", index)
+        )
         if valid_object(control) then stats.controls = stats.controls + 1 end
-        local position = self:_project_cached(node.world)
-        if position ~= nil then stats.projected = stats.projected + 1 end
+        if valid_object(label) and valid_object(label_text) then
+            stats.label_controls = stats.label_controls + 1
+        end
+        local position = positions[index]
         if valid_object(control) and position ~= nil then
             local is_capital = node.node_type == "CAPITAL"
             local size = tonumber(node.size) or 11
@@ -1314,15 +1433,36 @@ function Overlay:_render_nodes()
                 show(control)
                 used = index
                 stats.slots = stats.slots + 1
+                local centroid = position.normalized == true
+                    and centroids.normalized or centroids.pixels
+                local label_layout = Overlay.node_label_layout(
+                    node, index, position, centroid
+                )
+                if valid_object(label) and valid_object(label_text)
+                    and label_layout ~= nil
+                    and configure_canvas_slot(label, label_layout)
+                    and set_text(
+                        label_text,
+                        Overlay.node_label_text(node),
+                        self.api.make_text
+                    ) then
+                    show(label)
+                    stats.label_slots = stats.label_slots + 1
+                elseif valid_object(label) then
+                    hide(label)
+                end
             else
                 hide(control)
+                hide(label)
             end
         elseif valid_object(control) then
             hide(control)
+            hide(label)
         end
     end
     for index = used + 1, Overlay.MAX_NODES do
         hide(self:_control(control_name("TerritoryNode", index)))
+        hide(self:_control(control_name("TerritoryNodeLabel", index)))
     end
     return used, stats
 end
@@ -1381,6 +1521,7 @@ function Overlay:_tick()
             "PALTR_MAP_OVERLAY_RENDER | segments=%d/%d | nodes=%d/%d"
                 .. " | segment_controls=%d | inners=%d | projected=%d | slots=%d"
                 .. " | node_controls=%d | projected=%d | slots=%d"
+                .. " | labels=%d/%d"
                 .. " | sample=%.2f,%.2f>%.2f,%.2f",
             rendered_segments,
             tonumber(self.model.segment_count) or 0,
@@ -1393,6 +1534,8 @@ function Overlay:_tick()
             node_stats.controls,
             node_stats.projected,
             node_stats.slots,
+            tonumber(node_stats.label_slots) or 0,
+            tonumber(node_stats.label_controls) or 0,
             tonumber(sample_first and sample_first.x) or -1,
             tonumber(sample_first and sample_first.y) or -1,
             tonumber(sample_second and sample_second.x) or -1,
