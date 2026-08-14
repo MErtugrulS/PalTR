@@ -916,6 +916,16 @@ end
 function Overlay:request_discovery(source)
     self.map_expected_open = true
     self.last_visibility_check_at = nil
+    if valid_object(self.widget) and self:_restore_known_map() then
+        show(self.widget)
+        self.map_was_rendered = true
+        self.render_dirty = true
+        self.render_attempts = 0
+        self.next_render_at = nil
+        self.projection_size = nil
+        self.projected_points = {}
+        return true, "cached_widget"
+    end
     if self:_restore_known_map() and self:_map_is_rendered(true) then
         return true, "cached"
     end
@@ -956,10 +966,10 @@ function Overlay:set_map_expected_open(expected_open, source)
     if valid_object(self.widget) then
         self:_diagnostic(
             "runtime",
-            "PALTR_MAP_OVERLAY_DETACHED | reason=map_key_closed"
+            "PALTR_MAP_OVERLAY_HIDDEN | reason=map_key_closed"
         )
+        hide(self.widget)
     end
-    self:_clear_runtime(false)
     return true, "closed"
 end
 
@@ -1259,6 +1269,8 @@ function Overlay:_tick()
         return
     end
     self.last_visibility_check_at = now
+
+    if self.map_expected_open ~= true then return end
 
     if not valid_object(self.map_body) or not valid_object(self.parent_canvas) then
         if not self:_restore_known_map() then

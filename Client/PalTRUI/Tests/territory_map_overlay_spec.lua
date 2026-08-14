@@ -461,11 +461,13 @@ local explicit_overlay = Overlay.new({
     log = function() end
 })
 explicit_overlay.initial_discovery_attempted = true
+local explicit_visibility = nil
 explicit_overlay._create_widget = function(self)
     explicit_attach_calls = explicit_attach_calls + 1
     self.widget = object({
         name = "WBP_PalTRMapOverlay_C ExplicitOpen",
-        RemoveFromParent = function() end
+        RemoveFromParent = function() end,
+        SetVisibility = function(_, value) explicit_visibility = value end
     })
     return true, "explicit_open"
 end
@@ -479,9 +481,17 @@ if explicit_overlay.map_base ~= explicit_hidden_base
     error("explicit map open reaches the verified base canvas")
 end
 explicit_overlay:set_map_expected_open(false, "test_key")
-if explicit_overlay.widget ~= nil
+if explicit_overlay.widget == nil or explicit_visibility ~= 1
     or explicit_overlay.discovery_pending == true then
-    error("explicit map close detaches and stops discovery immediately")
+    error("explicit map close caches the widget and stops discovery")
+end
+local reopened, reopen_result = explicit_overlay:set_map_expected_open(
+    true,
+    "test_key"
+)
+if reopened ~= true or reopen_result ~= "cached_widget"
+    or explicit_visibility ~= 3 or explicit_attach_calls ~= 1 then
+    error("explicit map reopen reuses the cached overlay widget")
 end
 
 local scan_calls = 0
@@ -517,6 +527,7 @@ retry_overlay.model = {
     segment_count = 1,
     node_count = 0
 }
+retry_overlay.map_expected_open = true
 retry_overlay._map_is_rendered = function() return true end
 retry_overlay._render_segments = function()
     return 0, { controls = 1, inners = 1, projected = 1, slots = 0 }
@@ -654,6 +665,7 @@ render_overlay.map_base = render_base
 render_overlay.map_body = event_body
 render_overlay.parent_canvas = canvas
 render_overlay.widget = object({ name = "WBP_PalTRMapOverlay_C Runtime" })
+render_overlay.map_expected_open = true
 render_overlay._render_segments = function()
     render_calls = render_calls + 1
     return 0, { controls = 0, inners = 0, projected = 0, slots = 0 }
@@ -669,11 +681,11 @@ render_overlay:set_snapshot({ territories = { boundaries = {} } })
 render_now = 2
 render_overlay:_tick()
 near(render_calls, 2, "snapshot change redraws the map once")
-render_base.rendered = false
 render_now = 3
+render_overlay:set_map_expected_open(false, "test")
 render_overlay:_tick()
-if render_overlay.widget ~= nil then
-    error("hidden map removes the runtime overlay")
+if render_overlay.widget == nil then
+    error("closed map retains the runtime overlay for reuse")
 end
 if render_overlay.known_map_base ~= render_base then
     error("hidden map keeps the cached map reference for reopening")
@@ -690,6 +702,7 @@ retry_overlay.known_map_base = render_base
 retry_overlay.map_base = render_base
 retry_overlay.map_body = event_body
 retry_overlay.parent_canvas = canvas
+retry_overlay.map_expected_open = true
 retry_overlay._create_widget = function(self)
     attach_calls = attach_calls + 1
     if attach_calls == 1 then return false, "temporary" end
