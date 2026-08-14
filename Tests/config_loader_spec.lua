@@ -54,6 +54,16 @@ equal(
 )
 equal(Defaults.runtime.guild_scan_seconds, 60, "defaults stay immutable")
 equal(
+    Defaults.conquest.territory_default_capital_radius_meters,
+    100,
+    "capital territory radius uses reduced live default"
+)
+equal(
+    Defaults.conquest.territory_default_outpost_radius_meters,
+    60,
+    "outpost territory radius uses reduced live default"
+)
+equal(
     Defaults.conquest.operator_roles.COMMANDER,
     true,
     "nested defaults stay immutable"
