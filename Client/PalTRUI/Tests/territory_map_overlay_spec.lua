@@ -52,6 +52,9 @@ local capital_label_layout = Overlay.node_label_layout(
 )
 near(capital_label_layout.x, 0, "capital label stays centered")
 near(capital_label_layout.y, -3.6, "capital label stays above marker")
+near(capital_label_layout.width, 108, "label uses high-resolution layout width")
+near(capital_label_layout.height, 19.2, "label uses high-resolution layout height")
+near(capital_label_layout.render_scale, 1 / 6, "label counter-scales map zoom")
 local outpost_label_layout = Overlay.node_label_layout(
     { node_type = "OUTPOST" },
     2,
@@ -175,6 +178,7 @@ local function canvas_slot_probe()
     local control = object({ Slot = slot })
     function control:SetRenderTransformPivot() end
     function control:SetRenderTransformAngle() end
+    function control:SetRenderScale(value) state.render_scale = value end
     function control:SetBrushColor(value) state.color = value end
     function control:SetVisibility(value) state.visibility = value end
     return control, state
@@ -250,6 +254,8 @@ near(node_slot.size.X, 2.4, "normalized capital avoids map zoom magnification")
 near(node_slot.z_order, 40, "capital stays above overlapping outposts")
 near(node_label_slot.anchors.Minimum.X, 0.7, "label shares node anchor x")
 near(node_label_slot.position.Y, -3.6, "capital label is offset above marker")
+near(node_label_slot.size.X, 108, "label slot preserves font resolution")
+near(node_label_slot.render_scale.X, 1 / 6, "label is counter-scaled")
 near(node_label_slot.z_order, 41, "capital label stays above marker")
 if node_label_value ~= "FText:NWO Başkenti" then
     error("node label receives snapshot display name")

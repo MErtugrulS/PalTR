@@ -140,11 +140,8 @@ namespace PalTRUIMapOverlay
             ));
             UBorder* Frame = Cast<UBorder>(Tree->FindWidget(FrameName));
             UTextBlock* Label = Cast<UTextBlock>(Tree->FindWidget(TextName));
-            if (Frame && Label && Frame->GetContent() == Label)
-            {
-                return true;
-            }
-            if (Frame || Label)
+            const bool bExists = Frame && Label && Frame->GetContent() == Label;
+            if (!bExists && (Frame || Label))
             {
                 UE_LOG(
                     LogTemp,
@@ -154,30 +151,40 @@ namespace PalTRUIMapOverlay
                 );
                 return false;
             }
+            if (!bExists)
+            {
+                Frame = MakeSolid(
+                    Tree,
+                    FrameName,
+                    FromSRGB(5, 15, 22, 0.88f)
+                );
+                Label = Tree->ConstructWidget<UTextBlock>(
+                    UTextBlock::StaticClass(),
+                    TextName
+                );
+                Label->bIsVariable = true;
+                Frame->SetContent(Label);
+                AddPoolControl(Root, Frame, 31);
+            }
 
-            Frame = MakeSolid(
-                Tree,
-                FrameName,
-                FromSRGB(5, 15, 22, 0.88f)
-            );
-            Frame->SetPadding(FMargin(0.55f, 0.18f));
-            Label = Tree->ConstructWidget<UTextBlock>(
-                UTextBlock::StaticClass(),
-                TextName
-            );
-            Label->bIsVariable = true;
+            Frame->Modify();
+            Label->Modify();
+            Frame->SetBrushColor(FromSRGB(5, 15, 22, 0.88f));
+            // Runtime scales the complete label down after layout. Keeping the
+            // font and padding at normal resolution prevents blocky glyphs
+            // when Palworld magnifies the map-body canvas.
+            Frame->SetPadding(FMargin(3.3f, 1.08f));
+            Frame->SetVisibility(ESlateVisibility::Collapsed);
             Label->SetText(FText::FromString(TEXT("Karakol")));
             Label->SetColorAndOpacity(FSlateColor(FromSRGB(242, 232, 213)));
             Label->SetJustification(ETextJustify::Center);
             Label->SetAutoWrapText(false);
-            Label->SetShadowOffset(FVector2D(0.15f, 0.15f));
+            Label->SetShadowOffset(FVector2D(1.0f, 1.0f));
             Label->SetShadowColorAndOpacity(FromSRGB(0, 0, 0, 0.90f));
             FSlateFontInfo Font = Label->GetFont();
-            Font.Size = 2;
+            Font.Size = 12;
             Label->SetFont(Font);
             Label->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
-            Frame->SetContent(Label);
-            AddPoolControl(Root, Frame, 31);
             return true;
         }
     }

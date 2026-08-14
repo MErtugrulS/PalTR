@@ -36,6 +36,7 @@ Overlay.OUTPOST_Z_ORDER = 30
 Overlay.NORMALIZED_LABEL_WIDTH = 18.0
 Overlay.NORMALIZED_LABEL_HEIGHT = 3.2
 Overlay.NORMALIZED_LABEL_GAP = 2.0
+Overlay.NORMALIZED_LABEL_RENDER_SCALE = 1 / 6
 Overlay.VISIBILITY_CHECK_INTERVAL_SECONDS = 0.25
 Overlay.ATTACH_RETRY_INTERVAL_SECONDS = 1.0
 Overlay.ATTACH_MAX_ATTEMPTS = 3
@@ -348,6 +349,12 @@ local function configure_canvas_slot(control, layout)
         end
         control:SetRenderTransformPivot({ X = 0.5, Y = 0.5 })
         control:SetRenderTransformAngle(layout.angle)
+        if layout.render_scale ~= nil then
+            control:SetRenderScale({
+                X = layout.render_scale,
+                Y = layout.render_scale
+            })
+        end
     end)
     return updated
 end
@@ -372,6 +379,8 @@ function Overlay.node_label_layout(node, index, position, centroid)
     local width = normalized and Overlay.NORMALIZED_LABEL_WIDTH or 144
     local height = normalized and Overlay.NORMALIZED_LABEL_HEIGHT or 24
     local gap = normalized and Overlay.NORMALIZED_LABEL_GAP or 10
+    local render_scale = normalized
+        and Overlay.NORMALIZED_LABEL_RENDER_SCALE or 1
     local offset_x, offset_y = 0, 0
     if tostring(node.node_type or "") == "CAPITAL" then
         offset_y = -(height / 2 + gap)
@@ -401,9 +410,10 @@ function Overlay.node_label_layout(node, index, position, centroid)
             or position.x + offset_x - width / 2,
         y = normalized and offset_y
             or position.y + offset_y - height / 2,
-        width = width,
-        height = height,
+        width = width / render_scale,
+        height = height / render_scale,
         angle = 0,
+        render_scale = render_scale,
         z_order = tostring(node.node_type or "") == "CAPITAL" and 41 or 31
     }
 end
