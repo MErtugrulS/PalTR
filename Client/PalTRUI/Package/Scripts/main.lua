@@ -10,14 +10,30 @@ local UMGButtonHookPoller = require("umg_button_hook_poller")
 local ActionOutbox = require("action_outbox")
 local ChatCommandSender = require("chat_command_sender")
 
+-- The map overlay is independent from the F6 panel. Its runtime hooks are
+-- event-driven and the Palworld projection signature is covered by the
+-- territory overlay contract test.
+local ENABLE_TERRITORY_MAP_OVERLAY = true
+local TerritoryMapOverlay = ENABLE_TERRITORY_MAP_OVERLAY
+    and require("territory_map_overlay") or nil
+
 local widget_port = UMGWidgetPort.new()
+local chat_command_sender = ChatCommandSender.new()
 local presentation = PresentationController.new(
     RendererHost.new(widget_port),
-    ActionOutbox.new(ChatCommandSender.new())
+    ActionOutbox.new(chat_command_sender)
 )
 local interactions = UIInteractionRouter.new(presentation)
 local snapshots = SnapshotInbox.new(presentation)
 local snapshot_transport = SnapshotTransport.new()
+local territory_map_overlay = nil
+if ENABLE_TERRITORY_MAP_OVERLAY then
+    territory_map_overlay = TerritoryMapOverlay.new({
+        request_snapshot = function()
+            return chat_command_sender:request_snapshot()
+        end
+    })
+end
 local ENABLE_NATIVE_BUTTON_POLLER = false
 local interactive_controls = {
     "CloseButton",
@@ -77,6 +93,10 @@ ChatReceiveProbe.register(function(frame)
     end
     if complete ~= true then return end
 
+    if territory_map_overlay ~= nil then
+        territory_map_overlay:set_snapshot(snapshot)
+    end
+
     local accepted, model, rendered, receive_error =
         snapshots:receive(snapshot)
     print(string.format(
@@ -87,6 +107,18 @@ ChatReceiveProbe.register(function(frame)
         tostring(receive_error or "")
     ))
 end)
+
+if territory_map_overlay ~= nil then
+    local map_registered, map_register_error =
+        territory_map_overlay:register()
+    print(string.format(
+        "[PalTRUI] PALTR_MAP_OVERLAY_%s | error=%s\n",
+        map_registered == true and "READY" or "DISABLED",
+        tostring(map_register_error or "")
+    ))
+else
+    print("[PalTRUI] PALTR_MAP_OVERLAY_DISABLED | safe_homepage_mode=true\n")
+end
 
 PalTRUIKeybindCallbacks = PalTRUIKeybindCallbacks or {}
 local keybind_callbacks = PalTRUIKeybindCallbacks
