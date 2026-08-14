@@ -29,6 +29,19 @@ local vertical = Overlay.segment_layout(
 near(vertical.width, 100, "vertical width")
 near(vertical.angle, 90, "vertical angle")
 near(Overlay.BORDER_THICKNESS, 3.2, "strategy border stays restrained")
+near(Overlay.Z_ORDER, 10000, "map overlay stays above Palworld map layers")
+
+local anchored = Overlay.segment_layout(
+    { x = 0.2, y = 0.4, normalized = true },
+    { x = 0.4, y = 0.6, normalized = true },
+    3
+)
+if anchored.normalized ~= true then
+    error("normalized segment uses anchor fallback")
+end
+near(anchored.anchor_x, 0.3, "normalized segment anchor x")
+near(anchored.anchor_y, 0.5, "normalized segment anchor y")
+near(anchored.width, 6, "normalized boundary marker width")
 
 local projected_input = nil
 local projected_minimum = nil
@@ -106,6 +119,80 @@ end
 if projection_overlay.projection_strategy.name ~= "map_image_cm" then
     error("verified five-parameter map projection strategy selected")
 end
+
+local anchor_projection_overlay = Overlay.new({
+    log = function() end,
+    find_projection_target = function() return projection_target end,
+    get_local_size = function() return nil end
+})
+anchor_projection_overlay.parent_canvas = object({ name = "Canvas Anchored" })
+anchor_projection_overlay.map_body = projection_overlay.map_body
+local anchor_projected = anchor_projection_overlay:_world_to_widget({
+    x = 1200, y = 3400, z = 500
+})
+if anchor_projected.normalized ~= true then
+    error("missing map size preserves normalized anchor coordinates")
+end
+near(anchor_projected.x, 0.12, "anchor projection x")
+near(anchor_projected.y, 0.34, "anchor projection y")
+
+local function canvas_slot_probe()
+    local state = {}
+    local slot = object({})
+    function slot:SetAnchors(value) state.anchors = value end
+    function slot:SetAlignment(value) state.alignment = value end
+    function slot:SetPosition(value) state.position = value end
+    function slot:SetSize(value) state.size = value end
+    local control = object({ Slot = slot })
+    function control:SetRenderTransformPivot() end
+    function control:SetRenderTransformAngle() end
+    function control:SetBrushColor() end
+    function control:SetVisibility(value) state.visibility = value end
+    return control, state
+end
+
+local segment_control, segment_slot = canvas_slot_probe()
+local segment_inner = object({ SetBrushColor = function() end })
+local node_control, node_slot = canvas_slot_probe()
+local anchor_render_overlay = Overlay.new({ log = function() end })
+anchor_render_overlay.controls = {
+    TerritorySegment001 = segment_control,
+    TerritorySegmentInner001 = segment_inner,
+    TerritoryNode001 = node_control
+}
+anchor_render_overlay.model = {
+    segments = {
+        {
+            first = { id = "first" },
+            second = { id = "second" },
+            color = {}
+        }
+    },
+    nodes = { { world = { id = "node" }, color = {}, size = 11 } },
+    segment_count = 1,
+    node_count = 1
+}
+anchor_render_overlay._project_cached = function(_, world)
+    if world.id == "first" then
+        return { x = 0.2, y = 0.4, normalized = true }
+    end
+    if world.id == "second" then
+        return { x = 0.4, y = 0.6, normalized = true }
+    end
+    return { x = 0.7, y = 0.8, normalized = true }
+end
+local anchored_segments, anchored_segment_stats =
+    anchor_render_overlay:_render_segments()
+local anchored_nodes, anchored_node_stats = anchor_render_overlay:_render_nodes()
+near(anchored_segments, 1, "normalized segment renders")
+near(anchored_segment_stats.slots, 1, "normalized segment configures slot")
+near(segment_slot.anchors.Minimum.X, 0.3, "segment slot anchor x")
+near(segment_slot.anchors.Minimum.Y, 0.5, "segment slot anchor y")
+near(anchored_nodes, 1, "normalized node renders")
+near(anchored_node_stats.slots, 1, "normalized node configures slot")
+near(node_slot.anchors.Minimum.X, 0.7, "node slot anchor x")
+near(node_slot.anchors.Minimum.Y, 0.8, "node slot anchor y")
+near(node_slot.alignment.X, 0.5, "node anchor centers marker")
 
 local cached_projection_calls = 0
 projection_overlay.projected_points = {}

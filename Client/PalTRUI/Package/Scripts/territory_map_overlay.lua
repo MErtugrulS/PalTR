@@ -26,6 +26,7 @@ Overlay.MAP_BASE_CLASSES = { "WBP_Map_Base_C", "WBP_Map_Base" }
 Overlay.MAP_BODY_CLASSES = { "WBP_Map_Body_C", "WBP_Map_Body" }
 Overlay.MAX_SEGMENTS = 512
 Overlay.MAX_NODES = 64
+Overlay.Z_ORDER = 10000
 Overlay.BORDER_THICKNESS = 3.2
 Overlay.VISIBILITY_CHECK_INTERVAL_SECONDS = 0.25
 Overlay.ATTACH_RETRY_INTERVAL_SECONDS = 1.0
@@ -249,6 +250,18 @@ function Overlay.segment_layout(first, second, thickness)
     if first_x == nil or first_y == nil or second_x == nil or second_y == nil then
         return nil
     end
+    if first.normalized == true and second.normalized == true then
+        return {
+            normalized = true,
+            anchor_x = (first_x + second_x) / 2,
+            anchor_y = (first_y + second_y) / 2,
+            x = 0,
+            y = 0,
+            width = 6,
+            height = 6,
+            angle = 0
+        }
+    end
     local dx, dy = second_x - first_x, second_y - first_y
     local length = math.sqrt(dx * dx + dy * dy)
     if length < 0.5 then return nil end
@@ -295,6 +308,19 @@ local function configure_canvas_slot(control, layout)
     local slot = property(control, "Slot")
     if not valid_object(slot) then return false end
     local updated = pcall(function()
+        if layout.normalized == true then
+            slot:SetAnchors({
+                Minimum = { X = layout.anchor_x, Y = layout.anchor_y },
+                Maximum = { X = layout.anchor_x, Y = layout.anchor_y }
+            })
+            slot:SetAlignment({ X = 0.5, Y = 0.5 })
+        else
+            slot:SetAnchors({
+                Minimum = { X = 0, Y = 0 },
+                Maximum = { X = 0, Y = 0 }
+            })
+            slot:SetAlignment({ X = 0, Y = 0 })
+        end
         slot:SetPosition({ X = layout.x, Y = layout.y })
         slot:SetSize({ X = layout.width, Y = layout.height })
         control:SetRenderTransformPivot({ X = 0.5, Y = 0.5 })
@@ -442,7 +468,12 @@ function Overlay:_map_local_size()
             return widget_name(candidate) == "Image_MapBody"
         end)
     end
-    local candidates = { image, self.parent_canvas, self.map_body }
+    local candidates = {}
+    if valid_object(image) then table.insert(candidates, image) end
+    if valid_object(self.parent_canvas) then
+        table.insert(candidates, self.parent_canvas)
+    end
+    if valid_object(self.map_body) then table.insert(candidates, self.map_body) end
     for _, candidate in ipairs(candidates) do
         if valid_object(candidate) then
             local read, size = pcall(self.api.get_local_size, candidate)
@@ -467,7 +498,13 @@ function Overlay:_projection_to_pixels(offset)
     offset = vector(offset)
     if offset == nil then return nil, "invalid normalized offset" end
     local size = self:_map_local_size()
-    if size == nil then return nil, "map local size unavailable" end
+    if size == nil then
+        return {
+            x = offset.x,
+            y = offset.y,
+            normalized = true
+        }
+    end
     return {
         x = offset.x * size.x,
         y = offset.y * size.y
@@ -1150,7 +1187,7 @@ function Overlay:_create_widget()
         })
         slot:SetAlignment({ X = 0, Y = 0 })
         slot:SetOffsets({ Left = 0, Top = 0, Right = 0, Bottom = 0 })
-        slot:SetZOrder(20)
+        slot:SetZOrder(Overlay.Z_ORDER)
     end)
     self.widget = widget
     self.controls = controls
@@ -1236,13 +1273,19 @@ function Overlay:_render_nodes()
         if position ~= nil then stats.projected = stats.projected + 1 end
         if valid_object(control) and position ~= nil then
             local size = tonumber(node.size) or 11
-            local configured = configure_canvas_slot(control, {
-                x = position.x - size / 2,
-                y = position.y - size / 2,
+            local layout = {
+                normalized = position.normalized == true,
+                anchor_x = position.x,
+                anchor_y = position.y,
+                x = position.normalized == true and 0
+                    or position.x - size / 2,
+                y = position.normalized == true and 0
+                    or position.y - size / 2,
                 width = size,
                 height = size,
                 angle = tonumber(node.angle) or 0
-            })
+            }
+            local configured = configure_canvas_slot(control, layout)
             if configured then
                 set_color(control, node.color)
                 show(control)
