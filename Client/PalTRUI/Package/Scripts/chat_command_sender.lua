@@ -43,6 +43,12 @@ local function target_key(envelope)
     return key
 end
 
+local function identity_id(value)
+    local id = tostring(value or "")
+    if id == "" or #id > 32 or id:find("[^a-z0-9_%-]") then return nil end
+    return id
+end
+
 function ChatCommandSender.new(api)
     api = type(api) == "table" and api or {}
     return setmetatable({
@@ -55,6 +61,38 @@ end
 function ChatCommandSender:send(envelope)
     local action_id = type(envelope) == "table"
         and tostring(envelope.action_id or "") or ""
+    if action_id == "SET_GUILD_IDENTITY" then
+        local color_id = identity_id(envelope.color_id)
+        local emblem_id = identity_id(envelope.emblem_id)
+        if color_id == nil or emblem_id == nil then
+            return false, "Klan kimliği renk veya arma değeri geçersiz."
+        end
+        local command = string.format(
+            "!klankimlik %s %s",
+            color_id,
+            emblem_id
+        )
+        local controller = self.get_player_controller()
+        if not valid_object(controller) then
+            return false, "Yerel PlayerController bulunamadi."
+        end
+        local sent, send_error = pcall(function()
+            controller:EnterChat_Receive(command, self.chat_category)
+        end)
+        if not sent then
+            return false, "Sunucu komutu gonderilemedi: "
+                .. tostring(send_error)
+        end
+        return true, {
+            request_id = envelope.request_id,
+            action_id = action_id,
+            color_id = color_id,
+            emblem_id = emblem_id,
+            command = command,
+            queued = true
+        }
+    end
+
     local command_name = command_by_action[action_id]
     if command_name == nil then
         return false, "UI aksiyonu icin sunucu komutu tanimli degil."

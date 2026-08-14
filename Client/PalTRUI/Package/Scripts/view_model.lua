@@ -1,4 +1,5 @@
 local Contract = require("contract")
+local GuildIdentityModel = require("guild_identity_model")
 
 local ViewModel = {}
 
@@ -39,6 +40,11 @@ local tab_control_definitions = {
         control = "ChatTabButton",
         text_control = "ChatTabText",
         page_index = 3
+    },
+    MANAGEMENT = {
+        control = "ManagementTabButton",
+        text_control = "ManagementTabText",
+        page_index = 4
     }
 }
 
@@ -924,11 +930,13 @@ function ViewModel.build(snapshot, panel)
     )
     local guilds = guild_catalog_view(snapshot)
     local chat = chat_view(panel.chat)
+    local management = GuildIdentityModel.build(snapshot, panel)
     local views = {
         CLAN = clan,
         DIPLOMACY = relation_data.diplomacy,
         ALLIANCE = relation_data.alliance,
         GUILDS = guilds,
+        MANAGEMENT = management,
         CHAT = chat
     }
 
@@ -975,7 +983,8 @@ function ViewModel.build(snapshot, panel)
             CLAN = clan.member_count,
             DIPLOMACY = #relation_data.diplomacy.relations,
             ALLIANCE = #relation_data.alliance.relations,
-            GUILDS = guilds.active_count
+            GUILDS = guilds.active_count,
+            MANAGEMENT = 0
         }),
         views = views,
         content = views[active_tab] or views[Contract.DEFAULT_TAB]

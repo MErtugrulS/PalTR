@@ -11,6 +11,8 @@ function PanelState.new(options)
         open = false,
         active_tab = Contract.DEFAULT_TAB,
         selected_guild = "",
+        guild_identity_color_id = "",
+        guild_identity_emblem_id = "",
         snapshot = nil,
         chat = ChatState.new(),
         view_model = nil,
@@ -123,11 +125,43 @@ function PanelState:apply_snapshot(snapshot)
         return false
     end
     self.snapshot = snapshot
+    self.guild_identity_color_id = ""
+    self.guild_identity_emblem_id = ""
     self.error = ""
     self.action_status = ""
     self:_normalize_relation_selection()
     self:_rebuild_view_model()
     return true
+end
+
+function PanelState:select_guild_identity(kind, identity_id)
+    if self.active_tab ~= "MANAGEMENT" then
+        return false, "Klan kimliği yalnız Yönetim sayfasından seçilebilir."
+    end
+    local identity = self.view_model and self.view_model.views
+        and self.view_model.views.MANAGEMENT or nil
+    if type(identity) ~= "table" or identity.read_only == true then
+        return false, identity and identity.save_control.reason
+            or "Klan kimliği verisi hazır değil."
+    end
+    local source = kind == "color" and identity.colors
+        or kind == "emblem" and identity.emblems or nil
+    for _, item in ipairs(source or {}) do
+        if item.id == identity_id
+            and (kind ~= "color" or item.available == true) then
+            if kind == "color" then
+                self.guild_identity_color_id = identity_id
+            else
+                self.guild_identity_emblem_id = identity_id
+            end
+            self.error = ""
+            self:_rebuild_view_model()
+            return true
+        end
+    end
+    return false, kind == "color"
+        and "Seçilen klan rengi kullanılamıyor."
+        or "Seçilen klan arması kullanılamıyor."
 end
 
 function PanelState:set_action_pending(action_id)

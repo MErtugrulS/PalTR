@@ -80,6 +80,37 @@ function PresentationController:select_guild(guild_key)
     return accepted, self:model(), rendered, render_error
 end
 
+function PresentationController:select_guild_identity(kind, identity_id)
+    local accepted, select_error = self.panel:select_guild_identity(
+        kind,
+        identity_id
+    )
+    local rendered, render_error = self:_render()
+    return accepted, self:model(), rendered, select_error or render_error
+end
+
+function PresentationController:request_guild_identity()
+    local identity = self:model().views
+        and self:model().views.MANAGEMENT or nil
+    local save = identity and identity.save_control or nil
+    if type(save) ~= "table" or save.enabled ~= true then
+        return false, save and save.reason
+            or "Klan kimliği işlemi kullanılamıyor."
+    end
+    local dispatched, dispatch_result = self.action_sink:dispatch({
+        kind = "GUILD_IDENTITY_ACTION",
+        action_id = "SET_GUILD_IDENTITY",
+        guild_key = tostring(self:model().player.guild_key or ""),
+        color_id = identity.selected_color_id,
+        emblem_id = identity.selected_emblem_id,
+        snapshot_generated_at = self:model().generated_at
+    })
+    if dispatched ~= true then return false, dispatch_result end
+    self.panel:set_action_pending("SET_GUILD_IDENTITY")
+    self:_render()
+    return true, dispatch_result
+end
+
 function PresentationController:navigate_relation(step)
     return RelationNavigator.select(self, step)
 end

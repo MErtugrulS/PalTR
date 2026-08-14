@@ -73,6 +73,19 @@ local function relation_row(controller, control_name)
     return model, guild_key ~= "" and guild_key or nil
 end
 
+local function guild_identity_item(controller, control_name)
+    local kind, index = tostring(control_name or ""):match(
+        "^GuildIdentity(Color|Emblem)Button(%d%d)$"
+    )
+    if kind == nil then return nil, nil end
+    local model = current_model(controller)
+    local management = model and model.views and model.views.MANAGEMENT or nil
+    local items = management and (kind == "Color"
+        and management.colors or management.emblems) or nil
+    local item = type(items) == "table" and items[tonumber(index)] or nil
+    return kind == "Color" and "color" or "emblem", item
+end
+
 function UIInteractionRouter.new(controller)
     return setmetatable({
         controller = valid_controller(controller) and controller or nil
@@ -94,6 +107,36 @@ function UIInteractionRouter:handle(control_name)
     end
 
     local model = current_model(self.controller)
+    local identity_kind, identity_item = guild_identity_item(
+        self.controller,
+        name
+    )
+    if identity_kind ~= nil then
+        if type(identity_item) ~= "table" then
+            return false, model, false, "Klan kimliği seçeneği bulunamadı."
+        end
+        if type(self.controller.select_guild_identity) ~= "function" then
+            return false, model, false, "Klan kimliği controller'i hazır değil."
+        end
+        local accepted, selected_model, rendered, select_error =
+            self.controller:select_guild_identity(identity_kind, identity_item.id)
+        return accepted, selected_model, rendered, select_error
+    end
+    if name == "GuildIdentitySaveButton" then
+        local management = model and model.views
+            and model.views.MANAGEMENT or nil
+        local save = management and management.save_control or nil
+        if type(save) ~= "table" or save.enabled ~= true then
+            return false, model, false, save and save.reason
+                or "Klan kimliği işlemi kullanılamıyor."
+        end
+        if type(self.controller.request_guild_identity) ~= "function" then
+            return false, model, false, "Klan kimliği transportu hazır değil."
+        end
+        local sent, result = self.controller:request_guild_identity()
+        if sent ~= true then return false, model, false, result end
+        return true, current_model(self.controller), true
+    end
     local row_model, guild_key = relation_row(self.controller, name)
     if guild_key ~= nil then
         if type(self.controller.select_guild) ~= "function" then
