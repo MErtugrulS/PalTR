@@ -78,6 +78,7 @@ function Conquest.new(paths, config, diplomacy, logger, options)
         clock = options.clock or Clock,
         random = options.random or math.random,
         repository = repository,
+        guild_identity = options.guild_identity,
         nodes = repository:load_nodes(),
         edges = repository:load_edges(),
         campaigns = repository:load_campaigns(),
@@ -417,6 +418,14 @@ function Conquest:register_node(request)
         return Result.err("NODE_IDENTITY_MISSING", "Node veya klan kimligi yok")
     end
 
+    if self.guild_identity ~= nil
+        and not self.guild_identity:has_identity(guild_key) then
+        return Result.err(
+            "GUILD_IDENTITY_REQUIRED",
+            "Baskent veya karakol kurmadan once F6 Yonetim'den klan rengi ve armasi secilmeli"
+        )
+    end
+
     if self.nodes[node_id] then
         return Result.err("NODE_ALREADY_EXISTS", "Node kimligi zaten kayitli")
     end
@@ -459,6 +468,15 @@ function Conquest:register_node(request)
         if self:_capital_for(guild_key) then
             return Result.err("CAPITAL_ALREADY_EXISTS", "Klanin baskenti zaten var")
         end
+        local placement = Rules.validate_node_placement(
+            nil,
+            node,
+            self.nodes,
+            self.config
+        )
+        if not placement.allow then
+            return Result.err(placement.reason, "Baskent konumu gecersiz")
+        end
     else
         local maximum = math.max(
             0,
@@ -475,9 +493,22 @@ function Conquest:register_node(request)
             return Result.err("INVALID_PARENT_NODE", "Ana node klan kontrolunde degil")
         end
 
-        local link = Rules.validate_link(parent, node, self.config)
-        if not link.allow then
-            return Result.err(link.reason, "Karakol baglanti mesafesi gecersiz")
+        local placement = Rules.validate_node_placement(
+            parent,
+            node,
+            self.nodes,
+            self.config
+        )
+        if not placement.allow then
+            local messages = {
+                TERRITORY_NODE_TOO_CLOSE = "Baskent veya karakollar birbirine cok yakin",
+                OUTPOST_LINK_TOO_FAR = "Karakol mevcut klan topragina baglanmiyor",
+                ENEMY_TERRITORY_OVERLAP = "Bu konum baska klanin topragina veya tampon bolgesine tasiyor"
+            }
+            return Result.err(
+                placement.reason,
+                messages[placement.reason] or "Karakol konumu gecersiz"
+            )
         end
 
         node.parent_node_id = parent.node_id

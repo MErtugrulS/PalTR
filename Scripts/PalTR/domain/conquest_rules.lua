@@ -16,6 +16,25 @@ local function number(value)
     return tonumber(value) or 0
 end
 
+local function planar_distance(first, second)
+    local dx = number(first and first.x) - number(second and second.x)
+    local dy = number(first and first.y) - number(second and second.y)
+    return math.sqrt(dx * dx + dy * dy)
+end
+
+local function territory_radius(node, config)
+    node = node or {}
+    local override = tonumber(node.territory_radius_meters)
+    if override ~= nil and override > 0 then return override end
+    if tostring(node.node_type or "") == "CAPITAL" then
+        return number(config and config.territory_default_capital_radius_meters)
+    end
+    if tostring(node.node_type or "") == "OUTPOST" then
+        return number(config and config.territory_default_outpost_radius_meters)
+    end
+    return 0
+end
+
 function Rules.can_operate(role, config)
     local roles = config and config.operator_roles or {}
     return roles[tostring(role or "")] == true
@@ -46,6 +65,72 @@ function Rules.validate_link(parent, child, config)
     end
 
     return decision(true, "OUTPOST_LINK_VALID")
+end
+
+function Rules.validate_node_placement(parent, child, nodes, config)
+    config = config or {}
+    child = child or {}
+    local topology_enabled = tonumber(
+        config.territory_node_min_distance_ratio
+    ) ~= nil and tonumber(config.territory_outpost_link_max_ratio) ~= nil
+    if not topology_enabled then
+        if tostring(child.node_type or "") == "OUTPOST" then
+            return Rules.validate_link(parent, child, config)
+        end
+        return decision(true, "LEGACY_TERRITORY_PLACEMENT_VALID")
+    end
+    local child_radius = territory_radius(child, config)
+    if child_radius <= 0 then
+        return decision(false, "INVALID_TERRITORY_RADIUS_CONFIG")
+    end
+
+    local minimum_ratio = math.max(
+        0,
+        number(config.territory_node_min_distance_ratio)
+    )
+    local enemy_buffer = math.max(
+        0,
+        number(config.territory_enemy_buffer_meters)
+    )
+
+    for _, existing in pairs(nodes or {}) do
+        if tostring(existing.node_id or "") ~= tostring(child.node_id or "")
+            and tostring(existing.current_controller or "") ~= "" then
+            local existing_radius = territory_radius(existing, config)
+            if existing_radius > 0 then
+                local distance = planar_distance(existing, child)
+                if tostring(existing.current_controller)
+                    ~= tostring(child.current_controller) then
+                    if distance < child_radius + existing_radius + enemy_buffer then
+                        return decision(false, "ENEMY_TERRITORY_OVERLAP")
+                    end
+                elseif distance < (child_radius + existing_radius)
+                    * minimum_ratio then
+                    return decision(false, "TERRITORY_NODE_TOO_CLOSE")
+                end
+            end
+        end
+    end
+
+    if tostring(child.node_type or "") == "OUTPOST" then
+        if parent == nil then return decision(false, "INVALID_PARENT_NODE") end
+        local parent_radius = territory_radius(parent, config)
+        local maximum_ratio = math.max(
+            0,
+            number(config.territory_outpost_link_max_ratio)
+        )
+        local maximum = (child_radius + parent_radius) * maximum_ratio
+        local legacy_maximum = number(config.outpost_link_max_distance_meters)
+        if legacy_maximum > 0 then maximum = math.min(maximum, legacy_maximum) end
+        if maximum <= 0 then
+            return decision(false, "INVALID_LINK_DISTANCE_CONFIG")
+        end
+        if planar_distance(parent, child) > maximum then
+            return decision(false, "OUTPOST_LINK_TOO_FAR")
+        end
+    end
+
+    return decision(true, "TERRITORY_PLACEMENT_VALID")
 end
 
 
