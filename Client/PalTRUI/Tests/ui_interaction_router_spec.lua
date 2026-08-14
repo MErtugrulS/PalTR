@@ -47,6 +47,14 @@ local current_model = {
             }
         },
         DIPLOMACY = {
+            relations = {
+                {
+                    guild = { key = "guild-first", name = "First" }
+                },
+                {
+                    guild = { key = "guild-second", name = "Second" }
+                }
+            },
             navigation_controls = {
                 PreviousRelationButton = {
                     step = -1,
@@ -110,6 +118,17 @@ local controller = {
         })
         return true, current_model
     end,
+    select_guild = function(_, guild_key)
+        table.insert(calls, {
+            name = "select_guild",
+            guild_key = guild_key
+        })
+        return true, {
+            open = true,
+            active_tab = "DIPLOMACY",
+            selected_guild = guild_key
+        }, true
+    end,
     open_relation = function(_, tab_id, guild_key)
         table.insert(calls, {
             name = "open_relation",
@@ -139,6 +158,26 @@ for control_name, tab_id in pairs(tab_controls) do
     equal(rendered, true, control_name .. " rendered")
     equal(route_error, nil, control_name .. " has no error")
 end
+
+local row_handled, row_model, row_rendered, row_error =
+    router:handle("DiplomacyRelationRowButton02")
+equal(row_handled, true, "diplomacy relation row handled")
+equal(row_model.selected_guild, "guild-second",
+    "diplomacy relation row guild selected")
+equal(row_rendered, true, "diplomacy relation row rendered")
+equal(row_error, nil, "diplomacy relation row has no error")
+equal(calls[#calls].name, "select_guild",
+    "diplomacy relation row routed to selection")
+equal(calls[#calls].guild_key, "guild-second",
+    "diplomacy relation row uses visible row guild")
+
+local missing_row, _, missing_row_rendered, missing_row_error =
+    router:handle("DiplomacyRelationRowButton06")
+equal(missing_row, false, "empty diplomacy relation row rejected")
+equal(missing_row_rendered, false,
+    "empty diplomacy relation row not rendered")
+equal(missing_row_error, "UI kontrol etkilesimi tanimli degil.",
+    "empty diplomacy relation row falls through safely")
 
 
 local quick_handled, quick_model, quick_rendered, quick_error =

@@ -56,6 +56,23 @@ local function dashboard_control(controller, control_name)
     return model, controls[control_name]
 end
 
+local function relation_row(controller, control_name)
+    local index = tonumber(tostring(control_name or ""):match(
+        "^DiplomacyRelationRowButton(%d%d)$"
+    ))
+    if index == nil then return nil, nil end
+    local model = current_model(controller)
+    local views = type(model) == "table" and model.views or nil
+    local diplomacy = type(views) == "table" and views.DIPLOMACY or nil
+    local relations = type(diplomacy) == "table"
+        and diplomacy.relations or nil
+    local relation = type(relations) == "table" and relations[index] or nil
+    local guild = type(relation) == "table" and relation.guild or nil
+    local guild_key = type(guild) == "table"
+        and tostring(guild.key or "") or ""
+    return model, guild_key ~= "" and guild_key or nil
+end
+
 function UIInteractionRouter.new(controller)
     return setmetatable({
         controller = valid_controller(controller) and controller or nil
@@ -77,6 +94,19 @@ function UIInteractionRouter:handle(control_name)
     end
 
     local model = current_model(self.controller)
+    local row_model, guild_key = relation_row(self.controller, name)
+    if guild_key ~= nil then
+        if type(self.controller.select_guild) ~= "function" then
+            return false, row_model, false,
+                "UI klan secim controller'i hazir degil."
+        end
+        local accepted, selected_model, rendered, select_error =
+            self.controller:select_guild(guild_key)
+        if accepted ~= true or rendered ~= true then
+            return false, selected_model, rendered, select_error
+        end
+        return true, selected_model, true
+    end
     local tab_id = tab_id_for_control(model, name)
     if tab_id == nil then
         local dashboard_model, dashboard = dashboard_control(

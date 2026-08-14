@@ -9,6 +9,7 @@ local SnapshotTransport = require("snapshot_transport")
 local UMGButtonHookPoller = require("umg_button_hook_poller")
 local ActionOutbox = require("action_outbox")
 local ChatCommandSender = require("chat_command_sender")
+local DesignTemplateEventBridge = require("design_template_event_bridge")
 
 -- The map overlay is independent from the F6 panel. Its runtime hooks are
 -- event-driven and the Palworld projection signature is covered by the
@@ -24,6 +25,7 @@ local presentation = PresentationController.new(
     ActionOutbox.new(chat_command_sender)
 )
 local interactions = UIInteractionRouter.new(presentation)
+local design_events = DesignTemplateEventBridge.new(interactions)
 local snapshots = SnapshotInbox.new(presentation)
 local snapshot_transport = SnapshotTransport.new()
 local territory_map_overlay = nil
@@ -178,6 +180,12 @@ local function toggle_panel()
         end
     elseif model.open == true then
         print("[PalTRUI] PALTR_UI_BUTTON_POLLER_DISABLED | keyboard_mode=true\n")
+        local registered, register_error = design_events:register()
+        print(string.format(
+            "[PalTRUI] PALTR_UI_DESIGN_EVENTS_%s | error=%s\n",
+            registered == true and "READY" or "ERROR",
+            tostring(register_error or "")
+        ))
     elseif not closing then
         button_poller:stop()
     end
