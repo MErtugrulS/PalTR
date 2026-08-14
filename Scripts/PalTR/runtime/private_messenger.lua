@@ -53,56 +53,36 @@ local function read_property(object, property_name)
 end
 
 local function find_player_state(controller, player)
-    local candidates = {}
-
-    if player ~= nil then
-        table.insert(
-            candidates,
-            {
-                name = "player.player_state",
-                value = player.player_state
-            }
-        )
-
-        table.insert(
-            candidates,
-            {
-                name = "player.playerState",
-                value = player.playerState
-            }
-        )
-    end
-
-    local controller_state =
+    local controller_state = UE.unwrap(
         read_property(controller, "PlayerState")
-
-    table.insert(
-        candidates,
-        {
-            name = "controller.PlayerState",
-            value = controller_state
-        }
     )
+    if controller_state ~= nil then
+        return controller_state, "controller.PlayerState"
+    end
 
     local getter_ok, getter_value = pcall(function()
         return controller:GetPlayerState()
     end)
-
     if getter_ok then
-        table.insert(
-            candidates,
-            {
-                name = "controller:GetPlayerState",
-                value = getter_value
-            }
-        )
+        local getter_state = UE.unwrap(getter_value)
+        if getter_state ~= nil then
+            return getter_state, "controller:GetPlayerState"
+        end
     end
 
-    for _, candidate in ipairs(candidates) do
-        local state = UE.unwrap(candidate.value)
+    if player ~= nil then
+        local snake_state = UE.unwrap(
+            read_property(player, "player_state")
+        )
+        if snake_state ~= nil then
+            return snake_state, "player.player_state"
+        end
 
-        if state ~= nil then
-            return state, candidate.name
+        local camel_state = UE.unwrap(
+            read_property(player, "playerState")
+        )
+        if camel_state ~= nil then
+            return camel_state, "player.playerState"
         end
     end
 
@@ -135,14 +115,13 @@ local function find_player_uid(controller, player)
     )
 end
 
-function PrivateMessenger.send(
+function PrivateMessenger.send_many(
     world_context,
     player,
-    message,
+    messages,
     logger
 )
     local context = UE.unwrap(world_context)
-    local text = tostring(message or "")
 
     if context == nil then
         write_log(
@@ -154,14 +133,29 @@ function PrivateMessenger.send(
         return false
     end
 
-    if text == "" then
+    if type(messages) ~= "table" or #messages == 0 then
         write_log(
             logger,
             "warn",
-            "OZEL_CHAT_HATA | mesaj bos"
+            "OZEL_CHAT_HATA | mesaj listesi bos"
         )
 
         return false
+    end
+
+    local pending_messages = {}
+    for index = 1, #messages do
+        local text = tostring(messages[index] or "")
+        if text == "" then
+            write_log(
+                logger,
+                "warn",
+                "OZEL_CHAT_HATA | mesaj bos | index=" ..
+                tostring(index)
+            )
+            return false
+        end
+        pending_messages[index] = text
     end
 
     local function send_on_game_thread()
@@ -189,20 +183,23 @@ function PrivateMessenger.send(
                 type(receiver_uid)
             )
 
-            utility:SendSystemToPlayerChat(
-                context,
-                text,
-                {
-                    receiver_uid
-                }
-            )
+            for index = 1, #pending_messages do
+                utility:SendSystemToPlayerChat(
+                    context,
+                    pending_messages[index],
+                    {
+                        receiver_uid
+                    }
+                )
+            end
         end)
 
         if ok then
             write_log(
                 logger,
                 "info",
-                "OZEL_CHAT_OK | " .. text
+                "OZEL_CHAT_TOPLU_OK | adet=" ..
+                tostring(#pending_messages)
             )
         else
             write_log(
@@ -212,21 +209,60 @@ function PrivateMessenger.send(
                 tostring(error_message)
             )
         end
+
+        return ok
+    end
+
+    local already_on_game_thread = false
+    if type(IsInGameThread) == "function" then
+        local checked, result = pcall(IsInGameThread)
+        already_on_game_thread = checked and result == true
+    end
+
+    if already_on_game_thread then
+        return send_on_game_thread()
     end
 
     if type(ExecuteInGameThread) == "function" then
-        ExecuteInGameThread(send_on_game_thread)
-    else
-        send_on_game_thread()
+        local queued, queue_error = pcall(function()
+            ExecuteInGameThread(send_on_game_thread)
+        end)
+        if not queued then
+            write_log(
+                logger,
+                "warn",
+                "OZEL_CHAT_HATA | oyun thread kuyrugu | " ..
+                tostring(queue_error)
+            )
+            return false
+        end
+
+        write_log(
+            logger,
+            "info",
+            "OZEL_CHAT_TOPLU_KUYRUGA_ALINDI | adet=" ..
+            tostring(#pending_messages)
+        )
+
+        return true
     end
 
-    write_log(
-        logger,
-        "info",
-        "OZEL_CHAT_KUYRUGA_ALINDI"
-    )
+    return send_on_game_thread()
+end
 
-    return true
+
+function PrivateMessenger.send(
+    world_context,
+    player,
+    message,
+    logger
+)
+    return PrivateMessenger.send_many(
+        world_context,
+        player,
+        { message },
+        logger
+    )
 end
 
 return PrivateMessenger

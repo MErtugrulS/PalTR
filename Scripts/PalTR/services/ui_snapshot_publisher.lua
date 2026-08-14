@@ -63,28 +63,28 @@ function Publisher:publish(player, force)
         tostring(snapshot.generated_at),
         tostring(self.next_transfer_id)
     }, "-")
+    local frames = {}
     for index = 1, total do
         local first = (index - 1) * Publisher.CHUNK_SIZE + 1
         local chunk = payload:sub(first, first + Publisher.CHUNK_SIZE - 1)
-        local frame = UIWire.encode(
+        frames[index] = UIWire.encode(
             "SNAPSHOT_CHUNK",
             table.concat({ transfer_id, index, total }, ":"),
             chunk
         )
-        if not PrivateMessenger.send(
-            player.controller,
-            player,
-            frame,
-            self.logger
-        ) then
-            warn(self, string.format(
-                "UI_SNAPSHOT_GONDERIM_HATA | player=%s | chunk=%d/%d",
-                player_id,
-                index,
-                total
-            ))
-            return false, "send"
-        end
+    end
+    if not PrivateMessenger.send_many(
+        player.controller,
+        player,
+        frames,
+        self.logger
+    ) then
+        warn(self, string.format(
+            "UI_SNAPSHOT_GONDERIM_HATA | player=%s | chunks=%d",
+            player_id,
+            total
+        ))
+        return false, "send"
     end
     self.last_fingerprints[player_id] = current_fingerprint
     return true, total
