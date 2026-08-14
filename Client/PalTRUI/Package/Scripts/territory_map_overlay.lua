@@ -28,6 +28,8 @@ Overlay.MAX_SEGMENTS = 512
 Overlay.MAX_NODES = 64
 Overlay.Z_ORDER = 10000
 Overlay.BORDER_THICKNESS = 3.2
+Overlay.NORMALIZED_SEGMENT_SIZE = 0.8
+Overlay.NORMALIZED_NODE_SIZE = 2.0
 Overlay.VISIBILITY_CHECK_INTERVAL_SECONDS = 0.25
 Overlay.ATTACH_RETRY_INTERVAL_SECONDS = 1.0
 Overlay.ATTACH_MAX_ATTEMPTS = 3
@@ -257,8 +259,8 @@ function Overlay.segment_layout(first, second, thickness)
             anchor_y = (first_y + second_y) / 2,
             x = 0,
             y = 0,
-            width = 6,
-            height = 6,
+            width = Overlay.NORMALIZED_SEGMENT_SIZE,
+            height = Overlay.NORMALIZED_SEGMENT_SIZE,
             angle = 0
         }
     end
@@ -1272,7 +1274,9 @@ function Overlay:_render_nodes()
         local position = self:_project_cached(node.world)
         if position ~= nil then stats.projected = stats.projected + 1 end
         if valid_object(control) and position ~= nil then
-            local size = tonumber(node.size) or 11
+            local size = position.normalized == true
+                and Overlay.NORMALIZED_NODE_SIZE
+                or (tonumber(node.size) or 11)
             local layout = {
                 normalized = position.normalized == true,
                 anchor_x = position.x,

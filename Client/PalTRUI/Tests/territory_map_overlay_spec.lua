@@ -41,7 +41,8 @@ if anchored.normalized ~= true then
 end
 near(anchored.anchor_x, 0.3, "normalized segment anchor x")
 near(anchored.anchor_y, 0.5, "normalized segment anchor y")
-near(anchored.width, 6, "normalized boundary marker width")
+near(anchored.width, 0.8, "normalized boundary marker width")
+near(Overlay.NORMALIZED_NODE_SIZE, 2.0, "normalized node stays compact")
 
 local projected_input = nil
 local projected_minimum = nil
@@ -193,6 +194,7 @@ near(anchored_node_stats.slots, 1, "normalized node configures slot")
 near(node_slot.anchors.Minimum.X, 0.7, "node slot anchor x")
 near(node_slot.anchors.Minimum.Y, 0.8, "node slot anchor y")
 near(node_slot.alignment.X, 0.5, "node anchor centers marker")
+near(node_slot.size.X, 2.0, "normalized node avoids map zoom magnification")
 
 local cached_projection_calls = 0
 projection_overlay.projected_points = {}
