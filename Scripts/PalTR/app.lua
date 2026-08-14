@@ -8,6 +8,7 @@ local Result = require("PalTR.core.result")
 local HookRegistry = require("PalTR.runtime.hook_registry")
 local Announcer = require("PalTR.runtime.announcer")
 local RegistryService = require("PalTR.services.registry_service")
+local GuildIdentityService = require("PalTR.services.guild_identity_service")
 local DiplomacyService = require("PalTR.services.diplomacy_service")
 local StatusService = require("PalTR.services.status_service")
 local CommandService = require("PalTR.services.command_service")
@@ -33,6 +34,12 @@ function App.new(config)
     local registry = RegistryService.new(
         paths,
         Logger.new("Registry")
+    )
+
+    local guild_identity = GuildIdentityService.new(
+        paths,
+        config,
+        Logger.new("GuildIdentity")
     )
 
     local diplomacy = DiplomacyService.new(
@@ -64,7 +71,8 @@ function App.new(config)
         paths,
         config,
         diplomacy,
-        Logger.new("Conquest")
+        Logger.new("Conquest"),
+        { guild_identity = guild_identity }
     )
 
     local terrain_sampler = TerritoryTerrainSampler.new(config.conquest)
@@ -95,6 +103,7 @@ function App.new(config)
         logger = Logger.new("App"),
         hooks = HookRegistry.new(Logger.new("Hooks")),
         registry = registry,
+        guild_identity = guild_identity,
         diplomacy = diplomacy,
         status = status,
         damage_policy = damage_policy,
@@ -116,7 +125,8 @@ function App.new(config)
             nil,
             function(player)
                 return ui_publisher:publish(player, true)
-            end
+            end,
+            guild_identity
         ),
 
         damage = DamageObserver.new(
@@ -141,6 +151,9 @@ function App:_headers()
     local files = {
         [self.paths.guilds] =
             "guild_key\tguild_name\tguild_id\tobject_path\tfirst_seen\tlast_seen",
+
+        [self.paths.guild_identity] =
+            "guild_key\tcolor_id\temblem_id\tselected_by\tselected_at",
 
         [self.paths.players] =
             "player_key\tplayer_name\tplayer_id\tplayer_uid\tguild_key\trole\tis_master\tplayer_state_path\tpawn_path\tfirst_seen\tlast_seen",

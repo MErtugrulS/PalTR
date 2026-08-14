@@ -18,6 +18,8 @@ end
 
 equal(Parser.parse("!baskent").value.action, "REGISTER_CAPITAL", "capital parse")
 equal(Parser.parse("!karakol").value.action, "REGISTER_OUTPOST", "outpost parse")
+equal(Parser.parse("!klankimlik azure wolf").value.action,
+    "SET_GUILD_IDENTITY", "guild identity parse")
 equal(Parser.parse("!bolgeadi Kuzey 3 Karakolu").value.action,
     "RENAME_TERRITORY", "territory name parse")
 equal(Parser.parse("!bolgesinir 175").value.action,

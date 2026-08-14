@@ -107,7 +107,8 @@ function CommandService.new(
     conquest,
     conquest_flags,
     build_objects,
-    response_observer
+    response_observer,
+    guild_identity
 )
     return setmetatable({
         paths = paths,
@@ -118,11 +119,38 @@ function CommandService.new(
         conquest = conquest,
         conquest_flags = conquest_flags or ConquestFlagAdapter.new(),
         build_objects = build_objects or BuildObjectAdapter.new(),
+        guild_identity = guild_identity,
         response_observer = type(response_observer) == "function"
             and response_observer or nil,
         last_response_key = "",
         last_response_at = 0
     }, CommandService)
+end
+
+function CommandService:_set_guild_identity(player, value)
+    local role, role_error = self:_conquest_role(player)
+    if not role then return false, role_error end
+    if self.guild_identity == nil then
+        return false, "Klan kimligi servisi hazir degil"
+    end
+
+    local color_id, emblem_id = tostring(value or ""):match(
+        "^%s*([%a%d_%-]+)%s+([%a%d_%-]+)%s*$"
+    )
+    if not color_id or not emblem_id then
+        return false, "Renk ve arma secimi eksik"
+    end
+
+    local result = self.guild_identity:set_identity({
+        guild_key = player.guild_key,
+        color_id = color_id,
+        emblem_id = emblem_id,
+        actor_role = role,
+        selected_by = player.name,
+        now = Clock.now()
+    })
+    if not result.ok then return false, result.error.message end
+    return true, "Klan rengi ve armasi kaydedildi"
 end
 
 function CommandService:_start_conquest_campaign(player, defender_guild)
@@ -746,6 +774,7 @@ function CommandService:on_chat(
             true,
             "!durum | !klanlar | !iliskiler | !yardim | " ..
             "!fetihdurum | !bayrakaday | !baskent | !karakol | " ..
+            "!klankimlik RENK ARMA | " ..
             "!bolgeadi AD | !bolgesinir METRE | " ..
             "!bayrakyenile | !fetihbayragi | !karsisaldiri | " ..
             "!fetih KLAN | !kusatmakampi KLAN | !fetihedef KLAN | " ..
@@ -799,6 +828,12 @@ function CommandService:on_chat(
 
     if command.action == "CONQUEST_STATUS" then
         local ok, response = self:_conquest_status_message(player)
+        self:_respond(controller, player, command.raw, ok, response)
+        return
+    end
+
+    if command.action == "SET_GUILD_IDENTITY" then
+        local ok, response = self:_set_guild_identity(player, command.target)
         self:_respond(controller, player, command.raw, ok, response)
         return
     end

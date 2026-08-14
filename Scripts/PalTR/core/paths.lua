@@ -9,6 +9,7 @@ function Paths.new(root)
     return {
         root = root,
         guilds = join(root, "guild_registry.tsv"),
+        guild_identity = join(root, "guild_identity.tsv"),
         players = join(root, "player_registry.tsv"),
         online = join(root, "online_players.tsv"),
         protection = join(root, "guild_protection.tsv"),

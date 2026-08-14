@@ -11,6 +11,7 @@ local aliases = {
     ["!fetihdurum"] = "CONQUEST_STATUS",
     ["!baskent"] = "REGISTER_CAPITAL",
     ["!karakol"] = "REGISTER_OUTPOST",
+    ["!klankimlik"] = "SET_GUILD_IDENTITY",
     ["!bolgeadi"] = "RENAME_TERRITORY",
     ["!bolgesinir"] = "SET_TERRITORY_RADIUS",
     ["!fetih"] = "START_CONQUEST",
