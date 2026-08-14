@@ -28,7 +28,7 @@ local vertical = Overlay.segment_layout(
 )
 near(vertical.width, 100, "vertical width")
 near(vertical.angle, 90, "vertical angle")
-near(Overlay.BORDER_THICKNESS, 3.2, "strategy border stays restrained")
+near(Overlay.BORDER_THICKNESS, 1.8, "strategy border stays thin")
 near(Overlay.Z_ORDER, 10000, "map overlay stays above Palworld map layers")
 
 local anchored = Overlay.segment_layout(
@@ -41,7 +41,7 @@ if anchored.normalized ~= true then
 end
 near(anchored.anchor_x, 0.3, "normalized segment anchor x")
 near(anchored.anchor_y, 0.5, "normalized segment anchor y")
-near(anchored.width, 0.8, "normalized boundary marker width")
+near(anchored.width, 0.45, "normalized boundary fallback stays subtle")
 near(Overlay.NORMALIZED_CAPITAL_SIZE, 2.4, "normalized capital stays compact")
 near(Overlay.NORMALIZED_OUTPOST_SIZE, 1.4, "normalized outpost stays compact")
 local capital_label_layout = Overlay.node_label_layout(
@@ -241,6 +241,8 @@ local anchored_segments, anchored_segment_stats =
 local anchored_nodes, anchored_node_stats = anchor_render_overlay:_render_nodes()
 near(anchored_segments, 1, "normalized segment renders")
 near(anchored_segment_stats.slots, 1, "normalized segment configures slot")
+near(anchored_segment_stats.normalized, 1,
+    "normalized segment is reported for geometry retry")
 near(segment_slot.anchors.Minimum.X, 0.3, "segment slot anchor x")
 near(segment_slot.anchors.Minimum.Y, 0.5, "segment slot anchor y")
 near(segment_slot.color.R, 0.7, "normalized boundary uses clan color")
@@ -702,6 +704,44 @@ retry_now = 0.5
 retry_overlay:_tick()
 near(retry_overlay.render_attempts, 2,
     "geometry retry runs after layout settles")
+
+local normalized_retry_overlay = Overlay.new({
+    now = function() return 0 end,
+    log = function() end
+})
+normalized_retry_overlay.map_body = object({
+    name = "WBP_Map_Body_C NormalizedRetryBody"
+})
+normalized_retry_overlay.parent_canvas = canvas
+normalized_retry_overlay.widget = object({
+    name = "WBP_PalTRMapOverlay_C NormalizedRetry"
+})
+normalized_retry_overlay.snapshot = {}
+normalized_retry_overlay.model = {
+    segments = { { first = {}, second = {} } },
+    nodes = {},
+    segment_count = 1,
+    node_count = 0
+}
+normalized_retry_overlay.map_expected_open = true
+normalized_retry_overlay._map_is_rendered = function() return true end
+normalized_retry_overlay._render_segments = function()
+    return 1, {
+        controls = 1, inners = 1, projected = 1, slots = 1,
+        normalized = 1
+    }
+end
+normalized_retry_overlay._render_nodes = function()
+    return 0, {
+        controls = 0, projected = 0, slots = 0,
+        label_controls = 0, label_slots = 0
+    }
+end
+normalized_retry_overlay:_tick()
+if normalized_retry_overlay.render_dirty ~= true
+    or normalized_retry_overlay.render_attempts ~= 1 then
+    error("normalized boundary fallback schedules a bounded size retry")
+end
 
 local discovery_now = 0
 local discovery_calls = 0

@@ -27,8 +27,8 @@ Overlay.MAP_BODY_CLASSES = { "WBP_Map_Body_C", "WBP_Map_Body" }
 Overlay.MAX_SEGMENTS = 512
 Overlay.MAX_NODES = 64
 Overlay.Z_ORDER = 10000
-Overlay.BORDER_THICKNESS = 3.2
-Overlay.NORMALIZED_SEGMENT_SIZE = 0.8
+Overlay.BORDER_THICKNESS = 1.8
+Overlay.NORMALIZED_SEGMENT_SIZE = 0.45
 Overlay.NORMALIZED_CAPITAL_SIZE = 2.4
 Overlay.NORMALIZED_OUTPOST_SIZE = 1.4
 Overlay.CAPITAL_Z_ORDER = 40
@@ -47,6 +47,7 @@ Overlay.DISCOVERY_MAX_ATTEMPTS = 6
 Overlay.SNAPSHOT_REQUEST_INTERVAL_SECONDS = 5.0
 Overlay.RENDER_RETRY_INTERVAL_SECONDS = 0.5
 Overlay.RENDER_MAX_ATTEMPTS = 6
+Overlay.NORMALIZED_RENDER_MAX_ATTEMPTS = 2
 
 PalTRTerritoryMapOverlayCallbacks = PalTRTerritoryMapOverlayCallbacks or {}
 
@@ -1334,7 +1335,10 @@ end
 
 function Overlay:_render_segments()
     local used = 0
-    local stats = { controls = 0, inners = 0, projected = 0, slots = 0 }
+    local stats = {
+        controls = 0, inners = 0, projected = 0, slots = 0,
+        normalized = 0
+    }
     for index, segment in ipairs(self.model.segments or {}) do
         local control = self:_control(control_name("TerritorySegment", index))
         local inner = self:_control(
@@ -1355,6 +1359,7 @@ function Overlay:_render_segments()
         if valid_object(control) and valid_object(inner) and layout ~= nil
             and configure_canvas_slot(control, layout) then
             if layout.normalized == true then
+                stats.normalized = stats.normalized + 1
                 -- The packaged segment has an inset colored child. At the tiny
                 -- normalized fallback size that inset disappears completely,
                 -- so color the visible outline itself with the territory color.
@@ -1551,9 +1556,14 @@ function Overlay:_tick()
             tonumber(sample_second and sample_second.x) or -1,
             tonumber(sample_second and sample_second.y) or -1
         ))
-        local retry_needed = (tonumber(self.model.segment_count) or 0) > 0
-            and segment_stats.slots == 0
-        if retry_needed and self.render_attempts < Overlay.RENDER_MAX_ATTEMPTS then
+        local has_segments = (tonumber(self.model.segment_count) or 0) > 0
+        local normalized_fallback = (tonumber(segment_stats.normalized) or 0) > 0
+        local retry_needed = has_segments
+            and (segment_stats.slots == 0 or normalized_fallback)
+        local retry_limit = normalized_fallback
+            and Overlay.NORMALIZED_RENDER_MAX_ATTEMPTS
+            or Overlay.RENDER_MAX_ATTEMPTS
+        if retry_needed and self.render_attempts < retry_limit then
             self.render_attempts = self.render_attempts + 1
             self.next_render_at = now + Overlay.RENDER_RETRY_INTERVAL_SECONDS
             self.render_dirty = true
