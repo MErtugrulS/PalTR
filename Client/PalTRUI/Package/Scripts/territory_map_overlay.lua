@@ -326,6 +326,16 @@ local function default_load_registered_asset(package_name, asset_name)
     return true
 end
 
+local function call_vector(callback)
+    local results = table.pack(pcall(callback))
+    if results[1] ~= true then return nil end
+    for index = 2, results.n do
+        local converted = vector(results[index])
+        if converted ~= nil then return converted end
+    end
+    return nil
+end
+
 local function default_get_local_size(widget)
     widget = unwrap(widget)
     if not valid_object(widget) or type(StaticFindObject) ~= "function" then
@@ -339,15 +349,25 @@ local function default_get_local_size(widget)
         Overlay.SLATE_LIBRARY_PATH
     )
     if geometry_ok and library_ok and valid_object(library) then
-        local size_ok, size = pcall(function()
+        local size = call_vector(function()
             return library:GetLocalSize(geometry)
         end)
-        if size_ok and vector(size) ~= nil then return vector(size) end
+        if size ~= nil then return size end
     end
-    local desired_ok, desired = pcall(function()
+    if geometry_ok then
+        local direct = vector(property(geometry, "LocalSize"))
+            or vector(property(geometry, "Size"))
+        if direct ~= nil then return direct end
+    end
+    local desired = call_vector(function()
         return widget:GetDesiredSize()
     end)
-    return desired_ok and vector(desired) or nil
+    if desired ~= nil then return desired end
+    local slot = property(widget, "Slot")
+    if valid_object(slot) then
+        return call_vector(function() return slot:GetSize() end)
+    end
+    return nil
 end
 
 local function default_api()
@@ -416,16 +436,31 @@ function Overlay:_map_local_size()
         or not valid_object(self.parent_canvas) then
         return nil
     end
-    local read, size = pcall(self.api.get_local_size, self.parent_canvas)
-    size = read and vector(size) or nil
-    if size == nil or size.x <= 1 or size.y <= 1 then return nil end
-    self.projection_size = size
-    self:_diagnostic("projection_size", string.format(
-        "PALTR_MAP_OVERLAY_LOCAL_SIZE | width=%.2f | height=%.2f",
-        size.x,
-        size.y
-    ))
-    return size
+    local image = property(self.map_body, "Image_MapBody")
+    if not valid_object(image) then
+        image = find_widget(self.map_body, function(candidate)
+            return widget_name(candidate) == "Image_MapBody"
+        end)
+    end
+    local candidates = { image, self.parent_canvas, self.map_body }
+    for _, candidate in ipairs(candidates) do
+        if valid_object(candidate) then
+            local read, size = pcall(self.api.get_local_size, candidate)
+            size = read and vector(size) or nil
+            if size ~= nil and size.x > 1 and size.y > 1 then
+                self.projection_size = size
+                self:_diagnostic("projection_size", string.format(
+                    "PALTR_MAP_OVERLAY_LOCAL_SIZE | width=%.2f | height=%.2f"
+                        .. " | source=%s",
+                    size.x,
+                    size.y,
+                    widget_name(candidate)
+                ))
+                return size
+            end
+        end
+    end
+    return nil
 end
 
 function Overlay:_projection_to_pixels(offset)
