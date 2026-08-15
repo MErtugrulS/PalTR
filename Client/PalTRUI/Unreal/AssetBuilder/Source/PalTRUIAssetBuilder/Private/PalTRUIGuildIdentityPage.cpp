@@ -503,7 +503,9 @@ namespace PalTRUIGuildIdentityPage
                 TEXT("GuildIdentitySaveText"),
                 TEXT("Kimliği Kaydet")
             );
-            StyleButton(Tree, TEXT("GuildIdentitySaveButton"), GuildCyanDark);
+            // The disabled style remains muted. Once both choices are made,
+            // enabling the button exposes this bright gold call-to-action.
+            StyleButton(Tree, TEXT("GuildIdentitySaveButton"), GuildGold);
             Save->SetIsEnabled(false);
             AddVertical(Page, Save);
             Switcher->AddChild(PageFrame);
