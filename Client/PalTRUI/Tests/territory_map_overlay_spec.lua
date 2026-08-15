@@ -154,6 +154,7 @@ end
 local projection_lookup_count = 0
 local retry_projection_overlay = Overlay.new({
     log = function() end,
+    disable_bounds_fallback = true,
     find_projection_target = function()
         projection_lookup_count = projection_lookup_count + 1
         if projection_lookup_count == 1 then return nil end
@@ -174,6 +175,40 @@ local retried_projection = retry_projection_overlay:_world_to_widget({
 near(retried_projection.x, 120,
     "projection target is resolved again on bounded render retry")
 near(projection_lookup_count, 2, "projection lookup retry is bounded")
+
+local bounds_projection_overlay = Overlay.new({
+    log = function() end,
+    find_projection_target = function() return nil end
+})
+bounds_projection_overlay.parent_canvas = object({ name = "Canvas Bounds" })
+bounds_projection_overlay.map_body = projection_overlay.map_body
+local bounds_projected = bounds_projection_overlay:_world_to_widget({
+    x = 1200, y = 3400, z = 0
+})
+if bounds_projected.normalized ~= true then
+    error("landscape bounds fallback uses stable normalized anchors")
+end
+near(bounds_projected.x, (3400 + 200000) / 600000,
+    "world Y maps to horizontal landscape ratio")
+near(bounds_projected.y, 1 - ((1200 + 100000) / 400000),
+    "world X maps bottom-to-top on the map texture")
+local bounds_pixel_overlay = Overlay.new({
+    log = function() end,
+    find_projection_target = function() return nil end,
+    get_local_size = function() return { x = 1000, y = 500 } end
+})
+bounds_pixel_overlay.parent_canvas = object({ name = "Canvas Bounds Pixels" })
+bounds_pixel_overlay.map_body = projection_overlay.map_body
+local bounds_pixels = bounds_pixel_overlay:_world_to_widget({
+    x = 1200, y = 3400, z = 0
+})
+near(bounds_pixels.x, ((3400 + 200000) / 600000) * 1000,
+    "direct bounds projection scales horizontal ratio to map geometry")
+near(bounds_pixels.y, (1 - ((1200 + 100000) / 400000)) * 500,
+    "direct bounds projection scales vertical ratio to map geometry")
+if bounds_pixels.normalized ~= nil then
+    error("available map geometry produces fill-capable pixel coordinates")
+end
 
 local anchor_projection_overlay = Overlay.new({
     log = function() end,

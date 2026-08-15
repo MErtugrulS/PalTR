@@ -799,6 +799,28 @@ function Overlay:_find_projection_target()
     return nil
 end
 
+local function project_from_landscape_bounds(map_body, world)
+    local minimum = vector(property(map_body, "MinLandScapePosition"))
+    local maximum = vector(property(map_body, "MaxLandScapePosition"))
+    if minimum == nil or maximum == nil then
+        return nil, "landscape bounds unavailable"
+    end
+    local span_x = maximum.x - minimum.x
+    local span_y = maximum.y - minimum.y
+    if math.abs(span_x) < 1 or math.abs(span_y) < 1 then
+        return nil, "invalid landscape bounds"
+    end
+    -- Palworld's world map rotates the UE world axes: world Y is the map's
+    -- horizontal axis and world X runs bottom-to-top on the map texture.
+    -- Returning anchors keeps the overlay inside the same zoom/pan transform
+    -- as Canvas_MapBody without depending on a Blueprint function-library CDO.
+    return {
+        x = ((tonumber(world and world.y) or 0) - minimum.y) / span_y,
+        y = 1 - (((tonumber(world and world.x) or 0) - minimum.x) / span_x),
+        normalized = true
+    }
+end
+
 function Overlay:_reset_projection_lookup()
     self.projection_strategy = nil
     self.projection_target = nil
@@ -810,6 +832,36 @@ end
 function Overlay:_world_to_widget(world)
     if not valid_object(self.map_body) then return nil end
     local projection_target = self:_find_projection_target()
+    if projection_target == nil
+        and self.api.disable_bounds_fallback ~= true then
+        local direct, direct_error = project_from_landscape_bounds(
+            self.map_body,
+            world
+        )
+        if direct ~= nil then
+            local size = self:_map_local_size()
+            if size ~= nil then
+                direct = {
+                    x = direct.x * size.x,
+                    y = direct.y * size.y
+                }
+            end
+            self:_diagnostic(
+                "projection",
+                "PALTR_MAP_OVERLAY_PROJECTION | strategy="
+                    .. (size ~= nil
+                        and "landscape_bounds_pixels"
+                        or "landscape_bounds_anchor")
+            )
+            return direct
+        end
+        self:_diagnostic(
+            "projection",
+            "PALTR_MAP_OVERLAY_PROJECTION_FAILED | bounds_direct:"
+                .. tostring(direct_error or "")
+        )
+        return nil
+    end
     if projection_target == nil then return nil end
     if self.projection_strategy ~= nil then
         local converted = self.projection_strategy.project(
