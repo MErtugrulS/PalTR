@@ -30,6 +30,8 @@ near(vertical.width, 100, "vertical width")
 near(vertical.angle, 90, "vertical angle")
 near(Overlay.BORDER_THICKNESS, 1.8, "strategy border stays thin")
 near(Overlay.Z_ORDER, 10000, "map overlay stays above Palworld map layers")
+near(Overlay.RENDER_MAX_ATTEMPTS, 2,
+    "failed map projection retries stay bounded")
 
 local anchored = Overlay.segment_layout(
     { x = 0.2, y = 0.4, normalized = true },
@@ -209,6 +211,36 @@ near(bounds_pixels.y, (1 - ((1200 + 100000) / 400000)) * 500,
 if bounds_pixels.normalized ~= nil then
     error("available map geometry produces fill-capable pixel coordinates")
 end
+
+local stale_body = object({ name = "WBP_Map_Body_C StaleBody" })
+function stale_body:IsValid() return false end
+local fresh_body = object({
+    name = "WBP_Map_Body_C FreshBody",
+    MinLandScapePosition = { X = -100000, Y = -200000 },
+    MaxLandScapePosition = { X = 300000, Y = 400000 }
+})
+local fresh_canvas = object({ name = "CanvasPanel_MapBody FreshCanvas" })
+local fresh_base = object({
+    name = "WBP_Map_Base_C FreshBase",
+    MapBody = fresh_body,
+    CanvasPanel_MapBody = fresh_canvas
+})
+local recovered_projection_overlay = Overlay.new({
+    log = function() end,
+    find_projection_target = function() return nil end
+})
+recovered_projection_overlay.map_body = stale_body
+recovered_projection_overlay.parent_canvas = fresh_canvas
+recovered_projection_overlay.known_map_base = fresh_base
+local recovered_projection = recovered_projection_overlay:_world_to_widget({
+    x = 1200, y = 3400, z = 0
+})
+if recovered_projection == nil
+    or recovered_projection_overlay.map_body ~= fresh_body then
+    error("stale map body is refreshed before territory projection")
+end
+near(recovered_projection.x, (3400 + 200000) / 600000,
+    "recovered map body projects the territory")
 
 local anchor_projection_overlay = Overlay.new({
     log = function() end,

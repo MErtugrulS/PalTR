@@ -58,7 +58,9 @@ Overlay.DISCOVERY_MAX_ATTEMPTS = 6
 Overlay.SNAPSHOT_REQUEST_INTERVAL_SECONDS = 5.0
 Overlay.RENDER_RETRY_INTERVAL_SECONDS = 0.5
 Overlay.INITIAL_RENDER_DELAY_SECONDS = 0.25
-Overlay.RENDER_MAX_ATTEMPTS = 6
+-- One layout retry is enough after the map widget settles. Repeating a failed
+-- projection six times only stalls the map without creating any geometry.
+Overlay.RENDER_MAX_ATTEMPTS = 2
 Overlay.NORMALIZED_RENDER_MAX_ATTEMPTS = 2
 
 PalTRTerritoryMapOverlayCallbacks = PalTRTerritoryMapOverlayCallbacks or {}
@@ -830,7 +832,16 @@ function Overlay:_reset_projection_lookup()
 end
 
 function Overlay:_world_to_widget(world)
-    if not valid_object(self.map_body) then return nil end
+    if not valid_object(self.map_body) then
+        self:_restore_known_map()
+    end
+    if not valid_object(self.map_body) then
+        self:_diagnostic(
+            "projection",
+            "PALTR_MAP_OVERLAY_PROJECTION_FAILED | stale_map_body"
+        )
+        return nil
+    end
     local projection_target = self:_find_projection_target()
     if projection_target == nil
         and self.api.disable_bounds_fallback ~= true then
@@ -896,6 +907,31 @@ function Overlay:_world_to_widget(world)
             project_error = scale_error
         end
         table.insert(errors, strategy.name .. ":" .. tostring(project_error or ""))
+    end
+    if self.api.disable_bounds_fallback ~= true then
+        local direct, direct_error = project_from_landscape_bounds(
+            self.map_body,
+            world
+        )
+        if direct ~= nil then
+            local size = self:_map_local_size()
+            if size ~= nil then
+                direct = {
+                    x = direct.x * size.x,
+                    y = direct.y * size.y
+                }
+            end
+            self:_diagnostic(
+                "projection",
+                "PALTR_MAP_OVERLAY_PROJECTION | strategy="
+                    .. (size ~= nil
+                        and "landscape_bounds_pixels"
+                        or "landscape_bounds_anchor")
+            )
+            return direct
+        end
+        table.insert(errors, "bounds_direct:"
+            .. tostring(direct_error or ""))
     end
     self:_diagnostic(
         "projection",
