@@ -90,8 +90,10 @@ function App.new(config)
         registry,
         diplomacy,
         ui_actions,
-        paths
+        paths,
+        { config = config }
     )
+    ui_snapshot:set_guild_identity(guild_identity)
     local ui_publisher = UISnapshotPublisher.new(
         ui_snapshot,
         Logger.new("UITransport")

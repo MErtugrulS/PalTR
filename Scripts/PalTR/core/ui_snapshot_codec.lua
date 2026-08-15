@@ -52,12 +52,22 @@ function Codec.encode(snapshot)
     local guilds = type(snapshot.guilds) == "table" and snapshot.guilds or {}
     local members = type(snapshot.members) == "table" and snapshot.members or {}
     local relations = type(snapshot.relations) == "table" and snapshot.relations or {}
+    local recent_events = type(snapshot.recent_events) == "table"
+        and snapshot.recent_events or {}
     local territories = type(snapshot.territories) == "table"
         and snapshot.territories or {}
+    local protection = type(snapshot.protection) == "table"
+        and snapshot.protection or {}
     local territory_nodes = type(territories.nodes) == "table"
         and territories.nodes or {}
     local territory_boundaries = type(territories.boundaries) == "table"
         and territories.boundaries or {}
+    local guild_identity = type(snapshot.guild_identity) == "table"
+        and snapshot.guild_identity or {}
+    local identity_colors = type(guild_identity.colors) == "table"
+        and guild_identity.colors or {}
+    local identity_emblems = type(guild_identity.emblems) == "table"
+        and guild_identity.emblems or {}
     local lines = {}
 
     add(lines, "schema_version", snapshot.schema_version)
@@ -68,12 +78,45 @@ function Codec.encode(snapshot)
     add(lines, "player.is_master", boolean(player.is_master))
     add(lines, "guild.key", guild.key)
     add(lines, "guild.name", guild.name)
+    add(lines, "guild.color_id", guild.color_id)
+    add(lines, "guild.emblem_id", guild.emblem_id)
+    add(lines, "guild_identity.palette_version",
+        tonumber(guild_identity.palette_version) or 0)
+    add(lines, "guild_identity.selected_color_id",
+        guild_identity.selected_color_id)
+    add(lines, "guild_identity.selected_emblem_id",
+        guild_identity.selected_emblem_id)
+    add(lines, "guild_identity.locked", boolean(guild_identity.locked))
+    add(lines, "guild_identity.can_manage", boolean(guild_identity.can_manage))
+    add(lines, "guild_identity.colors.count", #identity_colors)
+    for index, item in ipairs(identity_colors) do
+        local prefix = "guild_identity.colors." .. index .. "."
+        add(lines, prefix .. "id", item.id)
+        add(lines, prefix .. "hex", item.hex)
+        add(lines, prefix .. "available", boolean(item.available))
+    end
+    add(lines, "guild_identity.emblems.count", #identity_emblems)
+    for index, item in ipairs(identity_emblems) do
+        local prefix = "guild_identity.emblems." .. index .. "."
+        add(lines, prefix .. "id", item.id)
+        add(lines, prefix .. "name", item.name)
+    end
+    add(lines, "protection.available", boolean(protection.available))
+    add(lines, "protection.protected", boolean(protection.protected))
+    add(lines, "protection.reason", protection.reason)
+    add(lines, "protection.online_count", tonumber(protection.online_count) or 0)
+    add(lines, "protection.protected_at", tonumber(protection.protected_at) or 0)
+    add(lines, "protection.raid_open", boolean(protection.raid_open))
+    add(lines, "protection.raid_window_start", protection.raid_window_start)
+    add(lines, "protection.raid_window_end", protection.raid_window_end)
 
     add(lines, "guilds.count", #guilds)
     for index, item in ipairs(guilds) do
         local prefix = "guilds." .. index .. "."
         add(lines, prefix .. "key", item.key)
         add(lines, prefix .. "name", item.name)
+        add(lines, prefix .. "color_id", item.color_id)
+        add(lines, prefix .. "emblem_id", item.emblem_id)
         add(lines, prefix .. "member_count", item.member_count)
         add(lines, prefix .. "online_count", item.online_count)
         add(lines, prefix .. "active", boolean(item.active))
@@ -107,6 +150,13 @@ function Codec.encode(snapshot)
             add(lines, action_prefix .. "id", action.id)
             add(lines, action_prefix .. "label", action.label)
         end
+    end
+    add(lines, "recent_events.count", #recent_events)
+    for index, item in ipairs(recent_events) do
+        local prefix = "recent_events." .. index .. "."
+        add(lines, prefix .. "timestamp", tonumber(item.timestamp) or 0)
+        add(lines, prefix .. "event_type", item.event_type)
+        add(lines, prefix .. "message", item.message)
     end
     add(lines, "territories.nodes.count", #territory_nodes)
     for index, item in ipairs(territory_nodes) do
@@ -196,6 +246,7 @@ function Codec.decode(payload)
     local guild_count = count(values, "guilds.count")
     local member_count = count(values, "members.count")
     local relation_count = count(values, "relations.count")
+    local recent_event_count = optional_count(values, "recent_events.count")
     local territory_node_count = optional_count(
         values,
         "territories.nodes.count"
@@ -204,19 +255,50 @@ function Codec.decode(payload)
         values,
         "territories.boundaries.count"
     )
-    if number(values, "schema_version") == nil
+    local schema_version = number(values, "schema_version")
+    local identity_color_count = optional_count(
+        values,
+        "guild_identity.colors.count"
+    )
+    local identity_emblem_count = optional_count(
+        values,
+        "guild_identity.emblems.count"
+    )
+    if schema_version == nil
         or number(values, "generated_at") == nil
         or guild_count == nil or member_count == nil
-        or relation_count == nil or territory_node_count == nil
-        or territory_boundary_count == nil then
+        or relation_count == nil or recent_event_count == nil
+        or territory_node_count == nil
+        or territory_boundary_count == nil
+        or identity_color_count == nil
+        or identity_emblem_count == nil then
         return nil, "header"
     end
     if guild_count > record_count
         or member_count > record_count
-        or relation_count > record_count
+        or relation_count > record_count or recent_event_count > record_count
         or territory_node_count > record_count
-        or territory_boundary_count > record_count then
+        or territory_boundary_count > record_count
+        or identity_color_count > record_count
+        or identity_emblem_count > record_count then
         return nil, "count"
+    end
+
+    local identity_present = values["guild_identity.palette_version"] ~= nil
+    if schema_version >= 2 and not identity_present then
+        return nil, "guild_identity"
+    end
+    if identity_present and (not present(values, {
+        "guild.color_id", "guild.emblem_id",
+        "guild_identity.palette_version",
+        "guild_identity.selected_color_id",
+        "guild_identity.selected_emblem_id",
+        "guild_identity.locked", "guild_identity.can_manage",
+        "guild_identity.colors.count", "guild_identity.emblems.count"
+    }) or number(values, "guild_identity.palette_version") == nil
+        or not valid_flag(values, "guild_identity.locked")
+        or not valid_flag(values, "guild_identity.can_manage")) then
+        return nil, "guild_identity"
     end
     if not present(values, {
         "player.name", "player.guild_key", "player.role",
@@ -224,6 +306,20 @@ function Codec.decode(payload)
     }) or number(values, "player.role") == nil
         or not valid_flag(values, "player.is_master") then
         return nil, "identity"
+    end
+
+    local protection_present = values["protection.available"] ~= nil
+    if protection_present and (not present(values, {
+        "protection.available", "protection.protected",
+        "protection.reason", "protection.online_count",
+        "protection.protected_at", "protection.raid_open",
+        "protection.raid_window_start", "protection.raid_window_end"
+    }) or not valid_flag(values, "protection.available")
+        or not valid_flag(values, "protection.protected")
+        or not valid_flag(values, "protection.raid_open")
+        or number(values, "protection.online_count") == nil
+        or number(values, "protection.protected_at") == nil) then
+        return nil, "protection"
     end
 
     local snapshot = {
@@ -237,13 +333,75 @@ function Codec.decode(payload)
         },
         guild = {
             key = values["guild.key"] or "",
-            name = values["guild.name"] or ""
+            name = values["guild.name"] or "",
+            color_id = values["guild.color_id"] or "",
+            emblem_id = values["guild.emblem_id"] or ""
+        },
+        guild_identity = {
+            palette_version = identity_present
+                and (number(values, "guild_identity.palette_version") or 0)
+                or 0,
+            selected_color_id = values[
+                "guild_identity.selected_color_id"
+            ] or "",
+            selected_emblem_id = values[
+                "guild_identity.selected_emblem_id"
+            ] or "",
+            locked = identity_present
+                and flag(values, "guild_identity.locked") or false,
+            can_manage = identity_present
+                and flag(values, "guild_identity.can_manage") or false,
+            colors = {},
+            emblems = {}
+        },
+        protection = {
+            available = protection_present
+                and flag(values, "protection.available") or false,
+            protected = protection_present
+                and flag(values, "protection.protected") or false,
+            reason = protection_present
+                and (values["protection.reason"] or "") or "",
+            online_count = protection_present
+                and (number(values, "protection.online_count") or 0) or 0,
+            protected_at = protection_present
+                and (number(values, "protection.protected_at") or 0) or 0,
+            raid_open = protection_present
+                and flag(values, "protection.raid_open") or false,
+            raid_window_start = protection_present
+                and (values["protection.raid_window_start"] or "") or "",
+            raid_window_end = protection_present
+                and (values["protection.raid_window_end"] or "") or ""
         },
         guilds = {},
         members = {},
         relations = {},
+        recent_events = {},
         territories = { nodes = {}, boundaries = {} }
     }
+
+    for index = 1, identity_color_count do
+        local prefix = "guild_identity.colors." .. index .. "."
+        if not present(values, {
+            prefix .. "id", prefix .. "hex", prefix .. "available"
+        }) or not valid_flag(values, prefix .. "available") then
+            return nil, "guild_identity.colors"
+        end
+        table.insert(snapshot.guild_identity.colors, {
+            id = values[prefix .. "id"] or "",
+            hex = values[prefix .. "hex"] or "",
+            available = flag(values, prefix .. "available")
+        })
+    end
+    for index = 1, identity_emblem_count do
+        local prefix = "guild_identity.emblems." .. index .. "."
+        if not present(values, { prefix .. "id", prefix .. "name" }) then
+            return nil, "guild_identity.emblems"
+        end
+        table.insert(snapshot.guild_identity.emblems, {
+            id = values[prefix .. "id"] or "",
+            name = values[prefix .. "name"] or ""
+        })
+    end
 
     for index = 1, guild_count do
         local prefix = "guilds." .. index .. "."
@@ -259,6 +417,8 @@ function Codec.decode(payload)
         table.insert(snapshot.guilds, {
             key = values[prefix .. "key"] or "",
             name = values[prefix .. "name"] or "",
+            color_id = values[prefix .. "color_id"] or "",
+            emblem_id = values[prefix .. "emblem_id"] or "",
             member_count = number(values, prefix .. "member_count") or 0,
             online_count = number(values, prefix .. "online_count") or 0,
             active = flag(values, prefix .. "active")
@@ -328,6 +488,19 @@ function Codec.decode(payload)
             })
         end
         table.insert(snapshot.relations, relation)
+    end
+    for index = 1, recent_event_count do
+        local prefix = "recent_events." .. index .. "."
+        if not present(values, {
+            prefix .. "timestamp", prefix .. "event_type", prefix .. "message"
+        }) or number(values, prefix .. "timestamp") == nil then
+            return nil, "recent_events"
+        end
+        table.insert(snapshot.recent_events, {
+            timestamp = number(values, prefix .. "timestamp") or 0,
+            event_type = values[prefix .. "event_type"] or "",
+            message = values[prefix .. "message"] or ""
+        })
     end
     for index = 1, territory_node_count do
         local prefix = "territories.nodes." .. index .. "."
