@@ -16,6 +16,8 @@ function Paths.new(root)
         responses = join(root, "command_responses.tsv"),
         damage = join(root, "passive_damage_events.tsv"),
         structure = join(root, "structure_damage_probe.tsv"),
+        territory_snapshot = join(root, "territory_snapshot.tsv"),
+        territory_boundaries = join(root, "territory_boundaries.tsv"),
         latest_status = join(root, "latest_status.txt"),
         health = join(root, "health.tsv")
     }

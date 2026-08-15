@@ -50,7 +50,8 @@ function App.new(config)
     local ui_snapshot = UISnapshotService.new(
         registry,
         diplomacy,
-        ui_actions
+        ui_actions,
+        paths
     )
     local ui_publisher = UISnapshotPublisher.new(
         ui_snapshot,
