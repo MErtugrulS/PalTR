@@ -432,6 +432,37 @@ local function append_status(description, status)
     return description .. " | " .. status
 end
 
+local dashboard_relation_priority = {
+    WAR = 1,
+    CEASEFIRE = 2,
+    ALLIANCE = 3,
+    PEACE = 4,
+    NEUTRAL = 5
+}
+
+local function dashboard_relations(relations)
+    local ranked = {}
+    for index, relation in ipairs(table_or_empty(relations)) do
+        table.insert(ranked, { value = relation, index = index })
+    end
+    table.sort(ranked, function(a, b)
+        local a_index, b_index = a.index, b.index
+        a, b = a.value, b.value
+        local a_state = text(table_or_empty(a).state)
+        local b_state = text(table_or_empty(b).state)
+        local a_pending = string.sub(a_state, -8) == "_PENDING"
+        local b_pending = string.sub(b_state, -8) == "_PENDING"
+        if a_pending ~= b_pending then return a_pending end
+        local a_priority = dashboard_relation_priority[a_state] or 99
+        local b_priority = dashboard_relation_priority[b_state] or 99
+        if a_priority ~= b_priority then return a_priority < b_priority end
+        return a_index < b_index
+    end)
+    local result = {}
+    for _, item in ipairs(ranked) do table.insert(result, item.value) end
+    return result
+end
+
 local function clan_view(
     snapshot,
     action_transport_ready,
@@ -462,7 +493,7 @@ local function clan_view(
     local relation_preview_lines = {}
     local relation_cards = {}
     local relation_preview_count = 0
-    for _, relation in ipairs(table_or_empty(snapshot.relations)) do
+    for _, relation in ipairs(dashboard_relations(snapshot.relations)) do
         relation = table_or_empty(relation)
         local state = text(relation.state)
         if state == "WAR" then war_count = war_count + 1 end
