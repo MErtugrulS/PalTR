@@ -77,6 +77,22 @@ function Bridge:register()
         PalTR_DiplomacyRelation05Clicked = { control = "DiplomacyRelationRowButton05" },
         PalTR_DiplomacyRelation06Clicked = { control = "DiplomacyRelationRowButton06" }
     }
+    definitions.PalTR_ManagementClicked = {
+        control = "ManagementTabButton"
+    }
+    for index = 1, 16 do
+        definitions[string.format("PalTR_GuildIdentityColor%02dClicked", index)] = {
+            control = string.format("GuildIdentityColorButton%02d", index)
+        }
+    end
+    for index = 1, 12 do
+        definitions[string.format("PalTR_GuildIdentityEmblem%02dClicked", index)] = {
+            control = string.format("GuildIdentityEmblemButton%02d", index)
+        }
+    end
+    definitions.PalTR_GuildIdentitySaveClicked = {
+        control = "GuildIdentitySaveButton"
+    }
     for function_name, definition in pairs(definitions) do
         self.callbacks[function_name] = function()
             self:_route(definition.control)

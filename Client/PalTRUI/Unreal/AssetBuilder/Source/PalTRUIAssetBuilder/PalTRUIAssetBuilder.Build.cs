@@ -20,6 +20,7 @@ public class PalTRUIAssetBuilder : ModuleRules
             new[]
             {
                 "AssetRegistry",
+                "BlueprintGraph",
                 "SlateCore",
                 "UMGEditor",
                 "UnrealEd"

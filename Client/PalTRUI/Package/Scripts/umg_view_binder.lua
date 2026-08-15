@@ -128,7 +128,17 @@ end
 
 function UMGViewBinder:_set_text_if_present(controls, name, value)
     if controls[name] == nil then return true end
-    return self:_set_text(controls, name, value)
+    -- Optional designer controls may be retained as named wrapper widgets in
+    -- generated assets. A failed optional write must not abort panel opening.
+    self:_set_text(controls, name, value)
+    return true
+end
+
+function UMGViewBinder:_try_set_text(controls, name, value)
+    if controls[name] ~= nil then
+        self:_set_text(controls, name, value)
+    end
+    return true
 end
 
 function UMGViewBinder:_set_enabled(controls, name, enabled)
@@ -146,6 +156,413 @@ function UMGViewBinder:_set_enabled(controls, name, enabled)
     return true
 end
 
+function UMGViewBinder:_set_enabled_if_present(controls, name, enabled)
+    if controls[name] == nil then return true end
+    self:_set_enabled(controls, name, enabled)
+    return true
+end
+
+function UMGViewBinder:_set_visible_if_present(controls, name, visible)
+    local control = controls[name]
+    if control == nil then return true end
+
+    -- ESlateVisibility: Collapsed=1, HitTestInvisible=3. Relation rows are
+    -- presentation-only; keeping them out of hit testing also lets the parent
+    -- VerticalBox reflow to exactly the number of live server relations.
+    pcall(function()
+        control:SetVisibility(visible == true and 3 or 1)
+    end)
+    return true
+end
+
+function UMGViewBinder:_set_interactive_visible_if_present(
+    controls,
+    name,
+    visible
+)
+    local control = controls[name]
+    if control == nil then return true end
+
+    -- ESlateVisibility: Visible=0, Collapsed=1. Unlike decorative rows,
+    -- diplomacy relation buttons must remain in the hit-test path.
+    pcall(function()
+        control:SetVisibility(visible == true and 0 or 1)
+        control:SetIsEnabled(visible == true)
+    end)
+    return true
+end
+
+function UMGViewBinder:_bind_design_template(controls, model)
+    local views = table_or_empty(model.views)
+    local clan = table_or_empty(views.CLAN)
+    local dashboard = table_or_empty(clan.dashboard)
+    local header = table_or_empty(model.header)
+    local connection = table_or_empty(model.connection)
+    local protection = table_or_empty(dashboard.protection)
+    local territories = table_or_empty(dashboard.territories)
+    local diplomacy = table_or_empty(views.DIPLOMACY)
+    local management = table_or_empty(views.MANAGEMENT)
+
+    if controls.TemplatePageSwitcher ~= nil then
+        pcall(function()
+            local page_index = 0
+            if model.active_tab == "DIPLOMACY" then page_index = 1 end
+            if model.active_tab == "MANAGEMENT" then page_index = 2 end
+            controls.TemplatePageSwitcher:SetActiveWidgetIndex(page_index)
+        end)
+    end
+    local home_active = model.active_tab ~= "DIPLOMACY"
+        and model.active_tab ~= "MANAGEMENT"
+    local diplomacy_active = model.active_tab == "DIPLOMACY"
+    local management_active = model.active_tab == "MANAGEMENT"
+    if controls.C_Home ~= nil then
+        pcall(function() controls.C_Home:SetIsChecked(home_active) end)
+    end
+    if controls.C_Diplomacy ~= nil then
+        pcall(function() controls.C_Diplomacy:SetIsChecked(diplomacy_active) end)
+    end
+    -- Compatibility with the short-lived native-button asset: only one
+    -- passive active overlay may be visible at a time.
+    self:_set_visible_if_present(controls, "C_HomeActive", home_active)
+    self:_set_visible_if_present(
+        controls,
+        "C_DiplomacyActive",
+        diplomacy_active
+    )
+    self:_set_visible_if_present(
+        controls,
+        "PalTRSidebarDiplomacyArrow",
+        diplomacy_active
+    )
+    for _, arrow_name in ipairs({
+        "PalTRSidebarWarArrow",
+        "PalTRSidebarBuildingsArrow",
+        "PalTRSidebarRegionsArrow",
+        "PalTRSidebarPlayersArrow",
+        "PalTRSidebarRecordsArrow",
+        "PalTRSidebarSettingsArrow"
+    }) do
+        self:_set_visible_if_present(controls, arrow_name, false)
+    end
+    self:_set_visible_if_present(
+        controls,
+        "PalTRSidebarManagementArrow",
+        management_active
+    )
+
+    local role_header = text(header.role_text):gsub("^Rol:", "Yetki:")
+    local role_value = role_header:gsub("^Yetki:%s*", "")
+    -- These labels belong to the authored layout. They are intentionally kept
+    -- local: only values that can change at runtime are read from the server.
+    local static_text_bindings = {
+        { "TemplateHomeText", "Ana Sayfa" },
+        { "TemplateHomeText_1", "Diplomasi" },
+        { "SavasText", "Savaş / Koruma" },
+        { "YapilarText", "Yapılar" },
+        { "BolgelerText", "Bölgeler" },
+        { "BolgelerText_2", "Kayıtlar" },
+        { "PlayersText", "Oyuncular" },
+        { "YonetimText", "Yönetim" },
+        { "AyarlarText", "Ayarlar" },
+        { "TextBlock_362", "PALTR " },
+        { "PANEL", "PANEL" },
+        { "ClanNameText1", "Klan: " },
+        { "ClanRoleText", "Yetki: " },
+        { "ClanRoleText_1", "Bildirimler" },
+        { "TemplatePageHeading", "Klan Durumu" },
+        {
+            "TemplatePageSubtitle",
+            "Klanınızın genel durumunu ve önemli bilgileri buradan takip edin."
+        },
+        { "TemplateCardTitle1", "Klanım" },
+        { "TemplateClanLeaderLabelText", "Lider:" },
+        { "TemplateDiplomacyTitleText", "Diplomasi" },
+        { "TemplateDiplomacyWarLabel", "Savaş:" },
+        { "TemplateDiplomacyAllianceLabel", "İttifak:" },
+        { "TemplateDiplomacyPendingLabel", "Bekleyen:" },
+        { "TemplateProtectionTitleText", "Koruma" },
+        { "TemplateProtectionOfflineLabel", "Offline Koruma:" },
+        { "TemplateProtectionRaidLabel", "Baskın Penceresi:" },
+        { "TemplateBuildingsTitleText", "Yapılar" },
+        { "TemplateBuildingsProtectedBaseLabel", "Korunan Üs:" },
+        { "TemplateBuildingsRiskyRegionLabel", "Riskli Bölge:" },
+        { "TemplateRecentEventsHeadingText", "Son Olaylar" },
+        { "TemplateRecentEventsViewAllText", "Tümünü Gör" },
+        { "TemplateQuickActionsHeadingText", "Hızlı İşlemler" },
+        { "TemplateRelationsHeading", "İlişkiler" },
+        { "TemplateOffersHeading", "Bekleyen Teklifler" },
+        {
+            "TemplateDiplomacyListHeading",
+            "Klan İlişkileri ve Teklifler"
+        },
+        { "TemplateProtectionStatusText", "Koruma Durumu" }
+    }
+    for _, binding in ipairs(static_text_bindings) do
+        self:_set_text_if_present(controls, binding[1], binding[2])
+    end
+
+    local template_bindings = {
+        { "TemplateServerBadgeText", connection.status_text },
+        { "TemplateGuildBadgeText", header.guild_text },
+        { "TemplateRoleBadgeText", role_header },
+        { "TemplateNotificationBadgeText", header.notification_text },
+        -- The manually-authored template kept these designer names instead
+        -- of the generated Template* aliases. Only the final visible copies
+        -- are targeted, so the decorative/label text remains untouched.
+        { "ActivePlayerText", connection.status_text },
+        { "ActivePlayerText_1", "" },
+        { "ClanNameText", table_or_empty(clan.guild).name },
+        { "ClanRoleText2", role_value },
+        { "TextBlock_172", dashboard.pending_count_text },
+        { "TemplateCardValue1", table_or_empty(clan.guild).name },
+        { "TemplateClanLeaderValueText", clan.leader_name },
+        {
+            "TemplateClanMemberText",
+            (tonumber(model.schema_version) or 0) > 0
+                and string.format("Üye: %d", tonumber(clan.member_count) or 0)
+                or "Üye: -"
+        },
+        { "TemplateDiplomacyWarValue", dashboard.war_count_text },
+        {
+            "TemplateDiplomacyAllianceValue",
+            dashboard.alliance_count_text
+        },
+        { "TemplateDiplomacyPendingValue", dashboard.pending_count_text },
+        { "TemplateProtectionOfflineValue", protection.offline_text },
+        { "TemplateProtectionRaidValue", protection.raid_text },
+        {
+            "TemplateBuildingsProtectedBaseValue",
+            territories.protected_base_count_text
+        },
+        {
+            "TemplateBuildingsRiskyRegionValue",
+            territories.risky_region_count_text
+        },
+        { "TemplateOfferGuild", dashboard.pending_guild_text },
+        { "TemplateOfferType", dashboard.pending_state_text },
+        {
+            "TemplatePendingOffersEmptyText",
+            clan.pending_empty and "Başka bekleyen teklif yok."
+                or "Diğer teklifler Diplomasi sayfasında."
+        }
+    }
+    for _, binding in ipairs(template_bindings) do
+        self:_set_text_if_present(controls, binding[1], binding[2])
+    end
+
+    for _, binding in ipairs({
+        { "TemplateDiplomacySelectedGuildText", diplomacy.title_text },
+        { "TemplateDiplomacySelectedStateText", diplomacy.state_text },
+        { "TemplateDiplomacyDescriptionText", diplomacy.description_text }
+    }) do
+        self:_set_text_if_present(controls, binding[1], binding[2])
+    end
+
+    local diplomacy_relations = table_or_empty(diplomacy.relations)
+    for index = 1, 6 do
+        local relation = table_or_empty(diplomacy_relations[index])
+        local guild = table_or_empty(relation.guild)
+        local status = table_or_empty(relation.status)
+        local has_relation = text(guild.name) ~= ""
+        self:_set_interactive_visible_if_present(
+            controls,
+            string.format("TemplateDiplomacyRelationButton_%02d", index),
+            has_relation
+        )
+        self:_set_text_if_present(
+            controls,
+            string.format("TemplateDiplomacyRelationNameText_%02d", index),
+            has_relation and ((relation.selected == true and "› " or "")
+                .. text(guild.name)) or ""
+        )
+        self:_set_text_if_present(
+            controls,
+            string.format("TemplateDiplomacyRelationStateText_%02d", index),
+            has_relation and (text(status.list_label) ~= ""
+                and text(status.list_label) or text(status.label)) or ""
+        )
+    end
+
+    local diplomacy_control_aliases = {
+        PreviousRelationButton = {
+            button = "TemplateDiplomacyPreviousButton",
+            label = "TemplateDiplomacyPreviousText"
+        },
+        NextRelationButton = {
+            button = "TemplateDiplomacyNextButton",
+            label = "TemplateDiplomacyNextText"
+        },
+        AllianceRequestButton = {
+            button = "TemplateDiplomacyAllianceButton",
+            label = "TemplateDiplomacyAllianceText"
+        },
+        WarRequestButton = {
+            button = "TemplateDiplomacyWarButton",
+            label = "TemplateDiplomacyWarText"
+        },
+        AcceptButton = {
+            button = "TemplateDiplomacyAcceptButton",
+            label = "TemplateDiplomacyAcceptText"
+        },
+        RejectButton = {
+            button = "TemplateDiplomacyRejectButton",
+            label = "TemplateDiplomacyRejectText"
+        },
+        CancelButton = {
+            button = "TemplateDiplomacyCancelButton",
+            label = "TemplateDiplomacyCancelText"
+        }
+    }
+    local diplomacy_controls = {}
+    for name, item in pairs(table_or_empty(diplomacy.navigation_controls)) do
+        diplomacy_controls[name] = item
+    end
+    for name, item in pairs(table_or_empty(diplomacy.action_controls)) do
+        diplomacy_controls[name] = item
+    end
+    for canonical_name, alias in pairs(diplomacy_control_aliases) do
+        local item = table_or_empty(diplomacy_controls[canonical_name])
+        if text(item.label) ~= "" then
+            self:_set_text_if_present(controls, alias.label, item.label)
+        end
+        self:_set_enabled_if_present(controls, alias.button, item.enabled)
+    end
+
+    local relation_rows = table_or_empty(dashboard.relation_rows)
+    for index = 1, 3 do
+        local relation_row = relation_rows[index]
+        relation_row = table_or_empty(relation_row)
+        local guild_name = text(relation_row.guild_name)
+        local has_relation = guild_name ~= "" and guild_name ~= "-"
+        self:_set_visible_if_present(
+            controls,
+            string.format("TemplateRelationRow_%02d", index),
+            has_relation
+        )
+        self:_set_text_if_present(
+            controls,
+            string.format("TemplateRelation%d", index),
+            has_relation and guild_name or ""
+        )
+        self:_set_text_if_present(
+            controls,
+            string.format("TemplateRelationStateText_%02d", index),
+            has_relation and relation_row.state_label or ""
+        )
+    end
+
+    local action_aliases = {
+        DashboardDiplomacyButton = {
+            button = "TemplateOpenDiplomacy",
+            label = "TemplateOpenDiplomacyText"
+        },
+        DashboardOffersButton = {
+            button = "TemplateViewOffers",
+            label = "TemplateViewOffersText"
+        },
+        DashboardGuildsButton = {
+            button = "TemplateListGuilds",
+            label = "TemplateListGuildsText"
+        },
+        DashboardPendingAcceptButton = {
+            button = "TemplateAcceptButton",
+            label = "TemplateAcceptText"
+        },
+        DashboardPendingRejectButton = {
+            button = "TemplateRejectButton",
+            label = "TemplateRejectText"
+        }
+    }
+    for canonical_name, alias in pairs(action_aliases) do
+        local action = table_or_empty(table_or_empty(clan.quick_actions)[canonical_name])
+        if text(action.label) ~= "" then
+            self:_set_text_if_present(controls, alias.label, action.label)
+        end
+        self:_set_enabled_if_present(controls, alias.button, action.enabled)
+    end
+
+    local recent_events = table_or_empty(dashboard.recent_events)
+    for index = 1, 5 do
+        local event = table_or_empty(recent_events[index])
+        local has_event = text(event.message) ~= ""
+        self:_set_visible_if_present(
+            controls,
+            string.format("TemplateRecentEventRow_%02d", index),
+            has_event
+        )
+        self:_set_text_if_present(
+            controls,
+            string.format("TemplateRecentEventMessageText_%02d", index),
+            event.message
+        )
+        self:_set_text_if_present(
+            controls,
+            string.format("TemplateRecentEventTimeText_%02d", index),
+            event.time_text
+        )
+    end
+
+    for index = 1, 16 do
+        local item = table_or_empty(management.colors[index])
+        local exists = text(item.id) ~= ""
+        self:_set_interactive_visible_if_present(
+            controls,
+            string.format("GuildIdentityColorButton%02d", index),
+            exists
+        )
+        self:_set_text_if_present(
+            controls,
+            string.format("GuildIdentityColorText%02d", index),
+            exists and ((item.selected == true and "✓ " or "")
+                .. text(item.id)) or ""
+        )
+        self:_set_enabled_if_present(
+            controls,
+            string.format("GuildIdentityColorButton%02d", index),
+            exists and management.read_only ~= true
+                and item.available == true
+        )
+    end
+    for index = 1, 12 do
+        local item = table_or_empty(management.emblems[index])
+        local exists = text(item.id) ~= ""
+        self:_set_interactive_visible_if_present(
+            controls,
+            string.format("GuildIdentityEmblemButton%02d", index),
+            exists
+        )
+        self:_set_text_if_present(
+            controls,
+            string.format("GuildIdentityEmblemText%02d", index),
+            exists and ((item.selected == true and "✓ " or "")
+                .. text(item.name)) or ""
+        )
+        self:_set_enabled_if_present(
+            controls,
+            string.format("GuildIdentityEmblemButton%02d", index),
+            exists and management.read_only ~= true
+        )
+    end
+    local save_control = table_or_empty(management.save_control)
+    self:_set_text_if_present(
+        controls,
+        "GuildIdentityStatusText",
+        management.status_text
+    )
+    self:_set_text_if_present(
+        controls,
+        "GuildIdentitySaveText",
+        save_control.label
+    )
+    self:_set_enabled_if_present(
+        controls,
+        "GuildIdentitySaveButton",
+        save_control.enabled == true
+    )
+
+    return true
+end
+
 function UMGViewBinder:bind(panel, model)
     if type(model) ~= "table" then
         return false, "Gorunum modeli bulunamadi."
@@ -157,8 +574,25 @@ function UMGViewBinder:bind(panel, model)
         return false, "PalTR widget agaci bulunamadi."
     end
 
-    local controls = {}
+    -- Preserve the authored hierarchy. Exact lookup through WidgetTree reaches
+    -- named controls below Border/SizeBox/Button content nodes without moving,
+    -- recreating, or requiring them to be Blueprint variables.
+    local controls = setmetatable({}, {
+        __index = function(_, control_name)
+            local found, control = pcall(function()
+                return tree:FindWidget(control_name)
+            end)
+            control = found and unwrap(control) or nil
+            if control ~= nil then return control end
+            return read_property(panel, control_name)
+        end
+    })
     collect_widgets(root, controls, 0)
+
+    if controls.TemplatePanelBackground ~= nil
+        or controls.TemplateShell ~= nil then
+        return self:_bind_design_template(controls, model)
+    end
 
     local switcher = controls.ContentSwitcher
     local active_index = nil
@@ -198,7 +632,23 @@ function UMGViewBinder:bind(panel, model)
         { "ClanMembersHeadingText", clan.members_heading_text },
         { "ClanMembersStatusText", clan.members_status_text },
         { "ClanMembersText", clan.members_text },
-        { "PendingOffersText", clan.pending_text },
+        { "PendingOffersText", clan.pending_text }
+    }
+
+    for _, binding in ipairs(bindings) do
+        local updated, update_error = self:_set_text(
+            controls,
+            binding[1],
+            binding[2]
+        )
+        if not updated then return false, update_error end
+    end
+
+
+    -- The redesigned home widget retains legacy tab variables for contract
+    -- compatibility. They can resolve to wrapper widgets until their page is
+    -- opened, so a failed legacy text write must not abort the F6 open path.
+    for _, binding in ipairs({
         { "RelationListEmptyText", diplomacy.list_text },
         { "RelationTitleText", diplomacy.title_text },
         { "RelationStateText", diplomacy.state_text },
@@ -214,15 +664,8 @@ function UMGViewBinder:bind(panel, model)
         { "GuildCatalogActiveText", guilds.active_text },
         { "GuildCatalogRegisteredHeadingText", guilds.registered_heading_text },
         { "GuildCatalogRegisteredText", guilds.registered_text }
-    }
-
-    for _, binding in ipairs(bindings) do
-        local updated, update_error = self:_set_text(
-            controls,
-            binding[1],
-            binding[2]
-        )
-        if not updated then return false, update_error end
+    }) do
+        self:_try_set_text(controls, binding[1], binding[2])
     end
 
     -- These fields belong to optional dashboard presentation components.
@@ -308,7 +751,7 @@ function UMGViewBinder:bind(panel, model)
         if not state_updated then return false, state_error end
     end
 
-    local relations_updated, relations_error = self:_set_text(
+    local relations_updated, relations_error = self:_set_text_if_present(
         controls,
         "DashboardRelationsText",
         dashboard.relations_text
@@ -322,7 +765,7 @@ function UMGViewBinder:bind(panel, model)
             { control = card.value_control, value = card.value },
             { control = card.detail_control, value = card.detail }
         }) do
-            local updated, update_error = self:_set_text(
+            local updated, update_error = self:_set_text_if_present(
                 controls,
                 text(field.control),
                 field.value

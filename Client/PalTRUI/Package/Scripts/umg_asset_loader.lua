@@ -3,6 +3,12 @@ UMGAssetLoader.__index = UMGAssetLoader
 
 UMGAssetLoader.PANEL_CANDIDATES = {
     {
+        asset_path = "/Game/Mods/PalTRUI/WBP_PalTRPanel_DesignTemplate.WBP_PalTRPanel_DesignTemplate",
+        class_path = "/Game/Mods/PalTRUI/WBP_PalTRPanel_DesignTemplate.WBP_PalTRPanel_DesignTemplate_C",
+        package_name = "/Game/Mods/PalTRUI/WBP_PalTRPanel_DesignTemplate",
+        asset_name = "WBP_PalTRPanel_DesignTemplate_C"
+    },
+    {
         asset_path = "/Game/Mods/PalTRUI/WBP_PalTRPanel.WBP_PalTRPanel",
         class_path = "/Game/Mods/PalTRUI/WBP_PalTRPanel.WBP_PalTRPanel_C",
         package_name = "/Game/Mods/PalTRUI/WBP_PalTRPanel",

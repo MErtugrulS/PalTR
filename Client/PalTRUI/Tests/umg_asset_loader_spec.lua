@@ -17,13 +17,13 @@ local invalid_class = {
 }
 equal(
     UMGAssetLoader.PANEL_ASSET_PATH,
-    "/Game/Mods/PalTRUI/WBP_PalTRPanel.WBP_PalTRPanel",
-    "manual panel asset path"
+    "/Game/Mods/PalTRUI/WBP_PalTRPanel_DesignTemplate.WBP_PalTRPanel_DesignTemplate",
+    "live design panel asset path"
 )
 equal(
     UMGAssetLoader.PANEL_ASSET_NAME,
-    "WBP_PalTRPanel_C",
-    "manual panel generated class asset name"
+    "WBP_PalTRPanel_DesignTemplate_C",
+    "live design panel generated class asset name"
 )
 local load_calls = {}
 local find_calls = 0
@@ -68,7 +68,7 @@ local registry_fallback = UMGAssetLoader.new({
     end,
     find_object = function()
         fallback_find_calls = fallback_find_calls + 1
-        if fallback_find_calls < 2 then return invalid_class end
+        if fallback_find_calls < 3 then return invalid_class end
         return loaded_class
     end
 })

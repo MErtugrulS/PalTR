@@ -1,4 +1,5 @@
 #include "PalTRUIAssetBuilderCommandlet.h"
+#include "PalTRUIGuildIdentityPage.h"
 
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "Blueprint/UserWidget.h"
@@ -6173,6 +6174,16 @@ int32 UPalTRUIAssetBuilderCommandlet::Main(const FString& Params)
     if (FParse::Param(*Params, TEXT("VerifyTerritoryMapOverlay")))
     {
         return PalTRUIMapOverlay::VerifyTerritoryMapOverlay() ? 0 : 53;
+    }
+
+    if (FParse::Param(*Params, TEXT("UpdateDesignTemplateGuildIdentityPage")))
+    {
+        return PalTRUIGuildIdentityPage::UpdateGuildIdentityPage() ? 0 : 54;
+    }
+
+    if (FParse::Param(*Params, TEXT("VerifyDesignTemplateGuildIdentityPage")))
+    {
+        return PalTRUIGuildIdentityPage::VerifyGuildIdentityPage() ? 0 : 55;
     }
 
     if (FParse::Param(*Params, TEXT("CreateHeaderDesignTemplate")))

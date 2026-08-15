@@ -30,6 +30,7 @@ end
 
 local text_values = {}
 local enabled_values = {}
+local visibility_values = {}
 local function text_widget(name)
     local item = widget(name)
     item.SetText = function(_, value)
@@ -42,6 +43,15 @@ local function button_widget(name)
     local item = widget(name)
     item.SetIsEnabled = function(_, value)
         enabled_values[name] = value
+    end
+    return item
+end
+
+
+local function visibility_widget(name)
+    local item = widget(name)
+    item.SetVisibility = function(_, value)
+        visibility_values[name] = value
     end
     return item
 end
@@ -531,5 +541,145 @@ local missing_control_panel = {
 local controls_bound, controls_error = binder:bind(missing_control_panel, model)
 equal(controls_bound, false, "missing text control rejected")
 equal(controls_error, "UMG kontrolu bulunamadi: TitleText", "control error")
+
+model.views.CLAN.leader_name = "Ada"
+model.views.CLAN.dashboard.war_count_text = "1"
+model.views.CLAN.dashboard.alliance_count_text = "2"
+model.views.CLAN.dashboard.pending_count_text = "1"
+model.views.CLAN.dashboard.protection = {
+    offline_text = "Aktif",
+    raid_text = "Pasif"
+}
+model.views.CLAN.dashboard.territories = {
+    protected_base_count_text = "2",
+    risky_region_count_text = "1"
+}
+model.views.CLAN.dashboard.recent_events = {
+    { message = "Rakipler ile savaş sürüyor", time_text = "5 dk önce" }
+}
+local detached_template_controls = {
+    TemplateHomeText = text_widget("TemplateHomeText")
+}
+local template_controls = {
+    widget("TemplatePanelBackground")
+}
+for _, name in ipairs({
+    "TemplateServerBadgeText", "TemplateGuildBadgeText",
+    "TemplateRoleBadgeText", "TemplateNotificationBadgeText",
+    "ActivePlayerText", "ActivePlayerText_1",
+    "ClanNameText", "ClanNameText1", "ClanRoleText",
+    "ClanRoleText_1", "ClanRoleText2", "TextBlock_172",
+    "TextBlock_362", "PANEL", "TemplateHomeText_1", "SavasText",
+    "YapilarText", "BolgelerText_2", "PlayersText",
+    "BolgelerText", "YonetimText", "AyarlarText",
+    "TemplatePageHeading", "TemplatePageSubtitle",
+    "TemplateCardTitle1", "TemplateClanLeaderLabelText",
+    "TemplateDiplomacyTitleText", "TemplateDiplomacyWarLabel",
+    "TemplateDiplomacyAllianceLabel", "TemplateDiplomacyPendingLabel",
+    "TemplateProtectionTitleText", "TemplateProtectionOfflineLabel",
+    "TemplateProtectionRaidLabel", "TemplateBuildingsTitleText",
+    "TemplateBuildingsProtectedBaseLabel",
+    "TemplateBuildingsRiskyRegionLabel",
+    "TemplateRecentEventsHeadingText",
+    "TemplateRecentEventsViewAllText",
+    "TemplateQuickActionsHeadingText", "TemplateRelationsHeading",
+    "TemplateOffersHeading", "TemplateProtectionStatusText",
+    "TemplateCardValue1", "TemplateClanLeaderValueText",
+    "TemplateClanMemberText", "TemplateDiplomacyWarValue",
+    "TemplateDiplomacyAllianceValue", "TemplateDiplomacyPendingValue",
+    "TemplateProtectionOfflineValue", "TemplateProtectionRaidValue",
+    "TemplateBuildingsProtectedBaseValue",
+    "TemplateBuildingsRiskyRegionValue", "TemplateRelation1",
+    "TemplateRelationStateText_01", "TemplateOfferGuild",
+    "TemplateOfferType", "TemplatePendingOffersEmptyText",
+    "TemplateOpenDiplomacyText", "TemplateViewOffersText",
+    "TemplateListGuildsText", "TemplateAcceptText",
+    "TemplateRejectText", "TemplateRecentEventMessageText_01",
+    "TemplateRecentEventTimeText_01",
+    "TemplateRecentEventMessageText_02",
+    "TemplateRecentEventTimeText_02"
+}) do
+    table.insert(template_controls, text_widget(name))
+end
+for _, name in ipairs({
+    "TemplateOpenDiplomacy", "TemplateViewOffers",
+    "TemplateListGuilds", "TemplateAcceptButton",
+    "TemplateRejectButton"
+}) do
+    table.insert(template_controls, button_widget(name))
+end
+for index = 1, 3 do
+    table.insert(
+        template_controls,
+        visibility_widget(string.format("TemplateRelationRow_%02d", index))
+    )
+end
+local template_panel = {
+    WidgetTree = {
+        RootWidget = widget("TemplateRoot", template_controls),
+        FindWidget = function(_, name)
+            return detached_template_controls[name]
+        end
+    }
+}
+local template_bound, template_error = binder:bind(template_panel, model)
+equal(template_bound, true, "design template bound")
+equal(template_error, nil, "design template bind has no error")
+equal(text_values.TemplateHomeText, "Ana Sayfa",
+    "detached sidebar label resolves through widget tree")
+equal(text_values.BolgelerText_2, "Kayıtlar",
+    "sidebar records label stays local")
+equal(text_values.TemplatePageHeading, "Klan Durumu",
+    "page heading stays local")
+equal(text_values.TemplateCardTitle1, "Klanım",
+    "card title stays local")
+equal(text_values.TemplateDiplomacyWarLabel, "Savaş:",
+    "card metric label stays local")
+equal(text_values.TemplateRecentEventsHeadingText, "Son Olaylar",
+    "recent events heading stays local")
+equal(text_values.TemplateGuildBadgeText, "Klan: Anka",
+    "template guild uses live header")
+equal(text_values.ActivePlayerText, "Sunucu Aktif",
+    "manual template status uses live connection")
+equal(text_values.ActivePlayerText_1, "",
+    "legacy player count is cleared")
+equal(text_values.ClanNameText1, "Klan: ",
+    "manual template guild label stays local")
+equal(text_values.ClanNameText, "Anka",
+    "manual template guild value uses live snapshot")
+equal(text_values.ClanRoleText, "Yetki: ",
+    "manual template role label stays local")
+equal(text_values.ClanRoleText2, "Lider",
+    "manual template role value uses live header")
+equal(text_values.TextBlock_172, "1",
+    "manual notification badge uses live pending count")
+equal(text_values.TemplateCardValue1, "Anka",
+    "template clan name uses live snapshot")
+equal(text_values.TemplateClanLeaderValueText, "Ada",
+    "template leader uses live member")
+equal(text_values.TemplateDiplomacyWarValue, "1",
+    "template war count uses live relations")
+equal(text_values.TemplateProtectionOfflineValue, "Aktif",
+    "template protection uses live snapshot")
+equal(text_values.TemplateBuildingsProtectedBaseValue, "2",
+    "template territories use live nodes")
+equal(text_values.TemplateRelation1, "Rakipler",
+    "template relation row uses live relation")
+equal(visibility_values.TemplateRelationRow_01, 3,
+    "first live relation row is visible")
+equal(visibility_values.TemplateRelationRow_02, 3,
+    "second live relation row is visible")
+equal(visibility_values.TemplateRelationRow_03, 1,
+    "unused relation row is collapsed")
+equal(text_values.TemplateOfferGuild, "Teklifciler",
+    "template offer uses live pending relation")
+equal(text_values.TemplateRecentEventMessageText_01,
+    "Rakipler ile savaş sürüyor", "template event uses live data")
+equal(text_values.TemplateRecentEventMessageText_02, "",
+    "unused template event message cleared")
+equal(text_values.TemplateRecentEventTimeText_02, "",
+    "unused template event time cleared")
+equal(enabled_values.TemplateAcceptButton, true,
+    "template accept follows server action permission")
 
 print("PALTR_UI_UMG_VIEW_BINDER_TEST_OK")

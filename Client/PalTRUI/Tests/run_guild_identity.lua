@@ -6,3 +6,6 @@ package.path = directory .. "/../Package/Scripts/?.lua;" .. package.path
 
 dofile(directory .. "/guild_identity_model_spec.lua")
 dofile(directory .. "/guild_identity_flow_spec.lua")
+dofile(directory .. "/guild_identity_binder_spec.lua")
+dofile(directory .. "/umg_asset_loader_spec.lua")
+dofile(directory .. "/design_template_event_bridge_spec.lua")
