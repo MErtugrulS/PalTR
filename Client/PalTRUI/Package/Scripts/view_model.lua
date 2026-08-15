@@ -624,7 +624,7 @@ local function clan_view(
             target_tab = definition.target_tab,
             action_id = definition.action_id or "",
             target_guild = definition.requires_pending
-                and text(table_or_empty(pending_offers[1]).guild_key) or "",
+                and text(primary_offer.guild_key) or "",
             enabled = enabled,
             reason = reason
         }
