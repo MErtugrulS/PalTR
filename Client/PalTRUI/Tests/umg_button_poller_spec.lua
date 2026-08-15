@@ -132,4 +132,58 @@ equal(unavailable, false, "missing router rejected")
 equal(unavailable_error, "UI etkilesim router'i hazir degil.",
     "missing router error")
 
+local aliased_routes = {}
+local aliased_frames = {
+    { pressed = true, hovered = true },
+    { pressed = false, hovered = true }
+}
+local aliased_index = 0
+local AliasedStateProbe = require("umg_button_state_probe")
+local aliased_button = {
+    IsPressed = function()
+        return aliased_frames[aliased_index].pressed
+    end,
+    IsHovered = function()
+        return aliased_frames[aliased_index].hovered
+    end,
+    GetFName = function()
+        return { ToString = function() return "C_DiplomacyButton" end }
+    end,
+    GetChildrenCount = function() return 0 end
+}
+local aliased_root = {
+    GetFName = function()
+        return { ToString = function() return "Root" end }
+    end,
+    GetChildrenCount = function() return 1 end,
+    GetChildAt = function() return aliased_button end
+}
+local aliased_panel = { WidgetTree = { RootWidget = aliased_root } }
+local aliased_poller = UMGButtonPoller.new({
+    widget_provider = function() return aliased_panel end,
+    control_names = {
+        { widget = "C_DiplomacyButton", control = "DiplomacyTabButton" }
+    },
+    sampler = {
+        sample = function(panel, controls)
+            aliased_index = aliased_index + 1
+            return AliasedStateProbe.sample(panel, controls)
+        end
+    },
+    router = {
+        handle = function(_, control)
+            table.insert(aliased_routes, control)
+            return true, { open = true }, true
+        end
+    },
+    schedule_loop = function() end,
+    execute_in_game_thread = function(callback) callback() end
+})
+equal(aliased_poller:start(), true, "aliased poller started")
+equal(aliased_poller:poll_once(), true, "aliased press sampled")
+equal(aliased_poller:poll_once(), true, "aliased release sampled")
+equal(aliased_routes[1], "DiplomacyTabButton",
+    "blueprint widget aliases to logical diplomacy control")
+aliased_poller:stop()
+
 print("PALTR_UI_UMG_BUTTON_POLLER_TEST_OK")

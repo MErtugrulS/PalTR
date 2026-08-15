@@ -36,14 +36,14 @@ if ENABLE_TERRITORY_MAP_OVERLAY then
         end
     })
 end
-local ENABLE_NATIVE_BUTTON_POLLER = false
 local interactive_controls = {
     "CloseButton",
-    "ClanTabButton",
-    "DiplomacyTabButton",
+    { widget = "C_HomeButton", control = "ClanTabButton" },
+    { widget = "C_DiplomacyButton", control = "DiplomacyTabButton" },
+    { widget = "YonetimButton", control = "ManagementTabButton" },
     "AllianceTabButton",
     "ChatTabButton",
-    "DashboardDiplomacyButton",
+    { widget = "TemplateOpenDiplomacy", control = "DashboardDiplomacyButton" },
     "DashboardOffersButton",
     "DashboardGuildsButton",
     "DashboardPendingAcceptButton",
@@ -52,16 +52,32 @@ local interactive_controls = {
     "NextRelationButton",
     "PreviousAllianceButton",
     "NextAllianceButton",
-    "AllianceRequestButton",
-    "WarRequestButton",
-    "AcceptButton",
-    "RejectButton",
-    "CancelButton"
+    { widget = "TemplateDiplomacyAllianceButton", control = "AllianceRequestButton" },
+    { widget = "TemplateDiplomacyWarButton", control = "WarRequestButton" },
+    { widget = "TemplateDiplomacyAcceptButton", control = "AcceptButton" },
+    { widget = "TemplateDiplomacyRejectButton", control = "RejectButton" },
+    { widget = "TemplateDiplomacyCancelButton", control = "CancelButton" }
 }
+for index = 1, 6 do
+    table.insert(interactive_controls, {
+        widget = string.format("TemplateDiplomacyRelationButton_%02d", index),
+        control = string.format("DiplomacyRelationRowButton%02d", index)
+    })
+end
+for index = 1, 16 do
+    table.insert(interactive_controls,
+        string.format("GuildIdentityColorButton%02d", index))
+end
+for index = 1, 12 do
+    table.insert(interactive_controls,
+        string.format("GuildIdentityEmblemButton%02d", index))
+end
+table.insert(interactive_controls, "GuildIdentitySaveButton")
 local button_poller = UMGButtonHookPoller.new({
     widget_provider = function() return widget_port.widget end,
     router = interactions,
     control_names = interactive_controls,
+    poll_interval_seconds = 0.125,
     on_resume = function(resumed_at)
         local refreshed, refresh_error = widget_port:refresh_input()
         print(string.format(
@@ -171,22 +187,23 @@ local function toggle_panel()
         tostring(model.open),
         tostring(model.active_tab)
     ))
-    if model.open == true and ENABLE_NATIVE_BUTTON_POLLER then
-        local started, start_error = button_poller:start()
-        if started ~= true then
-            print(string.format(
-                "[PalTRUI] PALTR_UI_BUTTON_POLLER_ERROR | %s\n",
-                tostring(start_error)
-            ))
-        end
-    elseif model.open == true then
-        print("[PalTRUI] PALTR_UI_BUTTON_POLLER_DISABLED | keyboard_mode=true\n")
+    if model.open == true then
         local registered, register_error = design_events:register()
         print(string.format(
             "[PalTRUI] PALTR_UI_DESIGN_EVENTS_%s | error=%s\n",
             registered == true and "READY" or "ERROR",
             tostring(register_error or "")
         ))
+        if registered ~= true then
+            local started, start_error = button_poller:start()
+            print(string.format(
+                "[PalTRUI] PALTR_UI_BUTTON_FALLBACK_%s | interval=0.125 | error=%s\n",
+                started == true and "READY" or "ERROR",
+                tostring(start_error or "")
+            ))
+        else
+            button_poller:stop()
+        end
     elseif not closing then
         button_poller:stop()
     end

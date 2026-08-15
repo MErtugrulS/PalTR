@@ -47,11 +47,20 @@ function UMGButtonStateProbe.sample(panel, control_names)
     local controls = {}
     collect(root, controls, 0)
     local result = {}
-    for _, name in ipairs(control_names or {}) do
-        local control = controls[name]
+    for _, spec in ipairs(control_names or {}) do
+        local widget_name = spec
+        local routed_name = spec
+        if type(spec) == "table" then
+            widget_name = spec.widget or spec.name or spec.control
+            routed_name = spec.control or widget_name
+        end
+        widget_name = tostring(widget_name or "")
+        routed_name = tostring(routed_name or widget_name)
+        local control = controls[widget_name]
         if control == nil then
             table.insert(result, {
-                control = name,
+                control = routed_name,
+                widget = widget_name,
                 available = false,
                 pressed = false,
                 hovered_available = false,
@@ -65,7 +74,8 @@ function UMGButtonStateProbe.sample(panel, control_names)
                 return control:IsHovered()
             end)
             table.insert(result, {
-                control = name,
+                control = routed_name,
+                widget = widget_name,
                 available = sampled,
                 pressed = sampled and pressed == true,
                 hovered_available = hover_sampled,
