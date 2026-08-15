@@ -502,8 +502,10 @@ function UMGViewBinder:_bind_design_template(controls, model)
         )
     end
 
+    local management_colors = table_or_empty(management.colors)
+    local management_emblems = table_or_empty(management.emblems)
     for index = 1, 16 do
-        local item = table_or_empty(management.colors[index])
+        local item = table_or_empty(management_colors[index])
         local exists = text(item.id) ~= ""
         self:_set_interactive_visible_if_present(
             controls,
@@ -524,7 +526,7 @@ function UMGViewBinder:_bind_design_template(controls, model)
         )
     end
     for index = 1, 12 do
-        local item = table_or_empty(management.emblems[index])
+        local item = table_or_empty(management_emblems[index])
         local exists = text(item.id) ~= ""
         self:_set_interactive_visible_if_present(
             controls,
