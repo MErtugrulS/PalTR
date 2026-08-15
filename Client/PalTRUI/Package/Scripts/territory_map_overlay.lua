@@ -24,10 +24,13 @@ Overlay.PAL_UI_LIBRARY_DEFAULT_PATH =
     "/Game/Pal/Blueprint/UI/System/BP_PalUIFunctionLibrary.Default__BP_PalUIFunctionLibrary_C"
 Overlay.MAP_BASE_CLASSES = { "WBP_Map_Base_C", "WBP_Map_Base" }
 Overlay.MAP_BODY_CLASSES = { "WBP_Map_Body_C", "WBP_Map_Body" }
-Overlay.MAX_SEGMENTS = 512
-Overlay.MAX_FILLS = 384
-Overlay.MAX_NODES = 64
-Overlay.MAX_BANNERS = 16
+-- Keep the packaged widget tree bounded. The model simplifies safely at these
+-- limits and avoids constructing nearly two thousand UMG controls when the map
+-- is opened.
+Overlay.MAX_SEGMENTS = 128
+Overlay.MAX_FILLS = 96
+Overlay.MAX_NODES = 32
+Overlay.MAX_BANNERS = 8
 Overlay.Z_ORDER = 10000
 Overlay.BORDER_THICKNESS = 1.8
 Overlay.NORMALIZED_SEGMENT_SIZE = 0.45
@@ -54,6 +57,7 @@ Overlay.DISCOVERY_MAX_RETRY_INTERVAL_SECONDS = 2.0
 Overlay.DISCOVERY_MAX_ATTEMPTS = 6
 Overlay.SNAPSHOT_REQUEST_INTERVAL_SECONDS = 5.0
 Overlay.RENDER_RETRY_INTERVAL_SECONDS = 0.5
+Overlay.INITIAL_RENDER_DELAY_SECONDS = 0.25
 Overlay.RENDER_MAX_ATTEMPTS = 6
 Overlay.NORMALIZED_RENDER_MAX_ATTEMPTS = 2
 
@@ -793,6 +797,14 @@ function Overlay:_find_projection_target()
         "PALTR_MAP_OVERLAY_PROJECTION_TARGET_FAILED"
     )
     return nil
+end
+
+function Overlay:_reset_projection_lookup()
+    self.projection_strategy = nil
+    self.projection_target = nil
+    self.projection_lookup_attempted = false
+    self.projection_size = nil
+    self.projected_points = {}
 end
 
 function Overlay:_world_to_widget(world)
@@ -1753,9 +1765,9 @@ function Overlay:_tick()
                         coroutine.yield()
                     end
                 end
-                local rendered_fills, fill_stats = self:_render_fills(throttle)
                 local rendered_segments, segment_stats =
                     self:_render_segments(throttle)
+                local rendered_fills, fill_stats = self:_render_fills(throttle)
                 local rendered_nodes, node_stats = self:_render_nodes(throttle)
                 local rendered_banners = self:_render_banners(throttle)
                 self.render_result = {
@@ -1840,7 +1852,7 @@ function Overlay:_tick()
             self.next_render_at = now + Overlay.RENDER_RETRY_INTERVAL_SECONDS
             self.render_dirty = true
             self.render_coroutine = nil
-            self.projected_points = {}
+            self:_reset_projection_lookup()
         else
             self.render_attempts = 0
             self.next_render_at = nil
@@ -1854,6 +1866,8 @@ function Overlay:_tick()
     if created then
         self.attach_attempts = 0
         self.next_attach_at = nil
+        self.next_render_at = now + Overlay.INITIAL_RENDER_DELAY_SECONDS
+        self:_reset_projection_lookup()
         self.render_dirty = true
         self:_diagnostic("runtime", string.format(
             "PALTR_MAP_OVERLAY_ATTACHED | strategy=%s | widget=%s",

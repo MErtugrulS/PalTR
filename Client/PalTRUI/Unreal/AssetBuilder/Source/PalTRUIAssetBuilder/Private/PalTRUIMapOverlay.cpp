@@ -31,10 +31,10 @@ namespace PalTRUIMapOverlay
         constexpr TCHAR PackageName[] =
             TEXT("/Game/Mods/PalTRUI/WBP_PalTRMapOverlay");
         constexpr TCHAR AssetName[] = TEXT("WBP_PalTRMapOverlay");
-        constexpr int32 SegmentCount = 512;
-        constexpr int32 FillCount = 384;
-        constexpr int32 NodeCount = 64;
-        constexpr int32 GuildBannerCount = 16;
+        constexpr int32 SegmentCount = 128;
+        constexpr int32 FillCount = 96;
+        constexpr int32 NodeCount = 32;
+        constexpr int32 GuildBannerCount = 8;
 
         FLinearColor FromSRGB(
             const uint8 R,

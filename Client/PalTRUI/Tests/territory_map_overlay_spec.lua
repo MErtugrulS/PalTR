@@ -151,6 +151,30 @@ if projection_overlay.projection_strategy.name ~= "map_image_cm" then
     error("verified five-parameter map projection strategy selected")
 end
 
+local projection_lookup_count = 0
+local retry_projection_overlay = Overlay.new({
+    log = function() end,
+    find_projection_target = function()
+        projection_lookup_count = projection_lookup_count + 1
+        if projection_lookup_count == 1 then return nil end
+        return projection_target
+    end,
+    get_local_size = function() return { x = 1000, y = 1000 } end
+})
+retry_projection_overlay.parent_canvas = object({ name = "Canvas Retry" })
+retry_projection_overlay.map_body = projection_overlay.map_body
+if retry_projection_overlay:_world_to_widget({ x = 1200, y = 3400, z = 0 })
+    ~= nil then
+    error("first unavailable projection target is not guessed")
+end
+retry_projection_overlay:_reset_projection_lookup()
+local retried_projection = retry_projection_overlay:_world_to_widget({
+    x = 1200, y = 3400, z = 0
+})
+near(retried_projection.x, 120,
+    "projection target is resolved again on bounded render retry")
+near(projection_lookup_count, 2, "projection lookup retry is bounded")
+
 local anchor_projection_overlay = Overlay.new({
     log = function() end,
     find_projection_target = function() return projection_target end,
@@ -1013,7 +1037,7 @@ batch_overlay.model = {
     segment_count = 0, node_count = 0, banner_count = 0
 }
 batch_overlay._map_is_rendered = function() return true end
-for index = 1, 130 do
+for index = 1, Overlay.MAX_FILLS do
     local control = object({})
     function control:SetVisibility() batch_updates = batch_updates + 1 end
     batch_overlay.controls[string.format("TerritoryFill%03d", index)] = control
@@ -1023,10 +1047,14 @@ near(batch_updates, Overlay.RENDER_BATCH_SIZE,
     "first tick updates only one bounded control batch")
 batch_now = 0.21
 batch_overlay:_tick()
-near(batch_updates, Overlay.RENDER_BATCH_SIZE * 2,
+near(batch_updates, math.min(
+    Overlay.RENDER_BATCH_SIZE * 2,
+    Overlay.MAX_FILLS
+),
     "second tick advances one additional control batch")
 batch_now = 0.42
 batch_overlay:_tick()
-near(batch_updates, 130, "final tick completes remaining pooled controls")
+near(batch_updates, Overlay.MAX_FILLS,
+    "final tick leaves the bounded fill pool complete")
 
 print("PALTR_UI_TERRITORY_MAP_OVERLAY_TEST_OK")
