@@ -446,7 +446,7 @@ equal(
 )
 
 local incompatible = snapshot()
-incompatible.schema_version = 2
+incompatible.schema_version = 3
 equal(panel:apply_snapshot(incompatible), false, "schema mismatch rejected")
 equal(
     panel.view_model.error,

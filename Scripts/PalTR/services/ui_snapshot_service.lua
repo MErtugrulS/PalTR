@@ -1,10 +1,43 @@
 local Clock = require("PalTR.core.clock")
+local TerritorySnapshotReader = require(
+    "PalTR.services.territory_snapshot_reader"
+)
 
 local Snapshot = {}
 Snapshot.__index = Snapshot
 
-function Snapshot.new(registry, diplomacy, actions)
-    return setmetatable({ registry = registry, diplomacy = diplomacy, actions = actions }, Snapshot)
+local function unavailable_protection()
+    return {
+        available = false,
+        protected = false,
+        reason = "",
+        online_count = 0,
+        protected_at = 0,
+        raid_open = false,
+        raid_window_start = "",
+        raid_window_end = ""
+    }
+end
+
+function Snapshot.new(registry, diplomacy, actions, paths, options)
+    options = options or {}
+    return setmetatable({
+        registry = registry,
+        diplomacy = diplomacy,
+        actions = actions,
+        paths = paths or {},
+        conquest_config = type(options.config) == "table"
+            and (options.config.conquest or options.config) or {},
+        protection_reader = options.protection_reader
+            or unavailable_protection,
+        territory_reader = options.territory_reader
+            or TerritorySnapshotReader.read,
+        guild_identity = options.guild_identity
+    }, Snapshot)
+end
+
+function Snapshot:set_guild_identity(service)
+    self.guild_identity = service
 end
 
 local function guild_name(registry, key)
@@ -76,7 +109,21 @@ local function guild_members(registry, guild_key)
     return result
 end
 
-local function guild_catalog(registry, own)
+local function identity_for(service, guild_key)
+    if service == nil or guild_key == nil or guild_key == "" then
+        return { color_id = "", emblem_id = "" }
+    end
+    local ok, record = pcall(service.get, service, guild_key)
+    if not ok or type(record) ~= "table" then
+        return { color_id = "", emblem_id = "" }
+    end
+    return {
+        color_id = tostring(record.color_id or ""),
+        emblem_id = tostring(record.emblem_id or "")
+    }
+end
+
+local function guild_catalog(registry, own, identity_service)
     local counts = {}
     for key in pairs(registry.guilds or {}) do
         local members = guild_members(registry, key)
@@ -91,9 +138,12 @@ local function guild_catalog(registry, own)
     for key, guild in pairs(registry.guilds or {}) do
         if key ~= own then
             local count = counts[key] or { members = 0, online = 0 }
+            local identity = identity_for(identity_service, key)
             table.insert(result, {
                 key = key,
                 name = guild.name or key,
+                color_id = identity.color_id,
+                emblem_id = identity.emblem_id,
                 member_count = count.members,
                 online_count = count.online,
                 active = (registry.runtime_guilds
@@ -110,10 +160,33 @@ local function guild_catalog(registry, own)
     return result
 end
 
+local function player_conquest_role(player, config)
+    if player and player.is_master == true then return "LEADER" end
+    local role = player and player.role
+    local mapped = type(config.game_role_map) == "table"
+        and config.game_role_map[tonumber(role)] or nil
+    return mapped or tostring(role or "")
+end
+
+local function identity_catalog(service, guild_key, role)
+    local fallback = {
+        palette_version = 0,
+        selected_color_id = "",
+        selected_emblem_id = "",
+        locked = false,
+        can_manage = false,
+        colors = {}, emblems = {}
+    }
+    if service == nil or guild_key == "" then return fallback end
+    local ok, catalog = pcall(service.catalog_for, service, guild_key, role)
+    if not ok or type(catalog) ~= "table" then return fallback end
+    return catalog
+end
+
 function Snapshot:build(player)
     local own = player and player.guild_key or ""
     local result = {
-        schema_version = 1,
+        schema_version = 2,
         generated_at = Clock.now(),
         player = {
             name = player and player.name or "",
@@ -122,10 +195,44 @@ function Snapshot:build(player)
             is_master = player and player.is_master == true or false
         },
         guild = { key = own, name = guild_name(self.registry, own) },
-        guilds = guild_catalog(self.registry, own),
+        guilds = guild_catalog(self.registry, own, self.guild_identity),
+        guild_identity = identity_catalog(
+            self.guild_identity,
+            own,
+            player_conquest_role(player, self.conquest_config)
+        ),
         members = {},
-        relations = {}
+        relations = {},
+        protection = unavailable_protection(),
+        territories = { nodes = {}, boundaries = {} }
     }
+
+    local own_identity = identity_for(self.guild_identity, own)
+    result.guild.color_id = own_identity.color_id
+    result.guild.emblem_id = own_identity.emblem_id
+
+    local protection_ok, protection = pcall(
+        self.protection_reader,
+        self.paths,
+        own,
+        result.generated_at,
+        self.conquest_config
+    )
+    if protection_ok and type(protection) == "table" then
+        result.protection = protection
+    end
+
+    local territory_ok, territories = pcall(
+        self.territory_reader,
+        self.paths
+    )
+    if territory_ok and type(territories) == "table" then
+        result.territories.nodes = type(territories.nodes) == "table"
+            and territories.nodes or {}
+        result.territories.boundaries =
+            type(territories.boundaries) == "table"
+                and territories.boundaries or {}
+    end
 
     if own == "" then return result end
 
