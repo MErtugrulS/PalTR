@@ -5,6 +5,6 @@
 namespace PalTRUIMapOverlay
 {
     bool CreateTerritoryMapOverlay();
-    bool UpdateTerritoryMapOverlayLabels();
+    bool UpdateTerritoryMapOverlayTerritories();
     bool VerifyTerritoryMapOverlay();
 }

@@ -25,7 +25,9 @@ Overlay.PAL_UI_LIBRARY_DEFAULT_PATH =
 Overlay.MAP_BASE_CLASSES = { "WBP_Map_Base_C", "WBP_Map_Base" }
 Overlay.MAP_BODY_CLASSES = { "WBP_Map_Body_C", "WBP_Map_Body" }
 Overlay.MAX_SEGMENTS = 512
+Overlay.MAX_FILLS = 384
 Overlay.MAX_NODES = 64
+Overlay.MAX_BANNERS = 16
 Overlay.Z_ORDER = 10000
 Overlay.BORDER_THICKNESS = 1.8
 Overlay.NORMALIZED_SEGMENT_SIZE = 0.45
@@ -33,11 +35,17 @@ Overlay.NORMALIZED_CAPITAL_SIZE = 2.4
 Overlay.NORMALIZED_OUTPOST_SIZE = 1.4
 Overlay.CAPITAL_Z_ORDER = 40
 Overlay.OUTPOST_Z_ORDER = 30
+Overlay.FILL_Z_ORDER = 10
+Overlay.BANNER_Z_ORDER = 40
+Overlay.RENDER_BATCH_SIZE = 64
+Overlay.NORMALIZED_BANNER_WIDTH = 28
+Overlay.NORMALIZED_BANNER_HEIGHT = 13
+Overlay.NORMALIZED_BANNER_RENDER_SCALE = 1 / 6
 Overlay.NORMALIZED_LABEL_WIDTH = 18.0
 Overlay.NORMALIZED_LABEL_HEIGHT = 3.2
 Overlay.NORMALIZED_LABEL_GAP = 2.0
 Overlay.NORMALIZED_LABEL_RENDER_SCALE = 1 / 6
-Overlay.VISIBILITY_CHECK_INTERVAL_SECONDS = 0.25
+Overlay.VISIBILITY_CHECK_INTERVAL_SECONDS = 0.20
 Overlay.ATTACH_RETRY_INTERVAL_SECONDS = 1.0
 Overlay.ATTACH_MAX_ATTEMPTS = 3
 Overlay.DISCOVERY_INITIAL_DELAY_SECONDS = 0.4
@@ -299,6 +307,17 @@ local function show(control)
     pcall(function() control:SetVisibility(3) end)
 end
 
+local function show_interactive(control)
+    if not valid_object(control) then return end
+    pcall(function() control:SetVisibility(0) end)
+end
+
+local function is_hovered(control)
+    if not valid_object(control) then return false end
+    local ok, hovered = pcall(function() return control:IsHovered() end)
+    return ok and hovered == true
+end
+
 local function set_color(control, color)
     color = type(color) == "table" and color
         or TerritoryMapModel.COLORS.NEUTRAL
@@ -548,7 +567,10 @@ function Overlay.new(api)
         controls = {},
         snapshot = nil,
         model = TerritoryMapModel.build({}),
+        node_hover = {},
         render_dirty = true,
+        render_coroutine = nil,
+        render_result = nil,
         render_attempts = 0,
         next_render_at = nil,
         last_visibility_check_at = nil,
@@ -858,19 +880,24 @@ function Overlay:set_snapshot(snapshot)
     self.snapshot = type(snapshot) == "table" and snapshot or nil
     self.model = TerritoryMapModel.build(self.snapshot or {}, {
         max_segments = Overlay.MAX_SEGMENTS,
-        max_nodes = Overlay.MAX_NODES
+        max_nodes = Overlay.MAX_NODES,
+        max_banners = Overlay.MAX_BANNERS
     })
     self.render_dirty = true
+    self.render_coroutine = nil
+    self.render_result = nil
     self.render_attempts = 0
     self.next_render_at = nil
     self.projection_size = nil
     self.projected_points = {}
     self:_diagnostic("model", string.format(
-        "PALTR_MAP_OVERLAY_MODEL | boundaries=%d | segments=%d | nodes=%d",
+        "PALTR_MAP_OVERLAY_MODEL | boundaries=%d | segments=%d | nodes=%d"
+            .. " | banners=%d",
         #(self.snapshot and self.snapshot.territories
             and self.snapshot.territories.boundaries or {}),
         tonumber(self.model.segment_count) or 0,
-        tonumber(self.model.node_count) or 0
+        tonumber(self.model.node_count) or 0,
+        tonumber(self.model.banner_count) or 0
     ))
 end
 
@@ -1063,6 +1090,8 @@ function Overlay:request_discovery(source)
         show(self.widget)
         self.map_was_rendered = true
         self.render_dirty = true
+        self.render_coroutine = nil
+        self.render_result = nil
         self.render_attempts = 0
         self.next_render_at = nil
         self.projection_size = nil
@@ -1317,6 +1346,8 @@ function Overlay:_clear_runtime(forget_map)
     self.widget = nil
     self.controls = {}
     self.render_dirty = true
+    self.render_coroutine = nil
+    self.render_result = nil
     self.render_attempts = 0
     self.next_render_at = nil
     self.projection_size = nil
@@ -1333,7 +1364,7 @@ function Overlay:_clear_runtime(forget_map)
     end
 end
 
-function Overlay:_render_segments()
+function Overlay:_render_segments(throttle)
     local used = 0
     local stats = {
         controls = 0, inners = 0, projected = 0, slots = 0,
@@ -1374,19 +1405,157 @@ function Overlay:_render_segments()
         elseif valid_object(control) then
             hide(control)
         end
+        if valid_object(control) and type(throttle) == "function" then
+            throttle()
+        end
     end
     for index = used + 1, Overlay.MAX_SEGMENTS do
-        hide(self:_control(control_name("TerritorySegment", index)))
+        local control = self:_control(control_name("TerritorySegment", index))
+        hide(control)
+        if valid_object(control) and type(throttle) == "function" then
+            throttle()
+        end
     end
     return used, stats
 end
 
-function Overlay:_render_nodes()
+function Overlay:_render_fills(throttle)
+    local entries = {}
+    local boundaries = self.model.boundaries or {}
+    local remaining = Overlay.MAX_FILLS
+    for boundary_index, boundary in ipairs(boundaries) do
+        if remaining <= 0 then break end
+        local points, normalized = {}, false
+        for _, world in ipairs(boundary.points or {}) do
+            local projected = self:_project_cached(world)
+            if projected == nil then points = {}; break end
+            if projected.normalized == true then normalized = true; break end
+            table.insert(points, projected)
+        end
+        if not normalized and #points >= 3 then
+            local boundary_count = #boundaries - boundary_index + 1
+            local quota = math.max(1, math.floor(remaining / boundary_count))
+            local spans = TerritoryMapModel.scanline_spans(points, {
+                spacing = 4,
+                max_spans = quota
+            })
+            for _, span in ipairs(spans) do
+                table.insert(entries, {
+                    span = span,
+                    color = boundary.fill_color
+                })
+            end
+            remaining = Overlay.MAX_FILLS - #entries
+        end
+    end
+
+    local used = 0
+    for index, entry in ipairs(entries) do
+        local control = self:_control(control_name("TerritoryFill", index))
+        local span = entry.span
+        if valid_object(control) and span.width > 0
+            and configure_canvas_slot(control, {
+                x = span.x,
+                y = span.y - span.height / 2,
+                width = span.width,
+                height = span.height,
+                angle = 0,
+                z_order = Overlay.FILL_Z_ORDER
+            }) then
+            set_color(control, entry.color)
+            show(control)
+            used = index
+        elseif valid_object(control) then
+            hide(control)
+        end
+        if valid_object(control) and type(throttle) == "function" then
+            throttle()
+        end
+    end
+    for index = used + 1, Overlay.MAX_FILLS do
+        local control = self:_control(control_name("TerritoryFill", index))
+        hide(control)
+        if valid_object(control) and type(throttle) == "function" then
+            throttle()
+        end
+    end
+    return used, { entries = #entries }
+end
+
+local function banner_status(status)
+    if status == "WAR" then return "SAVAS" end
+    if status == "ALLIANCE" then return "ITTIFAK" end
+    if status == "PENDING" then return "BEKLIYOR" end
+    if status == "OWN" then return "BIZIM TOPRAK" end
+    return ""
+end
+
+function Overlay:_render_banners(throttle)
+    local used = 0
+    for index, banner in ipairs(self.model.banners or {}) do
+        local frame = self:_control(control_name("GuildBannerFrame", index))
+        local emblem = self:_control(control_name("GuildBannerEmblem", index))
+        local name = self:_control(control_name("GuildBannerName", index))
+        local stats = self:_control(control_name("GuildBannerStats", index))
+        local power = self:_control(control_name("GuildBannerPower", index))
+        local status = self:_control(control_name("GuildBannerStatus", index))
+        local position = self:_project_cached(banner.world)
+        if valid_object(frame) and position ~= nil then
+            local normalized = position.normalized == true
+            local width = normalized and Overlay.NORMALIZED_BANNER_WIDTH or 168
+            local height = normalized and Overlay.NORMALIZED_BANNER_HEIGHT or 78
+            local configured = configure_canvas_slot(frame, {
+                normalized = normalized,
+                anchor_x = position.x,
+                anchor_y = position.y,
+                alignment_x = 0.5,
+                alignment_y = 0.5,
+                x = normalized and 0 or position.x - width / 2,
+                y = normalized and 0 or position.y - height / 2,
+                width = width,
+                height = height,
+                angle = 0,
+                z_order = Overlay.BANNER_Z_ORDER,
+                render_scale = normalized
+                    and Overlay.NORMALIZED_BANNER_RENDER_SCALE or 1
+            })
+            local text_ok = configured
+                and set_text(emblem, banner.emblem_label, self.api.make_text)
+                and set_text(name, banner.guild_name, self.api.make_text)
+                and set_text(stats, banner.region_text, self.api.make_text)
+                and set_text(power, banner.power_text, self.api.make_text)
+                and set_text(status, banner_status(banner.status), self.api.make_text)
+            if text_ok then
+                set_color(frame, banner.color)
+                show(frame)
+                used = index
+            else
+                hide(frame)
+            end
+        elseif valid_object(frame) then
+            hide(frame)
+        end
+        if valid_object(frame) and type(throttle) == "function" then
+            throttle()
+        end
+    end
+    for index = used + 1, Overlay.MAX_BANNERS do
+        local frame = self:_control(control_name("GuildBannerFrame", index))
+        hide(frame)
+        if valid_object(frame) and type(throttle) == "function" then
+            throttle()
+        end
+    end
+    return used
+end
+
+function Overlay:_render_nodes(throttle)
     local used = 0
     local stats = {
         controls = 0, projected = 0, slots = 0,
         label_controls = 0, label_slots = 0
     }
+    self.node_hover = {}
     local positions = {}
     local centroids = {
         normalized = { x = 0, y = 0, count = 0, normalized = true },
@@ -1416,6 +1585,10 @@ function Overlay:_render_nodes()
         local label_text = self:_control(
             control_name("TerritoryNodeLabelText", index)
         )
+        local icon_text = self:_control(
+            control_name("TerritoryNodeIconText", index)
+        )
+        local hit = self:_control(control_name("TerritoryNodeHit", index))
         if valid_object(control) then stats.controls = stats.controls + 1 end
         if valid_object(label) and valid_object(label_text) then
             stats.label_controls = stats.label_controls + 1
@@ -1445,6 +1618,8 @@ function Overlay:_render_nodes()
             local configured = configure_canvas_slot(control, layout)
             if configured then
                 set_color(control, node.color)
+                set_text(icon_text, node.node_type == "CAPITAL" and "B" or "K",
+                    self.api.make_text)
                 show(control)
                 used = index
                 stats.slots = stats.slots + 1
@@ -1461,25 +1636,64 @@ function Overlay:_render_nodes()
                         Overlay.node_label_text(node),
                         self.api.make_text
                     ) then
-                    show(label)
+                    hide(label)
                     stats.label_slots = stats.label_slots + 1
                 elseif valid_object(label) then
                     hide(label)
                 end
+                local hit_size = size + (position.normalized == true and 1 or 10)
+                local hit_layout = {
+                    normalized = position.normalized == true,
+                    anchor_x = position.x,
+                    anchor_y = position.y,
+                    alignment_x = 0.5,
+                    alignment_y = 0.5,
+                    x = position.normalized == true and 0
+                        or position.x - hit_size / 2,
+                    y = position.normalized == true and 0
+                        or position.y - hit_size / 2,
+                    width = hit_size,
+                    height = hit_size,
+                    angle = 0,
+                    z_order = 35
+                }
+                if valid_object(hit)
+                    and configure_canvas_slot(hit, hit_layout) then
+                    show_interactive(hit)
+                    self.node_hover[index] = { hit = hit, label = label }
+                elseif valid_object(hit) then
+                    hide(hit)
+                end
             else
                 hide(control)
                 hide(label)
+                hide(hit)
             end
         elseif valid_object(control) then
             hide(control)
             hide(label)
+            hide(hit)
+        end
+        if valid_object(control) and type(throttle) == "function" then
+            throttle()
         end
     end
     for index = used + 1, Overlay.MAX_NODES do
         hide(self:_control(control_name("TerritoryNode", index)))
         hide(self:_control(control_name("TerritoryNodeLabel", index)))
+        hide(self:_control(control_name("TerritoryNodeHit", index)))
+        local control = self:_control(control_name("TerritoryNode", index))
+        if valid_object(control) and type(throttle) == "function" then
+            throttle()
+        end
     end
     return used, stats
+end
+
+function Overlay:_update_hover_labels()
+    for _, item in pairs(self.node_hover or {}) do
+        if is_hovered(item.hit) then show(item.label) else hide(item.label) end
+    end
 end
 
 function Overlay:_tick()
@@ -1522,26 +1736,84 @@ function Overlay:_tick()
 
     if valid_object(self.widget) then
         self:_request_snapshot(now)
-        if self.render_dirty ~= true then return end
+        self:_update_hover_labels()
+        if self.render_dirty ~= true and self.render_coroutine == nil then
+            return
+        end
         if self.next_render_at ~= nil and now < self.next_render_at then return end
-        self.render_dirty = false
-        local rendered_segments, segment_stats = self:_render_segments()
-        local rendered_nodes, node_stats = self:_render_nodes()
+        if self.render_coroutine == nil then
+            self.render_dirty = false
+            self.render_result = nil
+            self.render_coroutine = coroutine.create(function()
+                local budget = 0
+                local function throttle()
+                    budget = budget + 1
+                    if budget >= Overlay.RENDER_BATCH_SIZE then
+                        budget = 0
+                        coroutine.yield()
+                    end
+                end
+                local rendered_fills, fill_stats = self:_render_fills(throttle)
+                local rendered_segments, segment_stats =
+                    self:_render_segments(throttle)
+                local rendered_nodes, node_stats = self:_render_nodes(throttle)
+                local rendered_banners = self:_render_banners(throttle)
+                self.render_result = {
+                    rendered_fills = rendered_fills,
+                    fill_stats = fill_stats,
+                    rendered_segments = rendered_segments,
+                    segment_stats = segment_stats,
+                    rendered_nodes = rendered_nodes,
+                    node_stats = node_stats,
+                    rendered_banners = rendered_banners
+                }
+            end)
+        end
+        local resumed, render_error = coroutine.resume(self.render_coroutine)
+        if not resumed then
+            self:_diagnostic("render_error",
+                "PALTR_MAP_OVERLAY_RENDER_FAILED | " .. tostring(render_error))
+            self.render_coroutine = nil
+            self.render_result = nil
+            return
+        end
+        if coroutine.status(self.render_coroutine) ~= "dead" then return end
+        self.render_coroutine = nil
+        local render = self.render_result or {}
+        self.render_result = nil
+        local rendered_fills = tonumber(render.rendered_fills) or 0
+        local fill_stats = render.fill_stats or { entries = 0 }
+        local rendered_segments = tonumber(render.rendered_segments) or 0
+        local segment_stats = render.segment_stats or {
+            controls = 0, inners = 0, projected = 0, slots = 0,
+            normalized = 0
+        }
+        local rendered_nodes = tonumber(render.rendered_nodes) or 0
+        local node_stats = render.node_stats or {
+            controls = 0, projected = 0, slots = 0,
+            label_controls = 0, label_slots = 0
+        }
+        local rendered_banners = tonumber(render.rendered_banners) or 0
         local first_segment = self.model.segments and self.model.segments[1]
         local sample_first = first_segment
             and self:_project_cached(first_segment.first) or nil
         local sample_second = first_segment
             and self:_project_cached(first_segment.second) or nil
         self:_diagnostic("render", string.format(
-            "PALTR_MAP_OVERLAY_RENDER | segments=%d/%d | nodes=%d/%d"
+            "PALTR_MAP_OVERLAY_RENDER | fills=%d/%d | segments=%d/%d"
+                .. " | nodes=%d/%d | banners=%d/%d"
                 .. " | segment_controls=%d | inners=%d | projected=%d | slots=%d"
                 .. " | node_controls=%d | projected=%d | slots=%d"
                 .. " | labels=%d/%d"
                 .. " | sample=%.2f,%.2f>%.2f,%.2f",
+            rendered_fills,
+            tonumber(fill_stats.entries) or 0,
             rendered_segments,
             tonumber(self.model.segment_count) or 0,
             rendered_nodes,
             tonumber(self.model.node_count) or 0,
+            rendered_banners,
+            tonumber(self.model.banner_count) or 0,
             segment_stats.controls,
             segment_stats.inners,
             segment_stats.projected,
@@ -1567,6 +1839,7 @@ function Overlay:_tick()
             self.render_attempts = self.render_attempts + 1
             self.next_render_at = now + Overlay.RENDER_RETRY_INTERVAL_SECONDS
             self.render_dirty = true
+            self.render_coroutine = nil
             self.projected_points = {}
         else
             self.render_attempts = 0

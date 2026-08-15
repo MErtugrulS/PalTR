@@ -6,6 +6,7 @@
 #include "Blueprint/WidgetTree.h"
 #include "Components/Border.h"
 #include "Components/BorderSlot.h"
+#include "Components/Button.h"
 #include "Components/CanvasPanel.h"
 #include "Components/CanvasPanelSlot.h"
 #include "Components/HorizontalBox.h"
@@ -13,6 +14,8 @@
 #include "Components/SizeBox.h"
 #include "Components/SizeBoxSlot.h"
 #include "Components/TextBlock.h"
+#include "Components/VerticalBox.h"
+#include "Components/VerticalBoxSlot.h"
 #include "Engine/Blueprint.h"
 #include "Kismet2/BlueprintEditorUtils.h"
 #include "Kismet2/KismetEditorUtilities.h"
@@ -29,7 +32,9 @@ namespace PalTRUIMapOverlay
             TEXT("/Game/Mods/PalTRUI/WBP_PalTRMapOverlay");
         constexpr TCHAR AssetName[] = TEXT("WBP_PalTRMapOverlay");
         constexpr int32 SegmentCount = 512;
+        constexpr int32 FillCount = 384;
         constexpr int32 NodeCount = 64;
+        constexpr int32 GuildBannerCount = 16;
 
         FLinearColor FromSRGB(
             const uint8 R,
@@ -124,6 +129,153 @@ namespace PalTRUIMapOverlay
             Slot->SetSize(FVector2D(1.0f, 1.0f));
             Slot->SetAlignment(FVector2D::ZeroVector);
             Slot->SetZOrder(ZOrder);
+        }
+
+        UTextBlock* MakeRuntimeText(
+            UWidgetTree* Tree,
+            const FName Name,
+            const TCHAR* Initial,
+            const int32 Size,
+            const FLinearColor Color
+        )
+        {
+            UTextBlock* Text = Tree->ConstructWidget<UTextBlock>(
+                UTextBlock::StaticClass(), Name
+            );
+            Text->bIsVariable = true;
+            Text->SetText(FText::FromString(Initial));
+            Text->SetColorAndOpacity(FSlateColor(Color));
+            Text->SetJustification(ETextJustify::Center);
+            Text->SetAutoWrapText(false);
+            Text->SetShadowOffset(FVector2D(1.0f, 1.0f));
+            Text->SetShadowColorAndOpacity(FromSRGB(0, 0, 0, 0.9f));
+            FSlateFontInfo Font = Text->GetFont();
+            Font.Size = Size;
+            Text->SetFont(Font);
+            return Text;
+        }
+
+        bool EnsureFill(UWidgetTree* Tree, UCanvasPanel* Root, int32 Index)
+        {
+            const FName Name(*FString::Printf(TEXT("TerritoryFill%03d"), Index));
+            UBorder* Fill = Cast<UBorder>(Tree->FindWidget(Name));
+            if (!Fill)
+            {
+                Fill = MakeSolid(Tree, Name, FromSRGB(47, 128, 237, 0.14f));
+                AddPoolControl(Root, Fill, 10);
+            }
+            Fill->Modify();
+            Fill->SetBrushColor(FromSRGB(47, 128, 237, 0.14f));
+            Fill->SetVisibility(ESlateVisibility::Collapsed);
+            return true;
+        }
+
+        bool EnsureNodeVisual(
+            UWidgetTree* Tree,
+            UCanvasPanel* Root,
+            const int32 Index
+        )
+        {
+            const FName NodeName(*FString::Printf(TEXT("TerritoryNode%03d"), Index));
+            const FName IconName(*FString::Printf(
+                TEXT("TerritoryNodeIconText%03d"), Index
+            ));
+            const FName HitName(*FString::Printf(
+                TEXT("TerritoryNodeHit%03d"), Index
+            ));
+            UBorder* Node = Cast<UBorder>(Tree->FindWidget(NodeName));
+            if (!Node)
+            {
+                Node = MakeSolid(Tree, NodeName, FromSRGB(232, 176, 69, 0.96f));
+                AddPoolControl(Root, Node, 30);
+            }
+            UTextBlock* Icon = Cast<UTextBlock>(Tree->FindWidget(IconName));
+            if (!Icon)
+            {
+                Icon = MakeRuntimeText(
+                    Tree, IconName, TEXT("K"), 9,
+                    FromSRGB(248, 243, 229)
+                );
+                Node->SetContent(Icon);
+            }
+            UButton* Hit = Cast<UButton>(Tree->FindWidget(HitName));
+            if (!Hit)
+            {
+                Hit = Tree->ConstructWidget<UButton>(UButton::StaticClass(), HitName);
+                Hit->bIsVariable = true;
+                Hit->SetBackgroundColor(FromSRGB(255, 255, 255, 0.001f));
+                Hit->SetColorAndOpacity(FLinearColor::Transparent);
+                Hit->SetVisibility(ESlateVisibility::Collapsed);
+                UCanvasPanelSlot* Slot = Root->AddChildToCanvas(Hit);
+                Slot->SetPosition(FVector2D::ZeroVector);
+                Slot->SetSize(FVector2D(1.0f, 1.0f));
+                Slot->SetZOrder(35);
+            }
+            Node->SetPadding(FMargin(1.0f));
+            Node->SetVisibility(ESlateVisibility::Collapsed);
+            Icon->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
+            Hit->SetVisibility(ESlateVisibility::Collapsed);
+            return true;
+        }
+
+        void AddBannerLine(UVerticalBox* Box, UTextBlock* Text, float Bottom)
+        {
+            UVerticalBoxSlot* Slot = Box->AddChildToVerticalBox(Text);
+            Slot->SetHorizontalAlignment(HAlign_Fill);
+            Slot->SetPadding(FMargin(0, 0, 0, Bottom));
+        }
+
+        bool EnsureGuildBanner(
+            UWidgetTree* Tree,
+            UCanvasPanel* Root,
+            const int32 Index
+        )
+        {
+            const FString Suffix = FString::Printf(TEXT("%03d"), Index);
+            UBorder* Frame = Cast<UBorder>(Tree->FindWidget(
+                FName(*(TEXT("GuildBannerFrame") + Suffix))
+            ));
+            if (Frame)
+            {
+                Frame->SetVisibility(ESlateVisibility::Collapsed);
+                return true;
+            }
+            Frame = MakeSolid(
+                Tree, FName(*(TEXT("GuildBannerFrame") + Suffix)),
+                FromSRGB(47, 128, 237, 0.92f)
+            );
+            Frame->SetPadding(FMargin(2.0f));
+            UBorder* Body = MakeSolid(
+                Tree, FName(*(TEXT("GuildBannerBody") + Suffix)),
+                FromSRGB(5, 15, 22, 0.90f)
+            );
+            Body->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
+            Body->SetPadding(FMargin(7.0f, 5.0f));
+            UVerticalBox* Lines = Tree->ConstructWidget<UVerticalBox>(
+                UVerticalBox::StaticClass(),
+                FName(*(TEXT("GuildBannerLines") + Suffix))
+            );
+            Lines->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
+            AddBannerLine(Lines, MakeRuntimeText(Tree,
+                FName(*(TEXT("GuildBannerEmblem") + Suffix)), TEXT("KLAN"), 10,
+                FromSRGB(232, 176, 69)), 1.0f);
+            AddBannerLine(Lines, MakeRuntimeText(Tree,
+                FName(*(TEXT("GuildBannerName") + Suffix)), TEXT("Klan"), 13,
+                FromSRGB(248, 243, 229)), 1.0f);
+            AddBannerLine(Lines, MakeRuntimeText(Tree,
+                FName(*(TEXT("GuildBannerStats") + Suffix)), TEXT("1 Bolge"), 9,
+                FromSRGB(219, 226, 230)), 0.0f);
+            AddBannerLine(Lines, MakeRuntimeText(Tree,
+                FName(*(TEXT("GuildBannerPower") + Suffix)), TEXT("Guc: Yakinda"), 8,
+                FromSRGB(165, 180, 190)), 0.0f);
+            AddBannerLine(Lines, MakeRuntimeText(Tree,
+                FName(*(TEXT("GuildBannerStatus") + Suffix)), TEXT(""), 8,
+                FromSRGB(232, 176, 69)), 0.0f);
+            Body->SetContent(Lines);
+            Frame->SetContent(Body);
+            AddPoolControl(Root, Frame, 40);
+            Frame->SetVisibility(ESlateVisibility::Collapsed);
+            return true;
         }
 
         bool EnsureNodeLabel(
@@ -234,6 +386,10 @@ namespace PalTRUIMapOverlay
 
         const FLinearColor Neutral = FromSRGB(148, 163, 184, 0.90f);
         const FLinearColor BorderShadow = FromSRGB(4, 12, 17, 0.92f);
+        for (int32 Index = 1; Index <= FillCount; ++Index)
+        {
+            if (!EnsureFill(Tree, Root, Index)) return false;
+        }
         for (int32 Index = 1; Index <= SegmentCount; ++Index)
         {
             UBorder* Segment = MakeSolid(
@@ -258,16 +414,15 @@ namespace PalTRUIMapOverlay
         const FLinearColor Gold = FromSRGB(232, 176, 69, 0.96f);
         for (int32 Index = 1; Index <= NodeCount; ++Index)
         {
-            UBorder* Node = MakeSolid(
-                Tree,
-                FName(*FString::Printf(TEXT("TerritoryNode%03d"), Index)),
-                Gold
-            );
-            AddPoolControl(Root, Node, 30);
+            if (!EnsureNodeVisual(Tree, Root, Index)) return false;
             if (!EnsureNodeLabel(Tree, Root, Index))
             {
                 return false;
             }
+        }
+        for (int32 Index = 1; Index <= GuildBannerCount; ++Index)
+        {
+            if (!EnsureGuildBanner(Tree, Root, Index)) return false;
         }
 
         UBorder* Legend = Tree->ConstructWidget<UBorder>(
@@ -359,7 +514,7 @@ namespace PalTRUIMapOverlay
         return true;
     }
 
-    bool UpdateTerritoryMapOverlayLabels()
+    bool UpdateTerritoryMapOverlayTerritories()
     {
         UWidgetBlueprint* Blueprint = LoadObject<UWidgetBlueprint>(
             nullptr,
@@ -381,12 +536,21 @@ namespace PalTRUIMapOverlay
         Blueprint->Modify();
         Tree->Modify();
         Root->Modify();
+        for (int32 Index = 1; Index <= FillCount; ++Index)
+        {
+            if (!EnsureFill(Tree, Root, Index)) return false;
+        }
         for (int32 Index = 1; Index <= NodeCount; ++Index)
         {
+            if (!EnsureNodeVisual(Tree, Root, Index)) return false;
             if (!EnsureNodeLabel(Tree, Root, Index))
             {
                 return false;
             }
+        }
+        for (int32 Index = 1; Index <= GuildBannerCount; ++Index)
+        {
+            if (!EnsureGuildBanner(Tree, Root, Index)) return false;
         }
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
         FKismetEditorUtilities::CompileBlueprint(Blueprint);
@@ -403,8 +567,10 @@ namespace PalTRUIMapOverlay
         UE_LOG(
             LogTemp,
             Display,
-            TEXT("PALTR_TERRITORY_MAP_LABELS_UPDATED | labels=%d"),
-            NodeCount
+            TEXT("PALTR_TERRITORY_MAP_UPDATED | fills=%d | nodes=%d | banners=%d"),
+            FillCount,
+            NodeCount,
+            GuildBannerCount
         );
         return true;
     }
@@ -441,10 +607,20 @@ namespace PalTRUIMapOverlay
                 return false;
             }
         }
+        for (int32 Index = 1; Index <= FillCount; ++Index)
+        {
+            if (!Cast<UBorder>(Blueprint->WidgetTree->FindWidget(
+                FName(*FString::Printf(TEXT("TerritoryFill%03d"), Index))
+            ))) return false;
+        }
         for (int32 Index = 1; Index <= NodeCount; ++Index)
         {
             if (!Cast<UBorder>(Blueprint->WidgetTree->FindWidget(
                 FName(*FString::Printf(TEXT("TerritoryNode%03d"), Index))
+            )) || !Cast<UTextBlock>(Blueprint->WidgetTree->FindWidget(
+                FName(*FString::Printf(TEXT("TerritoryNodeIconText%03d"), Index))
+            )) || !Cast<UButton>(Blueprint->WidgetTree->FindWidget(
+                FName(*FString::Printf(TEXT("TerritoryNodeHit%03d"), Index))
             )) || !Cast<UBorder>(Blueprint->WidgetTree->FindWidget(
                 FName(*FString::Printf(TEXT("TerritoryNodeLabel%03d"), Index))
             )) || !Cast<UTextBlock>(Blueprint->WidgetTree->FindWidget(
@@ -462,6 +638,14 @@ namespace PalTRUIMapOverlay
                 return false;
             }
         }
+        for (int32 Index = 1; Index <= GuildBannerCount; ++Index)
+        {
+            if (!Cast<UBorder>(Blueprint->WidgetTree->FindWidget(
+                FName(*FString::Printf(TEXT("GuildBannerFrame%03d"), Index))
+            )) || !Cast<UTextBlock>(Blueprint->WidgetTree->FindWidget(
+                FName(*FString::Printf(TEXT("GuildBannerName%03d"), Index))
+            ))) return false;
+        }
         if (!Blueprint->GeneratedClass
             || !Blueprint->WidgetTree->FindWidget(TEXT("TerritoryLegendFrame")))
         {
@@ -476,10 +660,12 @@ namespace PalTRUIMapOverlay
         UE_LOG(
             LogTemp,
             Display,
-            TEXT("PALTR_TERRITORY_MAP_OVERLAY_VERIFIED | segments=%d | nodes=%d | labels=%d"),
+            TEXT("PALTR_TERRITORY_MAP_OVERLAY_VERIFIED | fills=%d | segments=%d | nodes=%d | labels=%d | banners=%d"),
+            FillCount,
             SegmentCount,
             NodeCount,
-            NodeCount
+            NodeCount,
+            GuildBannerCount
         );
         return true;
     }

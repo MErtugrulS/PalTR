@@ -6165,9 +6165,9 @@ int32 UPalTRUIAssetBuilderCommandlet::Main(const FString& Params)
         return PalTRUIMapOverlay::CreateTerritoryMapOverlay() ? 0 : 51;
     }
 
-    if (FParse::Param(*Params, TEXT("UpdateTerritoryMapOverlayLabels")))
+    if (FParse::Param(*Params, TEXT("UpdateTerritoryMapOverlay")))
     {
-        return PalTRUIMapOverlay::UpdateTerritoryMapOverlayLabels() ? 0 : 52;
+        return PalTRUIMapOverlay::UpdateTerritoryMapOverlayTerritories() ? 0 : 52;
     }
 
     if (FParse::Param(*Params, TEXT("VerifyTerritoryMapOverlay")))

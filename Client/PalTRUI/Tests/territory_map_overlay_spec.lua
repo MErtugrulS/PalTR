@@ -263,6 +263,89 @@ if node_label_value ~= "FText:NWO Başkenti" then
     error("node label receives snapshot display name")
 end
 near(anchored_node_stats.label_slots, 1, "normalized node label renders")
+near(node_label_slot.visibility, 1, "node label is hidden until hover")
+
+local node_hit, node_hit_slot = canvas_slot_probe()
+local hovered = false
+function node_hit:IsHovered() return hovered end
+local node_icon_value = nil
+local node_icon = object({
+    SetText = function(_, value) node_icon_value = value end
+})
+anchor_render_overlay.controls.TerritoryNodeHit001 = node_hit
+anchor_render_overlay.controls.TerritoryNodeIconText001 = node_icon
+anchor_render_overlay:_render_nodes()
+near(node_hit_slot.visibility, 0, "small node hover hitbox is interactive")
+near(node_label_slot.visibility, 1, "label remains hidden without hover")
+hovered = true
+anchor_render_overlay:_update_hover_labels()
+near(node_label_slot.visibility, 3, "label appears on icon hover")
+hovered = false
+anchor_render_overlay:_update_hover_labels()
+near(node_label_slot.visibility, 1, "label hides after hover ends")
+if node_icon_value ~= "FText:B" then
+    error("capital receives compact castle marker text")
+end
+
+local fill_control, fill_slot = canvas_slot_probe()
+local fill_overlay = Overlay.new({ log = function() end })
+fill_overlay.controls.TerritoryFill001 = fill_control
+fill_overlay.model = {
+    boundaries = {
+        {
+            fill_color = { r = 0.2, g = 0.4, b = 0.6, a = 0.14 },
+            points = {
+                { x = 0, y = 0 }, { x = 100, y = 0 },
+                { x = 100, y = 20 }, { x = 0, y = 20 }
+            }
+        }
+    }
+}
+fill_overlay._project_cached = function(_, world)
+    return { x = world.x, y = world.y }
+end
+local rendered_fills = fill_overlay:_render_fills()
+near(rendered_fills, 1, "scanline fill uses pooled control")
+near(fill_slot.position.X, 0, "fill starts inside polygon")
+near(fill_slot.size.X, 100, "fill stops at polygon edge")
+near(fill_slot.color.A, 0.14, "fill keeps fourteen percent opacity")
+
+local banner_frame, banner_slot = canvas_slot_probe()
+local function text_probe()
+    local probe = object({ value = nil })
+    function probe:SetText(value) self.value = value end
+    return probe
+end
+local banner_name, banner_stats = text_probe(), text_probe()
+local banner_overlay = Overlay.new({
+    log = function() end,
+    make_text = function(value) return "FText:" .. value end
+})
+banner_overlay.controls = {
+    GuildBannerFrame001 = banner_frame,
+    GuildBannerEmblem001 = text_probe(),
+    GuildBannerName001 = banner_name,
+    GuildBannerStats001 = banner_stats,
+    GuildBannerPower001 = text_probe(),
+    GuildBannerStatus001 = text_probe()
+}
+banner_overlay.model = { banners = {
+    {
+        world = { x = 50, y = 60 }, guild_name = "NWO",
+        emblem_label = "KURT", region_text = "4 Bolge (1 Baskent, 3 Karakol)",
+        power_text = "Guc: Yakinda", status = "OWN",
+        color = { r = 0.1, g = 0.3, b = 0.8, a = 0.96 }
+    }
+} }
+banner_overlay._project_cached = function(_, world)
+    return { x = world.x, y = world.y }
+end
+near(banner_overlay:_render_banners(), 1, "guild center banner renders")
+if banner_name.value ~= "FText:NWO"
+    or banner_stats.value ~= "FText:4 Bolge (1 Baskent, 3 Karakol)" then
+    error("guild banner receives name and real territory counts")
+end
+near(banner_slot.z_order, 40, "guild banner renders above node icons")
 
 local cached_projection_calls = 0
 projection_overlay.projected_points = {}
@@ -914,5 +997,36 @@ near(attach_calls, 2, "temporary attach failure is retried once")
 if retry_overlay.widget == nil then
     error("delayed attach retry recovers while map remains visible")
 end
+
+local batch_now, batch_updates = 0, 0
+local batch_overlay = Overlay.new({
+    now = function() return batch_now end,
+    log = function() end
+})
+batch_overlay.map_expected_open = true
+batch_overlay.map_body = object({ name = "WBP_Map_Body_C Batch" })
+batch_overlay.parent_canvas = object({ name = "Canvas Batch" })
+batch_overlay.widget = object({ name = "WBP_PalTRMapOverlay_C Batch" })
+batch_overlay.snapshot = {}
+batch_overlay.model = {
+    boundaries = {}, segments = {}, nodes = {}, banners = {},
+    segment_count = 0, node_count = 0, banner_count = 0
+}
+batch_overlay._map_is_rendered = function() return true end
+for index = 1, 130 do
+    local control = object({})
+    function control:SetVisibility() batch_updates = batch_updates + 1 end
+    batch_overlay.controls[string.format("TerritoryFill%03d", index)] = control
+end
+batch_overlay:_tick()
+near(batch_updates, Overlay.RENDER_BATCH_SIZE,
+    "first tick updates only one bounded control batch")
+batch_now = 0.21
+batch_overlay:_tick()
+near(batch_updates, Overlay.RENDER_BATCH_SIZE * 2,
+    "second tick advances one additional control batch")
+batch_now = 0.42
+batch_overlay:_tick()
+near(batch_updates, 130, "final tick completes remaining pooled controls")
 
 print("PALTR_UI_TERRITORY_MAP_OVERLAY_TEST_OK")
