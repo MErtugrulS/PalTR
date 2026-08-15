@@ -19,7 +19,8 @@ local current_model = {
         { id = "CLAN", control = "ClanTabButton" },
         { id = "DIPLOMACY", control = "DiplomacyTabButton" },
         { id = "ALLIANCE", control = "AllianceTabButton" },
-        { id = "GUILDS", control = "ChatTabButton" }
+        { id = "GUILDS", control = "ChatTabButton" },
+        { id = "MANAGEMENT", control = "ManagementTabButton" }
     },
     views = {
         CLAN = {
@@ -89,6 +90,19 @@ local current_model = {
                     enabled = true
                 }
             }
+        },
+        MANAGEMENT = {
+            colors = {
+                { id = "azure", available = true },
+                { id = "cyan", available = false }
+            },
+            emblems = {
+                { id = "wolf", name = "Kurt" },
+                { id = "eagle", name = "Kartal" }
+            },
+            save_control = {
+                enabled = true
+            }
         }
     }
 }
@@ -140,6 +154,18 @@ local controller = {
             active_tab = tab_id,
             selected_guild = guild_key
         }, true
+    end,
+    select_guild_identity = function(_, kind, identity_id)
+        table.insert(calls, {
+            name = "select_guild_identity",
+            kind = kind,
+            identity_id = identity_id
+        })
+        return true, current_model, true
+    end,
+    request_guild_identity = function()
+        table.insert(calls, { name = "request_guild_identity" })
+        return true, { queued = true }
     end
 }
 local router = UIInteractionRouter.new(controller)
@@ -148,7 +174,8 @@ local tab_controls = {
     ClanTabButton = "CLAN",
     DiplomacyTabButton = "DIPLOMACY",
     AllianceTabButton = "ALLIANCE",
-    ChatTabButton = "GUILDS"
+    ChatTabButton = "GUILDS",
+    ManagementTabButton = "MANAGEMENT"
 }
 for control_name, tab_id in pairs(tab_controls) do
     local handled, model, rendered, route_error =
@@ -158,6 +185,37 @@ for control_name, tab_id in pairs(tab_controls) do
     equal(rendered, true, control_name .. " rendered")
     equal(route_error, nil, control_name .. " has no error")
 end
+
+local color_handled, color_model, color_rendered, color_error =
+    router:handle("GuildIdentityColorButton01")
+equal(color_handled, true, "guild identity color handled")
+equal(color_model, current_model, "guild identity color model returned")
+equal(color_rendered, true, "guild identity color rendered")
+equal(color_error, nil, "guild identity color has no error")
+equal(calls[#calls].name, "select_guild_identity",
+    "guild identity color routed")
+equal(calls[#calls].kind, "color", "guild identity color kind")
+equal(calls[#calls].identity_id, "azure", "guild identity color id")
+
+local emblem_handled, emblem_model, emblem_rendered, emblem_error =
+    router:handle("GuildIdentityEmblemButton02")
+equal(emblem_handled, true, "guild identity emblem handled")
+equal(emblem_model, current_model, "guild identity emblem model returned")
+equal(emblem_rendered, true, "guild identity emblem rendered")
+equal(emblem_error, nil, "guild identity emblem has no error")
+equal(calls[#calls].name, "select_guild_identity",
+    "guild identity emblem routed")
+equal(calls[#calls].kind, "emblem", "guild identity emblem kind")
+equal(calls[#calls].identity_id, "eagle", "guild identity emblem id")
+
+local identity_saved, identity_save_model, identity_save_rendered,
+    identity_save_error = router:handle("GuildIdentitySaveButton")
+equal(identity_saved, true, "guild identity save handled")
+equal(identity_save_model, current_model, "guild identity save model returned")
+equal(identity_save_rendered, true, "guild identity save rendered")
+equal(identity_save_error, nil, "guild identity save has no error")
+equal(calls[#calls].name, "request_guild_identity",
+    "guild identity save routed")
 
 local row_handled, row_model, row_rendered, row_error =
     router:handle("DiplomacyRelationRowButton02")

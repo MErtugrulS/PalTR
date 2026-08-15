@@ -74,10 +74,14 @@ local function relation_row(controller, control_name)
 end
 
 local function guild_identity_item(controller, control_name)
-    local kind, index = tostring(control_name or ""):match(
-        "^GuildIdentity(Color|Emblem)Button(%d%d)$"
-    )
-    if kind == nil then return nil, nil end
+    local name = tostring(control_name or "")
+    local kind = "Color"
+    local index = name:match("^GuildIdentityColorButton(%d%d)$")
+    if index == nil then
+        kind = "Emblem"
+        index = name:match("^GuildIdentityEmblemButton(%d%d)$")
+    end
+    if index == nil then return nil, nil end
     local model = current_model(controller)
     local management = model and model.views and model.views.MANAGEMENT or nil
     local items = management and (kind == "Color"
