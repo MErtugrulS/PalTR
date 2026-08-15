@@ -46,13 +46,25 @@ function UMGButtonHookPoller:poll_once()
 
     for _, state in ipairs(states) do
         local name = tostring(state.control or "")
-        local was_pressed = self.previous[name] == true
+        local previous = self.previous[name]
+        local was_pressed = type(previous) == "table"
+            and previous.pressed == true
         local released_over_control = was_pressed
             and state.pressed ~= true
             and state.hovered_available == true
             and state.hovered == true
-        self.previous[name] = state.pressed == true
-        if released_over_control then
+        local toggle_changed_over_control = type(previous) == "table"
+            and previous.checked_available == true
+            and state.checked_available == true
+            and previous.checked ~= (state.checked == true)
+            and state.hovered_available == true
+            and state.hovered == true
+        self.previous[name] = {
+            pressed = state.pressed == true,
+            checked_available = state.checked_available == true,
+            checked = state.checked == true
+        }
+        if released_over_control or toggle_changed_over_control then
             local handled, model, _, interaction_error =
                 self.router:handle(name)
             if type(self.on_result) == "function" then

@@ -73,4 +73,45 @@ local sampled_before = frame
 hook_callback()
 equal(frame, sampled_before, "inactive hook does not touch UMG")
 
+local toggle_frame = 0
+local toggle_routed = {}
+local toggle_callback = nil
+local toggle_poller = Poller.new({
+    widget_provider = function() return {} end,
+    control_names = { "DiplomacyTabButton" },
+    sampler = {
+        sample = function()
+            toggle_frame = toggle_frame + 1
+            return true, {{
+                control = "DiplomacyTabButton",
+                pressed = false,
+                checked_available = true,
+                checked = toggle_frame >= 2,
+                hovered_available = true,
+                hovered = toggle_frame >= 2
+            }}
+        end
+    },
+    router = {
+        handle = function(_, control)
+            table.insert(toggle_routed, control)
+            return true, { open = true }, true
+        end
+    },
+    register_hook = function(_, callback)
+        toggle_callback = callback
+        return "toggle-pre", "toggle-post"
+    end,
+    now = function() return 20 end,
+    poll_now = function() return toggle_frame + 1 end,
+    poll_interval_seconds = 0
+})
+equal(toggle_poller:start(), true, "toggle hook poller started")
+toggle_callback()
+equal(#toggle_routed, 0, "initial checkbox state is not routed")
+toggle_callback()
+equal(toggle_routed[1], "DiplomacyTabButton",
+    "checkbox change routes through runtime hook poller")
+toggle_poller:stop()
+
 print("PALTR_UI_UMG_BUTTON_HOOK_POLLER_TEST_OK")

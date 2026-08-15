@@ -186,4 +186,61 @@ equal(aliased_routes[1], "DiplomacyTabButton",
     "blueprint widget aliases to logical diplomacy control")
 aliased_poller:stop()
 
+local legacy_routes = {}
+local legacy_frames = {
+    { checked = false, hovered = false },
+    { checked = true, hovered = true }
+}
+local legacy_index = 0
+local legacy_toggle = {
+    IsChecked = function()
+        return legacy_frames[legacy_index].checked
+    end,
+    IsHovered = function()
+        return legacy_frames[legacy_index].hovered
+    end,
+    GetFName = function()
+        return { ToString = function() return "C_Diplomacy" end }
+    end,
+    GetChildrenCount = function() return 0 end
+}
+local legacy_root = {
+    GetFName = function()
+        return { ToString = function() return "Root" end }
+    end,
+    GetChildrenCount = function() return 1 end,
+    GetChildAt = function() return legacy_toggle end
+}
+local legacy_panel = { WidgetTree = { RootWidget = legacy_root } }
+local legacy_poller = UMGButtonPoller.new({
+    widget_provider = function() return legacy_panel end,
+    control_names = {
+        {
+            widgets = { "C_DiplomacyButton", "C_Diplomacy" },
+            control = "DiplomacyTabButton"
+        }
+    },
+    sampler = {
+        sample = function(panel, controls)
+            legacy_index = legacy_index + 1
+            return AliasedStateProbe.sample(panel, controls)
+        end
+    },
+    router = {
+        handle = function(_, control)
+            table.insert(legacy_routes, control)
+            return true, { open = true }, true
+        end
+    },
+    schedule_loop = function() end,
+    execute_in_game_thread = function(callback) callback() end
+})
+equal(legacy_poller:start(), true, "legacy toggle poller started")
+equal(legacy_poller:poll_once(), true, "legacy initial state sampled")
+equal(#legacy_routes, 0, "initial legacy state is not routed")
+equal(legacy_poller:poll_once(), true, "legacy checked change sampled")
+equal(legacy_routes[1], "DiplomacyTabButton",
+    "legacy checkbox aliases to logical diplomacy control")
+legacy_poller:stop()
+
 print("PALTR_UI_UMG_BUTTON_POLLER_TEST_OK")

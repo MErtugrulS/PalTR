@@ -38,8 +38,14 @@ if ENABLE_TERRITORY_MAP_OVERLAY then
 end
 local interactive_controls = {
     "CloseButton",
-    { widget = "C_HomeButton", control = "ClanTabButton" },
-    { widget = "C_DiplomacyButton", control = "DiplomacyTabButton" },
+    {
+        widgets = { "C_HomeButton", "C_Home" },
+        control = "ClanTabButton"
+    },
+    {
+        widgets = { "C_DiplomacyButton", "C_Diplomacy" },
+        control = "DiplomacyTabButton"
+    },
     { widget = "YonetimButton", control = "ManagementTabButton" },
     "AllianceTabButton",
     "ChatTabButton",
