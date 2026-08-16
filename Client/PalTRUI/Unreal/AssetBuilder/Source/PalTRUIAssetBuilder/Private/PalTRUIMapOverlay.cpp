@@ -193,7 +193,7 @@ namespace PalTRUIMapOverlay
             if (!Icon)
             {
                 Icon = MakeRuntimeText(
-                    Tree, IconName, TEXT("K"), 9,
+                    Tree, IconName, TEXT("K"), 72,
                     FromSRGB(248, 243, 229)
                 );
                 Node->SetContent(Icon);
@@ -211,7 +211,7 @@ namespace PalTRUIMapOverlay
                 Slot->SetSize(FVector2D(1.0f, 1.0f));
                 Slot->SetZOrder(35);
             }
-            Node->SetPadding(FMargin(1.0f));
+            Node->SetPadding(FMargin(8.0f));
             Node->SetVisibility(ESlateVisibility::Collapsed);
             Icon->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
             Hit->SetVisibility(ESlateVisibility::Collapsed);

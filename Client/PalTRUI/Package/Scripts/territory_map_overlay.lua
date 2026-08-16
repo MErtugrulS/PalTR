@@ -38,6 +38,10 @@ Overlay.BORDER_THICKNESS = 0.24
 Overlay.NORMALIZED_SEGMENT_SIZE = 0.45
 Overlay.NORMALIZED_CAPITAL_SIZE = 1.0
 Overlay.NORMALIZED_OUTPOST_SIZE = 0.72
+-- Render glyph markers on an 8x layout surface and counter-scale the widget.
+-- UMG rasterizes the star/diamond at the larger font size first, preventing
+-- the map transform from enlarging a 9px glyph into a blurred marker.
+Overlay.NODE_RENDER_SCALE = 1 / 8
 Overlay.CAPITAL_Z_ORDER = 40
 Overlay.OUTPOST_Z_ORDER = 30
 Overlay.FILL_Z_ORDER = 10
@@ -1910,17 +1914,20 @@ function Overlay:_render_nodes(throttle)
                 size = is_capital and Overlay.NORMALIZED_CAPITAL_SIZE
                     or Overlay.NORMALIZED_OUTPOST_SIZE
             end
+            local render_scale = Overlay.NODE_RENDER_SCALE
+            local layout_size = size / render_scale
             local layout = {
                 normalized = position.normalized == true,
                 anchor_x = position.x,
                 anchor_y = position.y,
                 x = position.normalized == true and 0
-                    or position.x - size / 2,
+                    or position.x - layout_size / 2,
                 y = position.normalized == true and 0
-                    or position.y - size / 2,
-                width = size,
-                height = size,
+                    or position.y - layout_size / 2,
+                width = layout_size,
+                height = layout_size,
                 angle = tonumber(node.angle) or 0,
+                render_scale = render_scale,
                 z_order = is_capital and Overlay.CAPITAL_Z_ORDER
                     or Overlay.OUTPOST_Z_ORDER
             }
