@@ -269,9 +269,10 @@
                                     <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                                     <TextBlock Text="PALTR KURULUMU" Style="{StaticResource Eyebrow}"
                                                VerticalAlignment="Center" />
-                                    <Button Grid.Column="1" Content="{Binding InstallationActionText}" Style="{StaticResource SecondaryButton}"
-                                            Padding="12,8" Command="{Binding InstallOrRepairCommand}"
-                                            IsEnabled="{Binding CanInstallOrRepair}" />
+                                     <Button Grid.Column="1" Content="{Binding InstallationActionText}" Style="{StaticResource SecondaryButton}"
+                                             Padding="12,8" Command="{Binding InstallOrRepairCommand}"
+                                             IsEnabled="{Binding CanInstallOrRepair}"
+                                             ToolTip="{Binding Installation.Detail}" />
                                 </Grid>
                             </Grid>
                         </Border>

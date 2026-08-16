@@ -97,21 +97,20 @@ public sealed class GitHubPalTRInstallationService : IInstallationService, IDisp
         }
         catch (Exception exception)
         {
-            InstallationSnapshot embeddedState = await embeddedInstaller.InspectAsync(cancellationToken);
-            if (embeddedState.CanInstall || embeddedState.CanRetry)
+            // GitHub erişilemese bile launcher ile birlikte gelen doğrulanmış paket
+            // tam kurulum ve onarım için kullanılabilir kalmalı.
+            InstallationActionResult fallback = await embeddedInstaller.InstallOrRepairAsync(cancellationToken);
+            if (fallback.Success)
             {
-                InstallationActionResult fallback = await embeddedInstaller.InstallOrRepairAsync(cancellationToken);
-                if (fallback.Success)
-                {
-                    return fallback;
-                }
+                return fallback;
             }
+
             return new InstallationActionResult(false, new InstallationSnapshot(
                 InstallationState.Failed,
                 "Güncelleme indirilemedi",
-                $"GitHub paketi alınamadı. {exception.Message}",
-                embeddedState.GameRoot,
-                embeddedState.PackageVersion));
+                $"Yerleşik kurulum da tamamlanamadı: {fallback.Snapshot.Detail} GitHub: {exception.Message}",
+                fallback.Snapshot.GameRoot,
+                fallback.Snapshot.PackageVersion));
         }
     }
 

@@ -115,12 +115,7 @@ public sealed class LocalPalTRInstallationService : IInstallationService
     public async Task<InstallationActionResult> InstallOrRepairAsync(CancellationToken cancellationToken = default)
     {
         InstallationSnapshot inspection = await InspectAsync(cancellationToken);
-        if (inspection.IsReady)
-        {
-            return new InstallationActionResult(true, inspection);
-        }
-
-        if (!inspection.CanInstall || inspection.GameRoot is null)
+        if ((!inspection.CanInstall && !inspection.CanRepair) || inspection.GameRoot is null)
         {
             return new InstallationActionResult(false, inspection);
         }
@@ -146,8 +141,9 @@ public sealed class LocalPalTRInstallationService : IInstallationService
             foreach (FileMapping mapping in BuildMappings(inspection.GameRoot))
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                if (File.Exists(mapping.Destination) &&
-                    (mapping.CopyOnlyIfMissing || FilesMatch(mapping.Source, mapping.Destination)))
+                // Kullanıcı ayar dosyalarını koru; diğer tüm PalTR/UE4SS dosyalarını
+                // yeniden yazarak "Onar / Yeniden Kur" işlemini gerçek bir onarım yap.
+                if (File.Exists(mapping.Destination) && mapping.CopyOnlyIfMissing)
                 {
                     continue;
                 }

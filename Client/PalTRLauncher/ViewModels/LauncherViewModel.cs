@@ -121,13 +121,15 @@ public sealed class LauncherViewModel : ObservableObject
         }
     }
 
-    public bool CanInstallOrRepair => Installation.CanInstall || Installation.CanRetry;
+    public bool CanInstallOrRepair =>
+        Installation.CanInstall || Installation.CanRepair || Installation.CanRetry;
 
     public string InstallationActionText => Installation.State switch
     {
-        InstallationState.Ready => "GÜNCEL",
+        InstallationState.Ready => "ONAR / YENİDEN KUR",
         InstallationState.Checking => "KONTROL EDİLİYOR",
-        _ => "GÜNCELLE"
+        InstallationState.InstallRequired => "KUR / GÜNCELLE",
+        _ => "TEKRAR DENE"
     };
 
     public string LoginIdentifier
@@ -281,6 +283,7 @@ public sealed class LauncherViewModel : ObservableObject
         Installation = InstallationSnapshot.Checking;
         InstallationActionResult result = await installationService.InstallOrRepairAsync();
         Installation = result.Snapshot;
+        SetStatus(result.Success, $"{Installation.Title}: {Installation.Detail}");
         if (!result.Success)
         {
             return;

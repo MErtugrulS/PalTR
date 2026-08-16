@@ -18,6 +18,7 @@ public sealed record InstallationSnapshot(
 {
     public bool IsReady => State == InstallationState.Ready;
     public bool CanInstall => State == InstallationState.InstallRequired;
+    public bool CanRepair => State == InstallationState.Ready;
     public bool CanRetry => State is InstallationState.Blocked or InstallationState.Failed;
 
     public static InstallationSnapshot Checking { get; } = new(
