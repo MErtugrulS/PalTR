@@ -186,6 +186,23 @@ local function simplify_closed(points, maximum)
     return result
 end
 
+local function smooth_closed(points, maximum)
+    if #points < 4 then return points end
+    local rounded = {}
+    for index, current in ipairs(points) do
+        local following = points[index % #points + 1]
+        table.insert(rounded, {
+            x = current.x * 0.75 + following.x * 0.25,
+            y = current.y * 0.75 + following.y * 0.25
+        })
+        table.insert(rounded, {
+            x = current.x * 0.25 + following.x * 0.75,
+            y = current.y * 0.25 + following.y * 0.75
+        })
+    end
+    return simplify_closed(rounded, maximum)
+end
+
 local function allocate_quotas(boundaries, maximum)
     local total = 0
     for _, boundary in ipairs(boundaries) do total = total + #boundary.points end
@@ -285,7 +302,10 @@ function Model.build(snapshot, limits)
     local boundaries, segments = {}, {}
     for _, source in ipairs(raw_boundaries) do
         local raw = source.raw
-        local points = simplify_closed(source.points, source.quota)
+        local points = smooth_closed(
+            simplify_closed(source.points, source.quota),
+            source.quota
+        )
         local style = guild_style(raw.controller_guild,
             raw.controller_name, palette, identities)
         local status = status_for(raw.controller_guild, own_guild, relations)

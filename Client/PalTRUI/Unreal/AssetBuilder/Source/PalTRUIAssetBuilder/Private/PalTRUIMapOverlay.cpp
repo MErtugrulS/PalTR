@@ -11,6 +11,7 @@
 #include "Components/CanvasPanelSlot.h"
 #include "Components/HorizontalBox.h"
 #include "Components/HorizontalBoxSlot.h"
+#include "Components/Image.h"
 #include "Components/SizeBox.h"
 #include "Components/SizeBoxSlot.h"
 #include "Components/TextBlock.h"
@@ -120,7 +121,7 @@ namespace PalTRUIMapOverlay
 
         void AddPoolControl(
             UCanvasPanel* Root,
-            UBorder* Control,
+            UWidget* Control,
             const int32 ZOrder
         )
         {
@@ -183,20 +184,39 @@ namespace PalTRUIMapOverlay
             const FName HitName(*FString::Printf(
                 TEXT("TerritoryNodeHit%03d"), Index
             ));
-            UBorder* Node = Cast<UBorder>(Tree->FindWidget(NodeName));
+            UWidget* ExistingNode = Tree->FindWidget(NodeName);
+            UTextBlock* ExistingIcon = Cast<UTextBlock>(
+                Tree->FindWidget(IconName)
+            );
+            UImage* Node = Cast<UImage>(ExistingNode);
+            if (!Node && ExistingNode)
+            {
+                if (ExistingIcon)
+                {
+                    Tree->RemoveWidget(ExistingIcon);
+                    ExistingIcon = nullptr;
+                }
+                Tree->RemoveWidget(ExistingNode);
+                const FName LegacyName = MakeUniqueObjectName(
+                    Tree,
+                    ExistingNode->GetClass(),
+                    FName(*FString::Printf(
+                        TEXT("LegacyTerritoryNode%03d"), Index
+                    ))
+                );
+                ExistingNode->Rename(
+                    *LegacyName.ToString(),
+                    Tree,
+                    REN_DontCreateRedirectors | REN_ForceNoResetLoaders
+                );
+            }
             if (!Node)
             {
-                Node = MakeSolid(Tree, NodeName, FromSRGB(232, 176, 69, 0.96f));
-                AddPoolControl(Root, Node, 30);
-            }
-            UTextBlock* Icon = Cast<UTextBlock>(Tree->FindWidget(IconName));
-            if (!Icon)
-            {
-                Icon = MakeRuntimeText(
-                    Tree, IconName, TEXT("K"), 9,
-                    FromSRGB(248, 243, 229)
+                Node = Tree->ConstructWidget<UImage>(
+                    UImage::StaticClass(), NodeName
                 );
-                Node->SetContent(Icon);
+                Node->bIsVariable = true;
+                AddPoolControl(Root, Node, 30);
             }
             UButton* Hit = Cast<UButton>(Tree->FindWidget(HitName));
             if (!Hit)
@@ -211,9 +231,8 @@ namespace PalTRUIMapOverlay
                 Slot->SetSize(FVector2D(1.0f, 1.0f));
                 Slot->SetZOrder(35);
             }
-            Node->SetPadding(FMargin(1.0f));
+            Node->SetColorAndOpacity(FLinearColor::White);
             Node->SetVisibility(ESlateVisibility::Collapsed);
-            Icon->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
             Hit->SetVisibility(ESlateVisibility::Collapsed);
             return true;
         }
@@ -615,10 +634,8 @@ namespace PalTRUIMapOverlay
         }
         for (int32 Index = 1; Index <= NodeCount; ++Index)
         {
-            if (!Cast<UBorder>(Blueprint->WidgetTree->FindWidget(
+            if (!Cast<UImage>(Blueprint->WidgetTree->FindWidget(
                 FName(*FString::Printf(TEXT("TerritoryNode%03d"), Index))
-            )) || !Cast<UTextBlock>(Blueprint->WidgetTree->FindWidget(
-                FName(*FString::Printf(TEXT("TerritoryNodeIconText%03d"), Index))
             )) || !Cast<UButton>(Blueprint->WidgetTree->FindWidget(
                 FName(*FString::Printf(TEXT("TerritoryNodeHit%03d"), Index))
             )) || !Cast<UBorder>(Blueprint->WidgetTree->FindWidget(

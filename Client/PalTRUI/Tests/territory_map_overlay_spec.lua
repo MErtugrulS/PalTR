@@ -68,17 +68,17 @@ local capital_label_layout = Overlay.node_label_layout(
     { x = 0.5, y = 0.5, normalized = true }
 )
 near(capital_label_layout.x, 0, "capital label stays centered")
-near(capital_label_layout.y, -3.6, "capital label stays above marker")
-near(capital_label_layout.width, 108, "label uses high-resolution layout width")
-near(capital_label_layout.height, 19.2, "label uses high-resolution layout height")
-near(capital_label_layout.render_scale, 1 / 6, "label counter-scales map zoom")
+near(capital_label_layout.y, -2.0, "capital label stays above marker")
+near(capital_label_layout.width, 100, "label uses high-resolution layout width")
+near(capital_label_layout.height, 18, "label uses high-resolution layout height")
+near(capital_label_layout.render_scale, 1 / 10, "label counter-scales map zoom")
 local outpost_label_layout = Overlay.node_label_layout(
     { node_type = "OUTPOST" },
     2,
     { x = 0.7, y = 0.5, normalized = true },
     { x = 0.5, y = 0.5, normalized = true }
 )
-near(outpost_label_layout.x, 11, "outpost label fans out from cluster")
+near(outpost_label_layout.x, 6.1, "outpost label fans out from cluster")
 near(outpost_label_layout.y, 0, "horizontal outpost label keeps y")
 if Overlay.node_label_text({
     display_name = "NWO Başkenti", node_type = "CAPITAL"
@@ -332,6 +332,8 @@ local function canvas_slot_probe()
     function control:SetRenderTransformAngle() end
     function control:SetRenderScale(value) state.render_scale = value end
     function control:SetBrushColor(value) state.color = value end
+    function control:SetBrushFromMaterial(value) state.material = value end
+    function control:SetColorAndOpacity(value) state.image_color = value end
     function control:SetVisibility(value) state.visibility = value end
     return control, state
 end
@@ -347,6 +349,7 @@ local node_label_value = nil
 local node_label_text = object({
     SetText = function(_, value) node_label_value = value end
 })
+local native_camp_material = object({ name = "MI_UI_MapMarker_Camp" })
 local anchor_parent = object({ name = "Canvas_MapBody AnchorParent" })
 local anchor_render_overlay = Overlay.new({
     log = function() end,
@@ -356,6 +359,12 @@ local anchor_render_overlay = Overlay.new({
             return { x = 2000, y = 1000 }, "canvas_slot"
         end
         return nil
+    end,
+    load_asset = function(path)
+        if path ~= Overlay.NATIVE_NODE_MATERIALS.CAPITAL.asset then
+            error("unexpected native marker material")
+        end
+        return native_camp_material
     end
 })
 anchor_render_overlay.parent_canvas = anchor_parent
@@ -414,40 +423,37 @@ near(anchored_node_stats.slots, 1, "normalized node configures slot")
 near(node_slot.anchors.Minimum.X, 0.7, "node slot anchor x")
 near(node_slot.anchors.Minimum.Y, 0.8, "node slot anchor y")
 near(node_slot.alignment.X, 0.5, "node anchor centers marker")
-near(node_slot.size.X, 1.0, "normalized capital avoids map zoom magnification")
+near(node_slot.size.X, 8.0, "native icon lays out before counter scaling")
+near(node_slot.render_scale.X, 1 / 8,
+    "native icon counter-scales Palworld map zoom")
+if node_slot.material ~= native_camp_material then
+    error("capital uses Palworld's native camp marker material")
+end
 near(node_slot.z_order, 40, "capital stays above overlapping outposts")
 near(node_label_slot.anchors.Minimum.X, 0.7, "label shares node anchor x")
-near(node_label_slot.position.Y, -3.6, "capital label is offset above marker")
-near(node_label_slot.size.X, 108, "label slot preserves font resolution")
-near(node_label_slot.render_scale.X, 1 / 6, "label is counter-scaled")
+near(node_label_slot.position.Y, -2.0, "capital label is offset above marker")
+near(node_label_slot.size.X, 100, "label slot preserves font resolution")
+near(node_label_slot.render_scale.X, 1 / 10, "label is counter-scaled")
 near(node_label_slot.z_order, 41, "capital label stays above marker")
 if node_label_value ~= "FText:NWO Başkenti" then
     error("node label receives snapshot display name")
 end
 near(anchored_node_stats.label_slots, 1, "normalized node label renders")
-near(node_label_slot.visibility, 3, "capital label stays permanently visible")
+near(node_label_slot.visibility, 1, "capital label stays hidden until hover")
 
 local node_hit, node_hit_slot = canvas_slot_probe()
 local hovered = false
 function node_hit:IsHovered() return hovered end
-local node_icon_value = nil
-local node_icon = object({
-    SetText = function(_, value) node_icon_value = value end
-})
 anchor_render_overlay.controls.TerritoryNodeHit001 = node_hit
-anchor_render_overlay.controls.TerritoryNodeIconText001 = node_icon
 anchor_render_overlay:_render_nodes()
 near(node_hit_slot.visibility, 0, "small node hover hitbox is interactive")
-near(node_label_slot.visibility, 3, "capital label remains visible without hover")
+near(node_label_slot.visibility, 1, "capital label remains hidden without hover")
 hovered = true
 anchor_render_overlay:_update_hover_labels()
 near(node_label_slot.visibility, 3, "label appears on icon hover")
 hovered = false
 anchor_render_overlay:_update_hover_labels()
-near(node_label_slot.visibility, 3, "capital label remains after hover ends")
-if node_icon_value ~= "FText:★" then
-    error("capital receives compact capital marker glyph")
-end
+near(node_label_slot.visibility, 1, "capital label hides after hover ends")
 
 local fill_control, fill_slot = canvas_slot_probe()
 local fill_overlay = Overlay.new({ log = function() end })
@@ -524,6 +530,12 @@ near(banner_overlay:_render_banners(), 0,
     "zoomed map suppresses the fixed-layout detail banner")
 near(banner_slot.visibility, 1,
     "suppressed detail banner cannot leave blurred child boxes")
+banner_slot.visibility = 0
+banner_overlay.visible_banner_count = 1
+near(banner_overlay:_hide_banners(), 0,
+    "native marker mode suppresses custom guild banners")
+near(banner_slot.visibility, 1,
+    "native marker mode hides a previously visible guild banner")
 
 local cached_projection_calls = 0
 projection_overlay.projected_points = {}
