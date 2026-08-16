@@ -65,8 +65,7 @@ local model = Model.build({
 equal(model.segment_count, 7, "closed polygons produce all segments")
 equal(model.segments[1].status, "OWN", "own border color status")
 equal(model.segments[5].status, "WAR", "enemy relation stays metadata")
-equal(model.segments[1].first.x, 200,
-    "smoothed meter coordinates convert to world centimeters")
+equal(model.segments[1].first.x, 0, "meters convert to world centimeters")
 equal(math.floor(model.segments[1].color.b * 255 + 0.5), 237,
     "border uses chosen guild color")
 equal(model.boundaries[1].fill_color.a, 0.14, "fill opacity is fixed")

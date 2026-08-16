@@ -24,16 +24,6 @@ Overlay.PAL_UI_LIBRARY_CLASS_PATH =
     "/Game/Pal/Blueprint/UI/System/BP_PalUIFunctionLibrary.BP_PalUIFunctionLibrary_C"
 Overlay.PAL_UI_LIBRARY_DEFAULT_PATH =
     "/Game/Pal/Blueprint/UI/System/BP_PalUIFunctionLibrary.Default__BP_PalUIFunctionLibrary_C"
-Overlay.NATIVE_NODE_MATERIALS = {
-    CAPITAL = {
-        asset = "/Game/Pal/Material/UI/Menu/MI_UI_MapMarker_Camp.MI_UI_MapMarker_Camp",
-        object = "/Game/Pal/Material/UI/Menu/MI_UI_MapMarker_Camp.MI_UI_MapMarker_Camp"
-    },
-    OUTPOST = {
-        asset = "/Game/Pal/Material/UI/Menu/MI_UI_MapMarker_Tower.MI_UI_MapMarker_Tower",
-        object = "/Game/Pal/Material/UI/Menu/MI_UI_MapMarker_Tower.MI_UI_MapMarker_Tower"
-    }
-}
 Overlay.MAP_BASE_CLASSES = { "WBP_Map_Base_C", "WBP_Map_Base" }
 Overlay.MAP_BODY_CLASSES = { "WBP_Map_Body_C", "WBP_Map_Body" }
 -- Keep the packaged widget tree bounded. The model simplifies safely at these
@@ -48,7 +38,6 @@ Overlay.BORDER_THICKNESS = 0.24
 Overlay.NORMALIZED_SEGMENT_SIZE = 0.45
 Overlay.NORMALIZED_CAPITAL_SIZE = 1.0
 Overlay.NORMALIZED_OUTPOST_SIZE = 0.72
-Overlay.NORMALIZED_NODE_RENDER_SCALE = 1 / 8
 Overlay.CAPITAL_Z_ORDER = 40
 Overlay.OUTPOST_Z_ORDER = 30
 Overlay.FILL_Z_ORDER = 10
@@ -57,10 +46,10 @@ Overlay.RENDER_BATCH_SIZE = 64
 Overlay.NORMALIZED_BANNER_WIDTH = 28
 Overlay.NORMALIZED_BANNER_HEIGHT = 13
 Overlay.NORMALIZED_BANNER_RENDER_SCALE = 1 / 8
-Overlay.NORMALIZED_LABEL_WIDTH = 10.0
-Overlay.NORMALIZED_LABEL_HEIGHT = 1.8
-Overlay.NORMALIZED_LABEL_GAP = 1.1
-Overlay.NORMALIZED_LABEL_RENDER_SCALE = 1 / 10
+Overlay.NORMALIZED_LABEL_WIDTH = 18.0
+Overlay.NORMALIZED_LABEL_HEIGHT = 3.2
+Overlay.NORMALIZED_LABEL_GAP = 2.0
+Overlay.NORMALIZED_LABEL_RENDER_SCALE = 1 / 6
 Overlay.VISIBILITY_CHECK_INTERVAL_SECONDS = 0.20
 Overlay.ATTACH_RETRY_INTERVAL_SECONDS = 1.0
 Overlay.ATTACH_MAX_ATTEMPTS = 3
@@ -695,7 +684,6 @@ function Overlay.new(api)
         snapshot = nil,
         model = TerritoryMapModel.build({}),
         node_hover = {},
-        node_materials = {},
         render_dirty = true,
         visible_segment_count = 0,
         visible_fill_count = 0,
@@ -1870,60 +1858,6 @@ function Overlay:_render_banners(throttle)
     return used
 end
 
-function Overlay:_hide_banners(throttle)
-    local count = math.max(
-        tonumber(self.visible_banner_count) or 0,
-        #(self.model and self.model.banners or {})
-    )
-    for index = 1, math.min(count, Overlay.MAX_BANNERS) do
-        local frame = self:_control(control_name("GuildBannerFrame", index))
-        hide(frame)
-        if valid_object(frame) and type(throttle) == "function" then
-            throttle()
-        end
-    end
-    self.visible_banner_count = 0
-    return 0
-end
-
-function Overlay:_node_material(node_type)
-    node_type = tostring(node_type or "")
-    local cached = self.node_materials[node_type]
-    if cached == false then return nil end
-    if valid_object(cached) then return cached end
-    local descriptor = Overlay.NATIVE_NODE_MATERIALS[node_type]
-    if descriptor == nil then return nil end
-    local material = nil
-    if type(self.api.find_object) == "function" then
-        local found, value = pcall(self.api.find_object, descriptor.object)
-        if found and valid_object(value) then material = unwrap(value) end
-    end
-    if not valid_object(material) and type(self.api.load_asset) == "function" then
-        local loaded, value = pcall(self.api.load_asset, descriptor.asset)
-        if loaded and valid_object(value) then material = unwrap(value) end
-        if not valid_object(material) and type(self.api.find_object) == "function" then
-            local found, resolved = pcall(
-                self.api.find_object,
-                descriptor.object
-            )
-            if found and valid_object(resolved) then material = unwrap(resolved) end
-        end
-    end
-    self.node_materials[node_type] = valid_object(material) and material or false
-    return valid_object(material) and material or nil
-end
-
-function Overlay:_apply_native_node(control, node_type)
-    if not valid_object(control) then return false end
-    local material = self:_node_material(node_type)
-    if not valid_object(material) then return false end
-    local applied = pcall(function()
-        control:SetBrushFromMaterial(material)
-        control:SetColorAndOpacity({ R = 1, G = 1, B = 1, A = 1 })
-    end)
-    return applied == true
-end
-
 function Overlay:_render_nodes(throttle)
     local used = 0
     local stats = {
@@ -1960,6 +1894,9 @@ function Overlay:_render_nodes(throttle)
         local label_text = self:_control(
             control_name("TerritoryNodeLabelText", index)
         )
+        local icon_text = self:_control(
+            control_name("TerritoryNodeIconText", index)
+        )
         local hit = self:_control(control_name("TerritoryNodeHit", index))
         if valid_object(control) then stats.controls = stats.controls + 1 end
         if valid_object(label) and valid_object(label_text) then
@@ -1969,33 +1906,32 @@ function Overlay:_render_nodes(throttle)
         if valid_object(control) and position ~= nil then
             local is_capital = node.node_type == "CAPITAL"
             local size = tonumber(node.size) or 11
-            local render_scale = 1
             if position.normalized == true then
                 size = is_capital and Overlay.NORMALIZED_CAPITAL_SIZE
                     or Overlay.NORMALIZED_OUTPOST_SIZE
-                render_scale = Overlay.NORMALIZED_NODE_RENDER_SCALE
             end
-            local layout_size = size / render_scale
             local layout = {
                 normalized = position.normalized == true,
                 anchor_x = position.x,
                 anchor_y = position.y,
                 x = position.normalized == true and 0
-                    or position.x - layout_size / 2,
+                    or position.x - size / 2,
                 y = position.normalized == true and 0
-                    or position.y - layout_size / 2,
-                width = layout_size,
-                height = layout_size,
-                angle = 0,
-                render_scale = render_scale,
+                    or position.y - size / 2,
+                width = size,
+                height = size,
+                angle = tonumber(node.angle) or 0,
                 z_order = is_capital and Overlay.CAPITAL_Z_ORDER
                     or Overlay.OUTPOST_Z_ORDER
             }
             local configured = configure_canvas_slot(control, layout)
-            if configured and self:_apply_native_node(
-                control,
-                node.node_type
-            ) then
+            if configured then
+                set_color(control, node.color)
+                set_text(
+                    icon_text,
+                    node.node_type == "CAPITAL" and "★" or "◆",
+                    self.api.make_text
+                )
                 show(control)
                 used = index
                 stats.slots = stats.slots + 1
@@ -2012,7 +1948,7 @@ function Overlay:_render_nodes(throttle)
                         Overlay.node_label_text(node),
                         self.api.make_text
                     ) then
-                    hide(label)
+                    if is_capital then show(label) else hide(label) end
                     stats.label_slots = stats.label_slots + 1
                 elseif valid_object(label) then
                     hide(label)
@@ -2039,6 +1975,7 @@ function Overlay:_render_nodes(throttle)
                     self.node_hover[index] = {
                         hit = hit,
                         label = label,
+                        always_visible = is_capital
                     }
                 elseif valid_object(hit) then
                     hide(hit)
@@ -2073,7 +2010,11 @@ end
 
 function Overlay:_update_hover_labels()
     for _, item in pairs(self.node_hover or {}) do
-        if is_hovered(item.hit) then show(item.label) else hide(item.label) end
+        if item.always_visible == true or is_hovered(item.hit) then
+            show(item.label)
+        else
+            hide(item.label)
+        end
     end
 end
 
@@ -2128,10 +2069,7 @@ function Overlay:_tick()
         local rendered_segments, segment_stats = self:_render_segments()
         local rendered_fills, fill_stats = self:_render_fills()
         local rendered_nodes, node_stats = self:_render_nodes()
-        -- Native Palworld map markers carry the node identity. Keep the
-        -- custom multi-line guild card out of the map; it competes with the
-        -- game's own icons and becomes blurry at map zoom levels.
-        local rendered_banners = self:_hide_banners()
+        local rendered_banners = self:_render_banners()
         local first_segment = self.model.segments and self.model.segments[1]
         local sample_first = first_segment
             and self:_project_cached(first_segment.first) or nil
