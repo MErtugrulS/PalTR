@@ -45,7 +45,7 @@ Overlay.BANNER_Z_ORDER = 40
 Overlay.RENDER_BATCH_SIZE = 64
 Overlay.NORMALIZED_BANNER_WIDTH = 28
 Overlay.NORMALIZED_BANNER_HEIGHT = 13
-Overlay.NORMALIZED_BANNER_RENDER_SCALE = 1 / 6
+Overlay.NORMALIZED_BANNER_RENDER_SCALE = 1 / 8
 Overlay.NORMALIZED_LABEL_WIDTH = 18.0
 Overlay.NORMALIZED_LABEL_HEIGHT = 3.2
 Overlay.NORMALIZED_LABEL_GAP = 2.0
@@ -697,6 +697,7 @@ function Overlay.new(api)
         projection_target = nil,
         projection_lookup_attempted = false,
         projection_size = nil,
+        anchor_layout_size = nil,
         projected_points = {},
         diagnostics = {}
     }, Overlay)
@@ -773,6 +774,30 @@ function Overlay:_map_local_size()
         end
     end
     return nil
+end
+
+function Overlay:_anchor_layout_size()
+    if self.anchor_layout_size ~= nil then return self.anchor_layout_size end
+    if type(self.api.get_local_size) ~= "function"
+        or not valid_object(self.parent_canvas) then
+        return nil
+    end
+    local read, size, source = pcall(
+        self.api.get_local_size,
+        self.parent_canvas
+    )
+    size = read and vector(size) or nil
+    if size == nil or size.x <= 1 or size.y <= 1 then return nil end
+    self.anchor_layout_size = size
+    self:_diagnostic("anchor_layout_size", string.format(
+        "PALTR_MAP_OVERLAY_ANCHOR_SIZE | width=%.2f | height=%.2f"
+            .. " | source=%s | geometry=%s",
+        size.x,
+        size.y,
+        widget_name(self.parent_canvas),
+        tostring(source or "custom")
+    ))
+    return size
 end
 
 function Overlay:_projection_to_pixels(offset)
@@ -986,6 +1011,7 @@ function Overlay:_reset_projection_lookup()
     self.projection_target = nil
     self.projection_lookup_attempted = false
     self.projection_size = nil
+    self.anchor_layout_size = nil
     self.projected_points = {}
 end
 
@@ -1132,6 +1158,7 @@ function Overlay:set_snapshot(snapshot)
     self.render_attempts = 0
     self.next_render_at = nil
     self.projection_size = nil
+    self.anchor_layout_size = nil
     self.projected_points = {}
     self:_diagnostic("model", string.format(
         "PALTR_MAP_OVERLAY_MODEL | boundaries=%d | segments=%d | nodes=%d"
@@ -1337,6 +1364,7 @@ function Overlay:request_discovery(source)
         self.render_attempts = 0
         self.next_render_at = nil
         self.projection_size = nil
+        self.anchor_layout_size = nil
         self.projected_points = {}
         return true, "cached_widget"
     end
@@ -1608,6 +1636,7 @@ function Overlay:_clear_runtime(forget_map)
     self.render_attempts = 0
     self.next_render_at = nil
     self.projection_size = nil
+    self.anchor_layout_size = nil
     self.projected_points = {}
     if forget_map == true then
         self.known_map_base = nil
@@ -1640,7 +1669,7 @@ function Overlay:_render_segments(throttle)
             stats.projected = stats.projected + 1
         end
         local anchor_size = first ~= nil and first.normalized == true
-            and self:_map_local_size() or nil
+            and self:_anchor_layout_size() or nil
         local layout = Overlay.segment_layout(
             first,
             second,
@@ -1698,7 +1727,7 @@ function Overlay:_render_fills(throttle)
             local boundary_count = #boundaries - boundary_index + 1
             local quota = math.max(1, math.floor(remaining / boundary_count))
             local spans = TerritoryMapModel.scanline_spans(points, {
-                spacing = normalized and 0.003 or 4,
+                spacing = normalized and 0.00075 or 4,
                 normalized = normalized,
                 max_spans = quota
             })
@@ -1799,14 +1828,30 @@ function Overlay:_render_banners(throttle)
                 render_scale = normalized
                     and Overlay.NORMALIZED_BANNER_RENDER_SCALE or 1
             })
-            local text_ok = configured
-                and set_text(emblem, banner.emblem_label, self.api.make_text)
-                and set_text(name, banner.guild_name, self.api.make_text)
-                and set_text(stats, banner.region_text, self.api.make_text)
-                and set_text(power, banner.power_text, self.api.make_text)
-                and set_text(status, banner_status(banner.status), self.api.make_text)
+            local text_ok
+            if normalized then
+                -- The detailed banner layout is authored for a fixed panel
+                -- scale and becomes unreadable inside Palworld's zoomed map
+                -- canvas. Keep one permanent, legible identity label here;
+                -- node details remain available through their hover labels.
+                hide(emblem)
+                hide(stats)
+                hide(power)
+                hide(status)
+                text_ok = configured
+                    and set_text(name, banner.guild_name, self.api.make_text)
+            else
+                text_ok = configured
+                    and set_text(emblem, banner.emblem_label, self.api.make_text)
+                    and set_text(name, banner.guild_name, self.api.make_text)
+                    and set_text(stats, banner.region_text, self.api.make_text)
+                    and set_text(power, banner.power_text, self.api.make_text)
+                    and set_text(status, banner_status(banner.status), self.api.make_text)
+            end
             if text_ok then
-                set_color(frame, banner.color)
+                set_color(frame, normalized and {
+                    r = 0.025, g = 0.055, b = 0.075, a = 0.82
+                } or banner.color)
                 show(frame)
                 used = index
             else

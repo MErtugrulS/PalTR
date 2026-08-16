@@ -325,6 +325,7 @@ local function canvas_slot_probe()
     function slot:SetAlignment(value) state.alignment = value end
     function slot:SetPosition(value) state.position = value end
     function slot:SetSize(value) state.size = value end
+    function slot:SetOffsets(value) state.offsets = value end
     function slot:SetZOrder(value) state.z_order = value end
     local control = object({ Slot = slot })
     function control:SetRenderTransformPivot() end
@@ -346,10 +347,18 @@ local node_label_value = nil
 local node_label_text = object({
     SetText = function(_, value) node_label_value = value end
 })
+local anchor_parent = object({ name = "Canvas_MapBody AnchorParent" })
 local anchor_render_overlay = Overlay.new({
     log = function() end,
-    make_text = function(value) return "FText:" .. value end
+    make_text = function(value) return "FText:" .. value end,
+    get_local_size = function(candidate)
+        if candidate == anchor_parent then
+            return { x = 2000, y = 1000 }, "canvas_slot"
+        end
+        return nil
+    end
 })
+anchor_render_overlay.parent_canvas = anchor_parent
 anchor_render_overlay.controls = {
     TerritorySegment001 = segment_control,
     TerritorySegmentInner001 = segment_inner,
@@ -396,6 +405,8 @@ near(anchored_segment_stats.normalized, 1,
     "normalized segment is reported for geometry retry")
 near(segment_slot.anchors.Minimum.X, 0.3, "segment slot anchor x")
 near(segment_slot.anchors.Minimum.Y, 0.5, "segment slot anchor y")
+near(segment_slot.size.X, math.sqrt(400 * 400 + 200 * 200) + 1.8,
+    "anchored segment length uses the map canvas, not overlay desired size")
 near(segment_slot.color.R, 0.7, "normalized boundary uses clan color")
 near(segment_inner_color.G, 0.5, "normalized boundary inner keeps clan color")
 near(anchored_nodes, 1, "normalized node renders")
@@ -460,6 +471,15 @@ near(rendered_fills, 1, "scanline fill uses pooled control")
 near(fill_slot.position.X, 0, "fill starts inside polygon")
 near(fill_slot.size.X, 100, "fill stops at polygon edge")
 near(fill_slot.color.A, 0.14, "fill keeps fourteen percent opacity")
+fill_overlay._project_cached = function(_, world)
+    return { x = world.x / 1000, y = world.y / 1000, normalized = true }
+end
+local normalized_fills = fill_overlay:_render_fills()
+near(normalized_fills, 1, "normalized fill uses pooled control")
+near(fill_slot.anchors.Minimum.X, 0, "normalized fill anchors at left edge")
+near(fill_slot.anchors.Maximum.X, 0.1,
+    "normalized fill anchors at right polygon edge")
+near(fill_slot.offsets.Left, 0, "normalized fill clears stretch offsets")
 
 local banner_frame, banner_slot = canvas_slot_probe()
 local function text_probe()
