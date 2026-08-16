@@ -1135,39 +1135,34 @@ if retry_overlay.widget == nil then
     error("delayed attach retry recovers while map remains visible")
 end
 
-local batch_now, batch_updates = 0, 0
-local batch_overlay = Overlay.new({
-    now = function() return batch_now end,
+local cleanup_now, cleanup_updates = 0, 0
+local cleanup_overlay = Overlay.new({
+    now = function() return cleanup_now end,
     log = function() end
 })
-batch_overlay.map_expected_open = true
-batch_overlay.map_body = object({ name = "WBP_Map_Body_C Batch" })
-batch_overlay.parent_canvas = object({ name = "Canvas Batch" })
-batch_overlay.widget = object({ name = "WBP_PalTRMapOverlay_C Batch" })
-batch_overlay.snapshot = {}
-batch_overlay.model = {
+cleanup_overlay.map_expected_open = true
+cleanup_overlay.map_body = object({ name = "WBP_Map_Body_C Cleanup" })
+cleanup_overlay.parent_canvas = object({ name = "Canvas Cleanup" })
+cleanup_overlay.widget = object({ name = "WBP_PalTRMapOverlay_C Cleanup" })
+cleanup_overlay.snapshot = {}
+cleanup_overlay.model = {
     boundaries = {}, segments = {}, nodes = {}, banners = {},
     segment_count = 0, node_count = 0, banner_count = 0
 }
-batch_overlay._map_is_rendered = function() return true end
+cleanup_overlay._map_is_rendered = function() return true end
 for index = 1, Overlay.MAX_FILLS do
     local control = object({})
-    function control:SetVisibility() batch_updates = batch_updates + 1 end
-    batch_overlay.controls[string.format("TerritoryFill%03d", index)] = control
+    function control:SetVisibility() cleanup_updates = cleanup_updates + 1 end
+    cleanup_overlay.controls[string.format("TerritoryFill%03d", index)] = control
 end
-batch_overlay:_tick()
-near(batch_updates, Overlay.RENDER_BATCH_SIZE,
-    "first tick updates only one bounded control batch")
-batch_now = 0.21
-batch_overlay:_tick()
-near(batch_updates, math.min(
-    Overlay.RENDER_BATCH_SIZE * 2,
-    Overlay.MAX_FILLS
-),
-    "second tick advances one additional control batch")
-batch_now = 0.42
-batch_overlay:_tick()
-near(batch_updates, Overlay.MAX_FILLS,
-    "final tick leaves the bounded fill pool complete")
+cleanup_overlay:_tick()
+near(cleanup_updates, 0,
+    "initial render does not touch the unused packaged control pool")
+cleanup_overlay.visible_fill_count = 3
+cleanup_overlay.render_dirty = true
+cleanup_now = Overlay.VISIBILITY_CHECK_INTERVAL_SECONDS
+cleanup_overlay:_tick()
+near(cleanup_updates, 3,
+    "redraw hides only controls that were previously visible")
 
 print("PALTR_UI_TERRITORY_MAP_OVERLAY_TEST_OK")

@@ -582,8 +582,10 @@ function Overlay.new(api)
         model = TerritoryMapModel.build({}),
         node_hover = {},
         render_dirty = true,
-        render_coroutine = nil,
-        render_result = nil,
+        visible_segment_count = 0,
+        visible_fill_count = 0,
+        visible_node_count = 0,
+        visible_banner_count = 0,
         render_attempts = 0,
         next_render_at = nil,
         last_visibility_check_at = nil,
@@ -985,8 +987,6 @@ function Overlay:set_snapshot(snapshot)
         max_banners = Overlay.MAX_BANNERS
     })
     self.render_dirty = true
-    self.render_coroutine = nil
-    self.render_result = nil
     self.render_attempts = 0
     self.next_render_at = nil
     self.projection_size = nil
@@ -1191,8 +1191,6 @@ function Overlay:request_discovery(source)
         show(self.widget)
         self.map_was_rendered = true
         self.render_dirty = true
-        self.render_coroutine = nil
-        self.render_result = nil
         self.render_attempts = 0
         self.next_render_at = nil
         self.projection_size = nil
@@ -1427,6 +1425,10 @@ function Overlay:_create_widget()
     end)
     self.widget = widget
     self.controls = controls
+    self.visible_segment_count = 0
+    self.visible_fill_count = 0
+    self.visible_node_count = 0
+    self.visible_banner_count = 0
     local control_count = 0
     for _ in pairs(controls) do control_count = control_count + 1 end
     return true, string.format(
@@ -1447,8 +1449,10 @@ function Overlay:_clear_runtime(forget_map)
     self.widget = nil
     self.controls = {}
     self.render_dirty = true
-    self.render_coroutine = nil
-    self.render_result = nil
+    self.visible_segment_count = 0
+    self.visible_fill_count = 0
+    self.visible_node_count = 0
+    self.visible_banner_count = 0
     self.render_attempts = 0
     self.next_render_at = nil
     self.projection_size = nil
@@ -1510,13 +1514,15 @@ function Overlay:_render_segments(throttle)
             throttle()
         end
     end
-    for index = used + 1, Overlay.MAX_SEGMENTS do
+    local previous = tonumber(self.visible_segment_count) or 0
+    for index = used + 1, previous do
         local control = self:_control(control_name("TerritorySegment", index))
         hide(control)
         if valid_object(control) and type(throttle) == "function" then
             throttle()
         end
     end
+    self.visible_segment_count = used
     return used, stats
 end
 
@@ -1573,13 +1579,15 @@ function Overlay:_render_fills(throttle)
             throttle()
         end
     end
-    for index = used + 1, Overlay.MAX_FILLS do
+    local previous = tonumber(self.visible_fill_count) or 0
+    for index = used + 1, previous do
         local control = self:_control(control_name("TerritoryFill", index))
         hide(control)
         if valid_object(control) and type(throttle) == "function" then
             throttle()
         end
     end
+    self.visible_fill_count = used
     return used, { entries = #entries }
 end
 
@@ -1640,13 +1648,15 @@ function Overlay:_render_banners(throttle)
             throttle()
         end
     end
-    for index = used + 1, Overlay.MAX_BANNERS do
+    local previous = tonumber(self.visible_banner_count) or 0
+    for index = used + 1, previous do
         local frame = self:_control(control_name("GuildBannerFrame", index))
         hide(frame)
         if valid_object(frame) and type(throttle) == "function" then
             throttle()
         end
     end
+    self.visible_banner_count = used
     return used
 end
 
@@ -1779,7 +1789,8 @@ function Overlay:_render_nodes(throttle)
             throttle()
         end
     end
-    for index = used + 1, Overlay.MAX_NODES do
+    local previous = tonumber(self.visible_node_count) or 0
+    for index = used + 1, previous do
         hide(self:_control(control_name("TerritoryNode", index)))
         hide(self:_control(control_name("TerritoryNodeLabel", index)))
         hide(self:_control(control_name("TerritoryNodeHit", index)))
@@ -1788,6 +1799,7 @@ function Overlay:_render_nodes(throttle)
             throttle()
         end
     end
+    self.visible_node_count = used
     return used, stats
 end
 
@@ -1838,63 +1850,17 @@ function Overlay:_tick()
     if valid_object(self.widget) then
         self:_request_snapshot(now)
         self:_update_hover_labels()
-        if self.render_dirty ~= true and self.render_coroutine == nil then
-            return
-        end
+        if self.render_dirty ~= true then return end
         if self.next_render_at ~= nil and now < self.next_render_at then return end
-        if self.render_coroutine == nil then
-            self.render_dirty = false
-            self.render_result = nil
-            self.render_coroutine = coroutine.create(function()
-                local budget = 0
-                local function throttle()
-                    budget = budget + 1
-                    if budget >= Overlay.RENDER_BATCH_SIZE then
-                        budget = 0
-                        coroutine.yield()
-                    end
-                end
-                local rendered_segments, segment_stats =
-                    self:_render_segments(throttle)
-                local rendered_fills, fill_stats = self:_render_fills(throttle)
-                local rendered_nodes, node_stats = self:_render_nodes(throttle)
-                local rendered_banners = self:_render_banners(throttle)
-                self.render_result = {
-                    rendered_fills = rendered_fills,
-                    fill_stats = fill_stats,
-                    rendered_segments = rendered_segments,
-                    segment_stats = segment_stats,
-                    rendered_nodes = rendered_nodes,
-                    node_stats = node_stats,
-                    rendered_banners = rendered_banners
-                }
-            end)
-        end
-        local resumed, render_error = coroutine.resume(self.render_coroutine)
-        if not resumed then
-            self:_diagnostic("render_error",
-                "PALTR_MAP_OVERLAY_RENDER_FAILED | " .. tostring(render_error))
-            self.render_coroutine = nil
-            self.render_result = nil
-            return
-        end
-        if coroutine.status(self.render_coroutine) ~= "dead" then return end
-        self.render_coroutine = nil
-        local render = self.render_result or {}
-        self.render_result = nil
-        local rendered_fills = tonumber(render.rendered_fills) or 0
-        local fill_stats = render.fill_stats or { entries = 0 }
-        local rendered_segments = tonumber(render.rendered_segments) or 0
-        local segment_stats = render.segment_stats or {
-            controls = 0, inners = 0, projected = 0, slots = 0,
-            normalized = 0
-        }
-        local rendered_nodes = tonumber(render.rendered_nodes) or 0
-        local node_stats = render.node_stats or {
-            controls = 0, projected = 0, slots = 0,
-            label_controls = 0, label_slots = 0
-        }
-        local rendered_banners = tonumber(render.rendered_banners) or 0
+        self.render_dirty = false
+        -- UE4SS UMG/UObject calls must remain on the hook's main Lua context.
+        -- Coroutine rendering silently invalidates projection and slot calls.
+        -- The renderers only touch active controls plus previously visible
+        -- leftovers, so this synchronous pass stays bounded by model size.
+        local rendered_segments, segment_stats = self:_render_segments()
+        local rendered_fills, fill_stats = self:_render_fills()
+        local rendered_nodes, node_stats = self:_render_nodes()
+        local rendered_banners = self:_render_banners()
         local first_segment = self.model.segments and self.model.segments[1]
         local sample_first = first_segment
             and self:_project_cached(first_segment.first) or nil
@@ -1940,7 +1906,6 @@ function Overlay:_tick()
             self.render_attempts = self.render_attempts + 1
             self.next_render_at = now + Overlay.RENDER_RETRY_INTERVAL_SECONDS
             self.render_dirty = true
-            self.render_coroutine = nil
             self:_reset_projection_lookup()
         else
             self.render_attempts = 0
