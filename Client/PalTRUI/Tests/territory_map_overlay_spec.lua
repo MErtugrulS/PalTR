@@ -1198,6 +1198,29 @@ near(pixel_projection.y, 450, "overlay geometry converts normalized y")
 if pixel_projection.normalized == true then
     error("overlay geometry enables continuous pixel rendering")
 end
+
+local viewport_overlay = Overlay.new({
+    get_local_size = function() return nil end,
+    get_viewport_local_size = function(context)
+        if context ~= base then error("viewport uses map context") end
+        return { x = 1280, y = 720 }
+    end,
+    log = function() end
+})
+viewport_overlay.map_base = base
+viewport_overlay.map_body = body
+viewport_overlay.parent_canvas = canvas
+local viewport_size = viewport_overlay:_map_local_size()
+near(viewport_size.x, 1280, "viewport fallback supplies logical width")
+near(viewport_size.y, 720, "viewport fallback supplies logical height")
+local viewport_projection = viewport_overlay:_projection_to_pixels({
+    x = 0.50, y = 0.25
+})
+near(viewport_projection.x, 640, "viewport fallback projects x in pixels")
+near(viewport_projection.y, 180, "viewport fallback projects y in pixels")
+if viewport_projection.normalized == true then
+    error("viewport fallback disables dotted normalized rendering")
+end
 cleanup_overlay:_tick()
 near(cleanup_updates, 0,
     "initial render does not touch the unused packaged control pool")

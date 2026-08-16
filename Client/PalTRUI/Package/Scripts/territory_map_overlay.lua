@@ -15,6 +15,8 @@ Overlay.ASSET_NAME = "WBP_PalTRMapOverlay_C"
 Overlay.ASSET_REGISTRY_HELPERS_PATH =
     "/Script/AssetRegistry.Default__AssetRegistryHelpers"
 Overlay.WIDGET_LIBRARY_PATH = "/Script/UMG.Default__WidgetBlueprintLibrary"
+Overlay.WIDGET_LAYOUT_LIBRARY_PATH =
+    "/Script/UMG.Default__WidgetLayoutLibrary"
 Overlay.SLATE_LIBRARY_PATH = "/Script/UMG.Default__SlateBlueprintLibrary"
 Overlay.PAL_UI_LIBRARY_ASSET_PATH =
     "/Game/Pal/Blueprint/UI/System/BP_PalUIFunctionLibrary.BP_PalUIFunctionLibrary"
@@ -544,6 +546,29 @@ local function default_get_local_size(widget)
     return nil
 end
 
+local function default_get_viewport_local_size(context)
+    context = unwrap(context)
+    if not valid_object(context) or type(StaticFindObject) ~= "function" then
+        return nil
+    end
+    local found, library = pcall(
+        StaticFindObject,
+        Overlay.WIDGET_LAYOUT_LIBRARY_PATH
+    )
+    if not found or not valid_object(library) then return nil end
+    local size = call_vector(function()
+        return library:GetViewportSize(context)
+    end)
+    if size == nil or size.x <= 1 or size.y <= 1 then return nil end
+    local scale = 1
+    local scale_read, scale_value = pcall(function()
+        return library:GetViewportScale(context)
+    end)
+    scale_value = scale_read and tonumber(unwrap(scale_value)) or nil
+    if scale_value ~= nil and scale_value > 0.01 then scale = scale_value end
+    return { x = size.x / scale, y = size.y / scale }
+end
+
 local function default_api()
     return {
         register_hook = type(RegisterHook) == "function" and RegisterHook or nil,
@@ -555,6 +580,7 @@ local function default_api()
         load_asset = type(LoadAsset) == "function" and LoadAsset or nil,
         load_registered_asset = default_load_registered_asset,
         get_local_size = default_get_local_size,
+        get_viewport_local_size = default_get_viewport_local_size,
         make_text = default_make_text,
         now = os.clock,
         log = function(message)
@@ -650,6 +676,25 @@ function Overlay:_map_local_size()
                 ))
                 return size
             end
+        end
+    end
+    if type(self.api.get_viewport_local_size) == "function" then
+        local context = valid_object(self.map_base)
+            and self.map_base or self.map_body
+        local read, size = pcall(
+            self.api.get_viewport_local_size,
+            context
+        )
+        size = read and vector(size) or nil
+        if size ~= nil and size.x > 1 and size.y > 1 then
+            self.projection_size = size
+            self:_diagnostic("projection_size", string.format(
+                "PALTR_MAP_OVERLAY_LOCAL_SIZE | width=%.2f | height=%.2f"
+                    .. " | source=viewport_dpi",
+                size.x,
+                size.y
+            ))
+            return size
         end
     end
     return nil
