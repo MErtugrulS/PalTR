@@ -28,7 +28,7 @@ local vertical = Overlay.segment_layout(
 )
 near(vertical.width, 100, "vertical width")
 near(vertical.angle, 90, "vertical angle")
-near(Overlay.BORDER_THICKNESS, 1.8, "strategy border stays thin")
+near(Overlay.BORDER_THICKNESS, 0.24, "zoomed map border stays thin")
 near(Overlay.Z_ORDER, 10000, "map overlay stays above Palworld map layers")
 near(Overlay.RENDER_MAX_ATTEMPTS, 2,
     "failed map projection retries stay bounded")
@@ -59,8 +59,8 @@ near(anchored_line.width, math.sqrt(400 * 400 + 200 * 200) + 2,
     "sized normalized segment connects both anchored endpoints")
 near(anchored_line.angle, math.deg(math.atan(200, 400)),
     "sized normalized segment follows the boundary angle")
-near(Overlay.NORMALIZED_CAPITAL_SIZE, 2.4, "normalized capital stays compact")
-near(Overlay.NORMALIZED_OUTPOST_SIZE, 1.4, "normalized outpost stays compact")
+near(Overlay.NORMALIZED_CAPITAL_SIZE, 1.0, "normalized capital stays compact")
+near(Overlay.NORMALIZED_OUTPOST_SIZE, 0.72, "normalized outpost stays compact")
 local capital_label_layout = Overlay.node_label_layout(
     { node_type = "CAPITAL" },
     1,
@@ -405,7 +405,7 @@ near(anchored_segment_stats.normalized, 1,
     "normalized segment is reported for geometry retry")
 near(segment_slot.anchors.Minimum.X, 0.3, "segment slot anchor x")
 near(segment_slot.anchors.Minimum.Y, 0.5, "segment slot anchor y")
-near(segment_slot.size.X, math.sqrt(400 * 400 + 200 * 200) + 1.8,
+near(segment_slot.size.X, math.sqrt(400 * 400 + 200 * 200) + 0.24,
     "anchored segment length uses the map canvas, not overlay desired size")
 near(segment_slot.color.R, 0.7, "normalized boundary uses clan color")
 near(segment_inner_color.G, 0.5, "normalized boundary inner keeps clan color")
@@ -414,7 +414,7 @@ near(anchored_node_stats.slots, 1, "normalized node configures slot")
 near(node_slot.anchors.Minimum.X, 0.7, "node slot anchor x")
 near(node_slot.anchors.Minimum.Y, 0.8, "node slot anchor y")
 near(node_slot.alignment.X, 0.5, "node anchor centers marker")
-near(node_slot.size.X, 2.4, "normalized capital avoids map zoom magnification")
+near(node_slot.size.X, 1.0, "normalized capital avoids map zoom magnification")
 near(node_slot.z_order, 40, "capital stays above overlapping outposts")
 near(node_label_slot.anchors.Minimum.X, 0.7, "label shares node anchor x")
 near(node_label_slot.position.Y, -3.6, "capital label is offset above marker")
@@ -425,7 +425,7 @@ if node_label_value ~= "FText:NWO Başkenti" then
     error("node label receives snapshot display name")
 end
 near(anchored_node_stats.label_slots, 1, "normalized node label renders")
-near(node_label_slot.visibility, 1, "node label is hidden until hover")
+near(node_label_slot.visibility, 3, "capital label stays permanently visible")
 
 local node_hit, node_hit_slot = canvas_slot_probe()
 local hovered = false
@@ -438,15 +438,15 @@ anchor_render_overlay.controls.TerritoryNodeHit001 = node_hit
 anchor_render_overlay.controls.TerritoryNodeIconText001 = node_icon
 anchor_render_overlay:_render_nodes()
 near(node_hit_slot.visibility, 0, "small node hover hitbox is interactive")
-near(node_label_slot.visibility, 1, "label remains hidden without hover")
+near(node_label_slot.visibility, 3, "capital label remains visible without hover")
 hovered = true
 anchor_render_overlay:_update_hover_labels()
 near(node_label_slot.visibility, 3, "label appears on icon hover")
 hovered = false
 anchor_render_overlay:_update_hover_labels()
-near(node_label_slot.visibility, 1, "label hides after hover ends")
-if node_icon_value ~= "FText:B" then
-    error("capital receives compact castle marker text")
+near(node_label_slot.visibility, 3, "capital label remains after hover ends")
+if node_icon_value ~= "FText:★" then
+    error("capital receives compact capital marker glyph")
 end
 
 local fill_control, fill_slot = canvas_slot_probe()
@@ -517,6 +517,13 @@ if banner_name.value ~= "FText:NWO"
     error("guild banner receives name and real territory counts")
 end
 near(banner_slot.z_order, 40, "guild banner renders above node icons")
+banner_overlay._project_cached = function()
+    return { x = 0.5, y = 0.5, normalized = true }
+end
+near(banner_overlay:_render_banners(), 0,
+    "zoomed map suppresses the fixed-layout detail banner")
+near(banner_slot.visibility, 1,
+    "suppressed detail banner cannot leave blurred child boxes")
 
 local cached_projection_calls = 0
 projection_overlay.projected_points = {}

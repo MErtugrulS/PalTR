@@ -34,10 +34,10 @@ Overlay.MAX_FILLS = 96
 Overlay.MAX_NODES = 32
 Overlay.MAX_BANNERS = 8
 Overlay.Z_ORDER = 10000
-Overlay.BORDER_THICKNESS = 1.8
+Overlay.BORDER_THICKNESS = 0.24
 Overlay.NORMALIZED_SEGMENT_SIZE = 0.45
-Overlay.NORMALIZED_CAPITAL_SIZE = 2.4
-Overlay.NORMALIZED_OUTPOST_SIZE = 1.4
+Overlay.NORMALIZED_CAPITAL_SIZE = 1.0
+Overlay.NORMALIZED_OUTPOST_SIZE = 0.72
 Overlay.CAPITAL_Z_ORDER = 40
 Overlay.OUTPOST_Z_ORDER = 30
 Overlay.FILL_Z_ORDER = 10
@@ -301,7 +301,7 @@ function Overlay.segment_layout(first, second, thickness, anchor_size)
             local dy = (second_y - first_y) * anchor_size.y
             local length = math.sqrt(dx * dx + dy * dy)
             if length >= 0.5 then
-                thickness = math.max(1, tonumber(thickness) or 3)
+                thickness = math.max(0.1, tonumber(thickness) or 0.24)
                 return {
                     normalized = true,
                     anchor_x = (first_x + second_x) / 2,
@@ -1803,61 +1803,43 @@ function Overlay:_render_banners(throttle)
     local used = 0
     for index, banner in ipairs(self.model.banners or {}) do
         local frame = self:_control(control_name("GuildBannerFrame", index))
-        local emblem = self:_control(control_name("GuildBannerEmblem", index))
-        local name = self:_control(control_name("GuildBannerName", index))
-        local stats = self:_control(control_name("GuildBannerStats", index))
-        local power = self:_control(control_name("GuildBannerPower", index))
-        local status = self:_control(control_name("GuildBannerStatus", index))
         local position = self:_project_cached(banner.world)
-        if valid_object(frame) and position ~= nil then
-            local normalized = position.normalized == true
-            local width = normalized and Overlay.NORMALIZED_BANNER_WIDTH or 168
-            local height = normalized and Overlay.NORMALIZED_BANNER_HEIGHT or 78
+        if valid_object(frame) and position ~= nil
+            and position.normalized ~= true then
+            local emblem = self:_control(
+                control_name("GuildBannerEmblem", index)
+            )
+            local name = self:_control(control_name("GuildBannerName", index))
+            local stats = self:_control(control_name("GuildBannerStats", index))
+            local power = self:_control(control_name("GuildBannerPower", index))
+            local status = self:_control(control_name("GuildBannerStatus", index))
+            local width, height = 168, 78
             local configured = configure_canvas_slot(frame, {
-                normalized = normalized,
-                anchor_x = position.x,
-                anchor_y = position.y,
-                alignment_x = 0.5,
-                alignment_y = 0.5,
-                x = normalized and 0 or position.x - width / 2,
-                y = normalized and 0 or position.y - height / 2,
+                x = position.x - width / 2,
+                y = position.y - height / 2,
                 width = width,
                 height = height,
                 angle = 0,
                 z_order = Overlay.BANNER_Z_ORDER,
-                render_scale = normalized
-                    and Overlay.NORMALIZED_BANNER_RENDER_SCALE or 1
+                render_scale = 1
             })
-            local text_ok
-            if normalized then
-                -- The detailed banner layout is authored for a fixed panel
-                -- scale and becomes unreadable inside Palworld's zoomed map
-                -- canvas. Keep one permanent, legible identity label here;
-                -- node details remain available through their hover labels.
-                hide(emblem)
-                hide(stats)
-                hide(power)
-                hide(status)
-                text_ok = configured
-                    and set_text(name, banner.guild_name, self.api.make_text)
-            else
-                text_ok = configured
-                    and set_text(emblem, banner.emblem_label, self.api.make_text)
-                    and set_text(name, banner.guild_name, self.api.make_text)
-                    and set_text(stats, banner.region_text, self.api.make_text)
-                    and set_text(power, banner.power_text, self.api.make_text)
-                    and set_text(status, banner_status(banner.status), self.api.make_text)
-            end
+            local text_ok = configured
+                and set_text(emblem, banner.emblem_label, self.api.make_text)
+                and set_text(name, banner.guild_name, self.api.make_text)
+                and set_text(stats, banner.region_text, self.api.make_text)
+                and set_text(power, banner.power_text, self.api.make_text)
+                and set_text(status, banner_status(banner.status), self.api.make_text)
             if text_ok then
-                set_color(frame, normalized and {
-                    r = 0.025, g = 0.055, b = 0.075, a = 0.82
-                } or banner.color)
+                set_color(frame, banner.color)
                 show(frame)
                 used = index
             else
                 hide(frame)
             end
         elseif valid_object(frame) then
+            -- The detailed VerticalBox card is authored for a fixed panel.
+            -- In Palworld's zoomed map canvas it becomes blurred stacked
+            -- blocks, so the capital marker owns the permanent guild label.
             hide(frame)
         end
         if valid_object(frame) and type(throttle) == "function" then
@@ -1945,8 +1927,11 @@ function Overlay:_render_nodes(throttle)
             local configured = configure_canvas_slot(control, layout)
             if configured then
                 set_color(control, node.color)
-                set_text(icon_text, node.node_type == "CAPITAL" and "B" or "K",
-                    self.api.make_text)
+                set_text(
+                    icon_text,
+                    node.node_type == "CAPITAL" and "★" or "◆",
+                    self.api.make_text
+                )
                 show(control)
                 used = index
                 stats.slots = stats.slots + 1
@@ -1963,7 +1948,7 @@ function Overlay:_render_nodes(throttle)
                         Overlay.node_label_text(node),
                         self.api.make_text
                     ) then
-                    hide(label)
+                    if is_capital then show(label) else hide(label) end
                     stats.label_slots = stats.label_slots + 1
                 elseif valid_object(label) then
                     hide(label)
@@ -1987,7 +1972,11 @@ function Overlay:_render_nodes(throttle)
                 if valid_object(hit)
                     and configure_canvas_slot(hit, hit_layout) then
                     show_interactive(hit)
-                    self.node_hover[index] = { hit = hit, label = label }
+                    self.node_hover[index] = {
+                        hit = hit,
+                        label = label,
+                        always_visible = is_capital
+                    }
                 elseif valid_object(hit) then
                     hide(hit)
                 end
@@ -2021,7 +2010,11 @@ end
 
 function Overlay:_update_hover_labels()
     for _, item in pairs(self.node_hover or {}) do
-        if is_hovered(item.hit) then show(item.label) else hide(item.label) end
+        if item.always_visible == true or is_hovered(item.hit) then
+            show(item.label)
+        else
+            hide(item.label)
+        end
     end
 end
 
