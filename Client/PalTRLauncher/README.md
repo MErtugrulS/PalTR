@@ -47,6 +47,9 @@ Ana sayfadaki **Kur / Güncelle / Onar** işlemi isteğe bağlı olarak çalış
   korur; desteklenen çekirdek bağımlılık dosyalarını yedekleyerek onarır.
 - UE4SS `mods.txt` içindeki yalnız `PalTRUI` kaydını etkinleştirir; diğer modların
   durumunu ve yerleşik `Keybinds` sırasını korur.
+- Palworld resmi mod yöneticisinin `PalModSettings.ini` kaydında
+  `UE4SSExperimentalPW` bağımlılığını etkinleştirir ve eksik yönetilen mod
+  `InstallManifest.json` dosyasını üretir; mevcut diğer aktif mod kayıtlarını korur.
 - Yalnız değişen dosyaları yedekleyerek geçici dosya üzerinden atomik değiştirir.
 - Bir hata oluşursa o işlemde değiştirdiği dosyaları geri alır.
 - Palworld çalışırken mod dosyalarını değiştirmez.

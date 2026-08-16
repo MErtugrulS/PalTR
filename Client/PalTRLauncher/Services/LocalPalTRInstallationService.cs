@@ -78,6 +78,17 @@ public sealed class LocalPalTRInstallationService : IInstallationService
                 packageVersion);
         }
 
+        string registrationError = GetManagedDependencyRegistrationError(gameRoot);
+        if (registrationError.Length > 0)
+        {
+            return new InstallationSnapshot(
+                InstallationState.InstallRequired,
+                "UE4SS etkinleştirilecek",
+                $"{registrationError} Launcher resmi Palworld mod kaydını onaracak.",
+                gameRoot,
+                packageVersion);
+        }
+
         IReadOnlyList<FileMapping> mappings = BuildMappings(gameRoot);
         foreach (FileMapping mapping in mappings)
         {
@@ -176,6 +187,7 @@ public sealed class LocalPalTRInstallationService : IInstallationService
             }
 
 
+            EnsureManagedDependencyRegistered(inspection.GameRoot, backupRoot, changedFiles);
             EnsurePalTRUIEnabled(inspection.GameRoot, backupRoot, changedFiles);
 
             InstallationSnapshot finalState = await InspectAsync(cancellationToken);
@@ -244,6 +256,32 @@ public sealed class LocalPalTRInstallationService : IInstallationService
         if (!File.Exists(managedDependency))
         {
             return "UE4SSExperimentalPW bağımlılığı kurulu değil.";
+        }
+
+        return string.Empty;
+    }
+
+    private static string GetManagedDependencyRegistrationError(string gameRoot)
+    {
+        string settingsPath = GetPalModSettingsFile(gameRoot);
+        if (!File.Exists(settingsPath))
+        {
+            return "Palworld mod etkinleştirme ayarı bulunamadı.";
+        }
+
+        string[] lines = File.ReadAllLines(settingsPath);
+        bool globallyEnabled = lines.Any(line =>
+            line.Trim().Equals("bGlobalEnableMod=True", StringComparison.OrdinalIgnoreCase));
+        bool dependencyEnabled = lines.Any(line =>
+            line.Trim().Equals("ActiveModList=UE4SSExperimentalPW", StringComparison.OrdinalIgnoreCase));
+        if (!globallyEnabled || !dependencyEnabled)
+        {
+            return "UE4SSExperimentalPW resmi mod listesinde etkin değil.";
+        }
+
+        if (!File.Exists(GetManagedDependencyManifestFile(gameRoot)))
+        {
+            return "UE4SSExperimentalPW kurulum manifesti eksik.";
         }
 
         return string.Empty;
@@ -324,6 +362,156 @@ public sealed class LocalPalTRInstallationService : IInstallationService
             process.ProcessName.Equals("Palworld-Win64-Shipping", StringComparison.OrdinalIgnoreCase) ||
             process.ProcessName.Equals("Palworld", StringComparison.OrdinalIgnoreCase));
 
+    private void EnsureManagedDependencyRegistered(
+        string gameRoot,
+        string backupRoot,
+        ICollection<(string Destination, string? Backup)> changedFiles)
+    {
+        EnsurePalModSettings(gameRoot, backupRoot, changedFiles);
+        EnsureManagedDependencyManifest(gameRoot, backupRoot, changedFiles);
+    }
+
+    private static void EnsurePalModSettings(
+        string gameRoot,
+        string backupRoot,
+        ICollection<(string Destination, string? Backup)> changedFiles)
+    {
+        string settingsPath = GetPalModSettingsFile(gameRoot);
+        Directory.CreateDirectory(Path.GetDirectoryName(settingsPath)!);
+        List<string> lines = File.Exists(settingsPath)
+            ? File.ReadAllLines(settingsPath).ToList()
+            : new List<string>();
+
+        bool changed = false;
+        if (!lines.Any(line => line.Trim().Equals("[PalModSettings]", StringComparison.OrdinalIgnoreCase)))
+        {
+            lines.Insert(0, "[PalModSettings]");
+            changed = true;
+        }
+
+        changed |= SetSingleSetting(lines, "bGlobalEnableMod", "True");
+        changed |= SetSingleSetting(lines, "ConfigVersion", "1.0", addOnlyIfMissing: true);
+
+        string steamApps = Directory.GetParent(Directory.GetParent(gameRoot)!.FullName)!.FullName;
+        string workshopRoot = Path.Combine(steamApps, "workshop", "content", "1623730");
+        changed |= SetSingleSetting(lines, "WorkshopRootDir", workshopRoot, addOnlyIfMissing: true);
+
+        if (!lines.Any(line =>
+                line.Trim().Equals("ActiveModList=UE4SSExperimentalPW", StringComparison.OrdinalIgnoreCase)))
+        {
+            int lastActiveMod = lines.FindLastIndex(line =>
+                line.TrimStart().StartsWith("ActiveModList=", StringComparison.OrdinalIgnoreCase));
+            lines.Insert(lastActiveMod >= 0 ? lastActiveMod + 1 : lines.Count, "ActiveModList=UE4SSExperimentalPW");
+            changed = true;
+        }
+
+        if (!changed)
+        {
+            return;
+        }
+
+        string? backup = BackUpFile(settingsPath, backupRoot, gameRoot);
+        WriteAllLinesAtomically(settingsPath, lines);
+        changedFiles.Add((settingsPath, backup));
+    }
+
+    private void EnsureManagedDependencyManifest(
+        string gameRoot,
+        string backupRoot,
+        ICollection<(string Destination, string? Backup)> changedFiles)
+    {
+        string manifestPath = GetManagedDependencyManifestFile(gameRoot);
+        if (File.Exists(manifestPath))
+        {
+            return;
+        }
+
+        List<string> files = Directory
+            .EnumerateFiles(DependencyRoot, "*", SearchOption.AllDirectories)
+            .Select(source => Path.GetRelativePath(DependencyRoot, source).Replace('\\', '/'))
+            .Where(relative => !relative.EndsWith("/InstallManifest.json", StringComparison.OrdinalIgnoreCase))
+            .OrderBy(relative => relative, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        List<string> directories = files
+            .Select(relative => Path.GetDirectoryName(relative.Replace('/', Path.DirectorySeparatorChar)))
+            .Where(directory => !string.IsNullOrWhiteSpace(directory))
+            .Select(directory => directory!.Replace('\\', '/'))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(directory => directory, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        var manifest = new
+        {
+            Files = files,
+            Dirs = directories,
+            Backups = Array.Empty<string>(),
+            WorkshopId = 3625223587,
+            LastInstallTimeUtc = DateTime.UtcNow.ToString("O"),
+            LastWorkshopUpdateTimeUtc = DateTime.UtcNow.ToString("O")
+        };
+
+        Directory.CreateDirectory(Path.GetDirectoryName(manifestPath)!);
+        string? backup = BackUpFile(manifestPath, backupRoot, gameRoot);
+        string temporary = manifestPath + ".paltr-new";
+        File.WriteAllText(temporary, JsonSerializer.Serialize(manifest, new JsonSerializerOptions
+        {
+            WriteIndented = true
+        }));
+        File.Move(temporary, manifestPath, true);
+        changedFiles.Add((manifestPath, backup));
+    }
+
+    private static bool SetSingleSetting(
+        IList<string> lines,
+        string key,
+        string value,
+        bool addOnlyIfMissing = false)
+    {
+        int index = -1;
+        for (int current = 0; current < lines.Count; current++)
+        {
+            if (lines[current].TrimStart().StartsWith(key + "=", StringComparison.OrdinalIgnoreCase))
+            {
+                index = current;
+                break;
+            }
+        }
+
+        if (index < 0)
+        {
+            lines.Add($"{key}={value}");
+            return true;
+        }
+
+        if (addOnlyIfMissing || lines[index].Trim().Equals($"{key}={value}", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        lines[index] = $"{key}={value}";
+        return true;
+    }
+
+    private static string? BackUpFile(string path, string backupRoot, string gameRoot)
+    {
+        if (!File.Exists(path))
+        {
+            return null;
+        }
+
+        string backup = Path.Combine(backupRoot, Path.GetRelativePath(gameRoot, path));
+        Directory.CreateDirectory(Path.GetDirectoryName(backup)!);
+        File.Copy(path, backup, true);
+        return backup;
+    }
+
+    private static void WriteAllLinesAtomically(string path, IEnumerable<string> lines)
+    {
+        string temporary = path + ".paltr-new";
+        File.WriteAllLines(temporary, lines);
+        File.Move(temporary, path, true);
+    }
+
     private static bool IsPalTRUIEnabled(string gameRoot)
     {
         string modsFile = GetModsFile(gameRoot);
@@ -386,6 +574,12 @@ public sealed class LocalPalTRInstallationService : IInstallationService
 
     private static string GetModsFile(string gameRoot)
         => Path.Combine(gameRoot, "Mods", "NativeMods", "UE4SS", "Mods", "mods.txt");
+
+    private static string GetPalModSettingsFile(string gameRoot)
+        => Path.Combine(gameRoot, "Mods", "PalModSettings.ini");
+
+    private static string GetManagedDependencyManifestFile(string gameRoot)
+        => Path.Combine(gameRoot, "Mods", "ManagedMods", "UE4SSExperimentalPW", "InstallManifest.json");
 
     private static void RollBack(IEnumerable<(string Destination, string? Backup)> changedFiles)
     {
