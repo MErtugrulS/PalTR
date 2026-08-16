@@ -62,6 +62,13 @@ Overlay.INITIAL_RENDER_DELAY_SECONDS = 0.25
 -- projection six times only stalls the map without creating any geometry.
 Overlay.RENDER_MAX_ATTEMPTS = 2
 Overlay.NORMALIZED_RENDER_MAX_ATTEMPTS = 2
+-- MainWorld5 values from Palworld's WorldMapUIData. They are only used when
+-- the live WBP_Map_Body_MW5 instance does not expose its copied bounds to
+-- UE4SS. Other map bodies must provide their own runtime bounds.
+Overlay.MAIN_WORLD_BOUNDS = {
+    minimum = { x = -1099400, y = -724400 },
+    maximum = { x = 349400, y = 724400 }
+}
 
 PalTRTerritoryMapOverlayCallbacks = PalTRTerritoryMapOverlayCallbacks or {}
 
@@ -801,9 +808,21 @@ function Overlay:_find_projection_target()
     return nil
 end
 
+local function main_world_bounds(map_body)
+    local identity = widget_name(map_body) .. " " .. full_name(map_body)
+    if identity:find("WBP_Map_Body_MW5", 1, true) == nil then return nil end
+    return Overlay.MAIN_WORLD_BOUNDS.minimum,
+        Overlay.MAIN_WORLD_BOUNDS.maximum
+end
+
 local function project_from_landscape_bounds(map_body, world)
     local minimum = vector(property(map_body, "MinLandScapePosition"))
     local maximum = vector(property(map_body, "MaxLandScapePosition"))
+    local source = "widget"
+    if minimum == nil or maximum == nil then
+        minimum, maximum = main_world_bounds(map_body)
+        source = "main_world_data"
+    end
     if minimum == nil or maximum == nil then
         return nil, "landscape bounds unavailable"
     end
@@ -820,7 +839,7 @@ local function project_from_landscape_bounds(map_body, world)
         x = ((tonumber(world and world.y) or 0) - minimum.y) / span_y,
         y = 1 - (((tonumber(world and world.x) or 0) - minimum.x) / span_x),
         normalized = true
-    }
+    }, nil, source
 end
 
 function Overlay:_reset_projection_lookup()
@@ -842,10 +861,9 @@ function Overlay:_world_to_widget(world)
         )
         return nil
     end
-    local projection_target = self:_find_projection_target()
-    if projection_target == nil
-        and self.api.disable_bounds_fallback ~= true then
-        local direct, direct_error = project_from_landscape_bounds(
+    local bounds_error = nil
+    if self.api.disable_bounds_fallback ~= true then
+        local direct, direct_error, bounds_source = project_from_landscape_bounds(
             self.map_body,
             world
         )
@@ -863,17 +881,22 @@ function Overlay:_world_to_widget(world)
                     .. (size ~= nil
                         and "landscape_bounds_pixels"
                         or "landscape_bounds_anchor")
+                    .. " | source=" .. tostring(bounds_source or "")
             )
             return direct
         end
+        bounds_error = direct_error
+    end
+    local projection_target = self:_find_projection_target()
+    if projection_target == nil then
         self:_diagnostic(
             "projection",
             "PALTR_MAP_OVERLAY_PROJECTION_FAILED | bounds_direct:"
-                .. tostring(direct_error or "")
+                .. tostring(bounds_error or "disabled")
+                .. " | projection_target:unavailable"
         )
         return nil
     end
-    if projection_target == nil then return nil end
     if self.projection_strategy ~= nil then
         local converted = self.projection_strategy.project(
             projection_target,
@@ -908,30 +931,8 @@ function Overlay:_world_to_widget(world)
         end
         table.insert(errors, strategy.name .. ":" .. tostring(project_error or ""))
     end
-    if self.api.disable_bounds_fallback ~= true then
-        local direct, direct_error = project_from_landscape_bounds(
-            self.map_body,
-            world
-        )
-        if direct ~= nil then
-            local size = self:_map_local_size()
-            if size ~= nil then
-                direct = {
-                    x = direct.x * size.x,
-                    y = direct.y * size.y
-                }
-            end
-            self:_diagnostic(
-                "projection",
-                "PALTR_MAP_OVERLAY_PROJECTION | strategy="
-                    .. (size ~= nil
-                        and "landscape_bounds_pixels"
-                        or "landscape_bounds_anchor")
-            )
-            return direct
-        end
-        table.insert(errors, "bounds_direct:"
-            .. tostring(direct_error or ""))
+    if bounds_error ~= nil then
+        table.insert(errors, "bounds_direct:" .. tostring(bounds_error))
     end
     self:_diagnostic(
         "projection",

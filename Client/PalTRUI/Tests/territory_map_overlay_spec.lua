@@ -123,6 +123,7 @@ local projection_target = object({
 })
 local projection_overlay = Overlay.new({
     log = function() end,
+    disable_bounds_fallback = true,
     find_projection_target = function() return projection_target end,
     get_local_size = function() return { x = 1000, y = 1000 } end
 })
@@ -194,6 +195,49 @@ near(bounds_projected.x, (3400 + 200000) / 600000,
     "world Y maps to horizontal landscape ratio")
 near(bounds_projected.y, 1 - ((1200 + 100000) / 400000),
     "world X maps bottom-to-top on the map texture")
+
+local main_world_body = widget_object({
+    name = "WBP_Map_Body_C MainWorldBody",
+    widget_name = "WBP_Map_Body_MW5",
+    class_name = "WBP_Map_Body_C"
+})
+local main_world_projection_overlay = Overlay.new({
+    log = function() end,
+    find_projection_target = function() return nil end
+})
+main_world_projection_overlay.parent_canvas = object({
+    name = "Canvas MainWorld"
+})
+main_world_projection_overlay.map_body = main_world_body
+local main_world_projected = main_world_projection_overlay:_world_to_widget({
+    x = -344668, y = 258391, z = 0
+})
+if main_world_projected == nil or main_world_projected.normalized ~= true then
+    error("MW5 uses verified map data when live bounds are unavailable")
+end
+near(main_world_projected.x,
+    (258391 + 724400) / (724400 + 724400),
+    "MW5 fallback maps world Y horizontally")
+near(main_world_projected.y,
+    1 - ((-344668 + 1099400) / (349400 + 1099400)),
+    "MW5 fallback maps world X vertically")
+
+local unknown_map_projection_overlay = Overlay.new({
+    log = function() end,
+    find_projection_target = function() return nil end
+})
+unknown_map_projection_overlay.parent_canvas = object({
+    name = "Canvas UnknownMap"
+})
+unknown_map_projection_overlay.map_body = widget_object({
+    name = "WBP_Map_Body_C UnknownBody",
+    widget_name = "WBP_Map_Body_Unknown",
+    class_name = "WBP_Map_Body_C"
+})
+if unknown_map_projection_overlay:_world_to_widget({ x = 1, y = 2, z = 0 })
+    ~= nil then
+    error("verified MW5 bounds are not guessed for another map")
+end
 local bounds_pixel_overlay = Overlay.new({
     log = function() end,
     find_projection_target = function() return nil end,
@@ -244,6 +288,7 @@ near(recovered_projection.x, (3400 + 200000) / 600000,
 
 local anchor_projection_overlay = Overlay.new({
     log = function() end,
+    disable_bounds_fallback = true,
     find_projection_target = function() return projection_target end,
     get_local_size = function() return nil end
 })
@@ -600,6 +645,7 @@ end
 
 projected_relative = nil
 local tree_projection_overlay = Overlay.new({
+    disable_bounds_fallback = true,
     find_projection_target = function() return projection_target end,
     get_local_size = function() return { x = 1000, y = 1000 } end,
     log = function() end
