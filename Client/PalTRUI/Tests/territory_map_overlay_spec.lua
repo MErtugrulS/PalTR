@@ -212,14 +212,14 @@ main_world_projection_overlay.map_body = main_world_body
 local main_world_projected = main_world_projection_overlay:_world_to_widget({
     x = -344668, y = 258391, z = 0
 })
-if main_world_projected == nil or main_world_projected.normalized == true then
-    error("MW5 uses verified texture space when live bounds are unavailable")
+if main_world_projected == nil or main_world_projected.normalized ~= true then
+    error("MW5 uses normalized anchors until live geometry is available")
 end
 near(main_world_projected.x,
-    ((258391 + 724400) / (724400 + 724400)) * 8192,
+    (258391 + 724400) / (724400 + 724400),
     "MW5 fallback maps world Y horizontally")
 near(main_world_projected.y,
-    (1 - ((-344668 + 1099400) / (349400 + 1099400))) * 8192,
+    1 - ((-344668 + 1099400) / (349400 + 1099400)),
     "MW5 fallback maps world X vertically")
 
 local unknown_map_projection_overlay = Overlay.new({
@@ -1234,13 +1234,17 @@ local main_world_overlay = Overlay.new({
 main_world_overlay.map_body = main_world_body
 main_world_overlay.parent_canvas = canvas
 local main_world_size = main_world_overlay:_map_local_size()
-near(main_world_size.x, 8192, "MainWorld uses map texture width")
-near(main_world_size.y, 8192, "MainWorld uses map texture height")
+if main_world_size ~= nil then
+    error("MainWorld must not guess a texture-sized CanvasPanel geometry")
+end
 local main_world_projection = main_world_overlay:_projection_to_pixels({
     x = 0.50, y = 0.25
 })
-near(main_world_projection.x, 4096, "MainWorld projects x in texture space")
-near(main_world_projection.y, 2048, "MainWorld projects y in texture space")
+near(main_world_projection.x, 0.50, "MainWorld preserves normalized x")
+near(main_world_projection.y, 0.25, "MainWorld preserves normalized y")
+if main_world_projection.normalized ~= true then
+    error("MainWorld without geometry must use visible normalized anchors")
+end
 cleanup_overlay:_tick()
 near(cleanup_updates, 0,
     "initial render does not touch the unused packaged control pool")

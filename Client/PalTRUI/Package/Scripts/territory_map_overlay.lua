@@ -71,7 +71,6 @@ Overlay.MAIN_WORLD_BOUNDS = {
     minimum = { x = -1099400, y = -724400 },
     maximum = { x = 349400, y = 724400 }
 }
-Overlay.MAIN_WORLD_LOCAL_SIZE = { x = 8192, y = 8192 }
 
 PalTRTerritoryMapOverlayCallbacks = PalTRTerritoryMapOverlayCallbacks or {}
 
@@ -518,31 +517,54 @@ local function default_get_local_size(widget)
     if not valid_object(widget) or type(StaticFindObject) ~= "function" then
         return nil
     end
-    local geometry_ok, geometry = pcall(function()
-        return widget:GetCachedGeometry()
-    end)
     local library_ok, library = pcall(
         StaticFindObject,
         Overlay.SLATE_LIBRARY_PATH
     )
-    if geometry_ok and library_ok and valid_object(library) then
-        local size = call_vector(function()
-            return library:GetLocalSize(geometry)
-        end)
-        if size ~= nil then return size end
-    end
-    if geometry_ok then
-        local direct = vector(property(geometry, "LocalSize"))
-            or vector(property(geometry, "Size"))
-        if direct ~= nil then return direct end
+    local geometry_readers = {
+        {
+            name = "paint_geometry",
+            read = function() return widget:GetPaintSpaceGeometry() end
+        },
+        {
+            name = "tick_geometry",
+            read = function() return widget:GetTickSpaceGeometry() end
+        },
+        {
+            name = "cached_geometry",
+            read = function() return widget:GetCachedGeometry() end
+        }
+    }
+    for _, reader in ipairs(geometry_readers) do
+        local geometry_ok, geometry = pcall(reader.read)
+        if geometry_ok and library_ok and valid_object(library) then
+            local size = call_vector(function()
+                return library:GetLocalSize(geometry)
+            end)
+            if size ~= nil and size.x > 1 and size.y > 1 then
+                return size, reader.name
+            end
+        end
+        if geometry_ok then
+            local direct = vector(property(geometry, "LocalSize"))
+                or vector(property(geometry, "Size"))
+            if direct ~= nil and direct.x > 1 and direct.y > 1 then
+                return direct, reader.name .. "_direct"
+            end
+        end
     end
     local desired = call_vector(function()
         return widget:GetDesiredSize()
     end)
-    if desired ~= nil then return desired end
+    if desired ~= nil and desired.x > 1 and desired.y > 1 then
+        return desired, "desired_size"
+    end
     local slot = property(widget, "Slot")
     if valid_object(slot) then
-        return call_vector(function() return slot:GetSize() end)
+        local size = call_vector(function() return slot:GetSize() end)
+        if size ~= nil and size.x > 1 and size.y > 1 then
+            return size, "canvas_slot"
+        end
     end
     return nil
 end
@@ -669,38 +691,30 @@ function Overlay:_map_local_size()
     if valid_object(self.map_body) then table.insert(candidates, self.map_body) end
     for _, candidate in ipairs(candidates) do
         if valid_object(candidate) then
-            local read, size = pcall(self.api.get_local_size, candidate)
+            local read, size, geometry_source = pcall(
+                self.api.get_local_size,
+                candidate
+            )
             size = read and vector(size) or nil
             if size ~= nil and size.x > 1 and size.y > 1 then
                 self.projection_size = size
                 self:_diagnostic("projection_size", string.format(
                     "PALTR_MAP_OVERLAY_LOCAL_SIZE | width=%.2f | height=%.2f"
-                        .. " | source=%s",
+                        .. " | source=%s | geometry=%s",
                     size.x,
                     size.y,
-                    widget_name(candidate)
+                    widget_name(candidate),
+                    tostring(geometry_source or "custom")
                 ))
                 return size
             end
         end
     end
-    -- Canvas_MapBody is the zoomed/panned 8192² MainWorld texture space, not
-    -- the current viewport. Normalized anchors worked because CanvasPanel
-    -- resolved them against this same space. Convert explicitly so continuous
-    -- segments and scanline fills inherit Palworld's map transform correctly.
-    if is_main_world_map_body(self.map_body) then
-        self.projection_size = {
-            x = Overlay.MAIN_WORLD_LOCAL_SIZE.x,
-            y = Overlay.MAIN_WORLD_LOCAL_SIZE.y
-        }
-        self:_diagnostic("projection_size", string.format(
-            "PALTR_MAP_OVERLAY_LOCAL_SIZE | width=%.2f | height=%.2f"
-                .. " | source=main_world_texture",
-            self.projection_size.x,
-            self.projection_size.y
-        ))
-        return self.projection_size
-    end
+    -- MainWorld's texture resolution is not the CanvasPanel's Slate layout
+    -- size. Guessing 8192 here places otherwise valid controls outside the
+    -- zoomed/panned map hierarchy. Normalized anchors are the safe fallback
+    -- until the first completed Slate layout exposes a real local geometry.
+    if is_main_world_map_body(self.map_body) then return nil end
     if type(self.api.get_viewport_local_size) == "function" then
         local context = valid_object(self.map_base)
             and self.map_base or self.map_body
