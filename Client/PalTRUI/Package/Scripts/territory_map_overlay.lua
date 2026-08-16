@@ -71,6 +71,7 @@ Overlay.MAIN_WORLD_BOUNDS = {
     minimum = { x = -1099400, y = -724400 },
     maximum = { x = 349400, y = 724400 }
 }
+Overlay.MAIN_WORLD_LOCAL_SIZE = { x = 8192, y = 8192 }
 
 PalTRTerritoryMapOverlayCallbacks = PalTRTerritoryMapOverlayCallbacks or {}
 
@@ -546,6 +547,11 @@ local function default_get_local_size(widget)
     return nil
 end
 
+local function is_main_world_map_body(widget)
+    local identity = widget_name(widget) .. " " .. full_name(widget)
+    return identity:find("WBP_Map_Body_MW5", 1, true) ~= nil
+end
+
 local function default_get_viewport_local_size(context)
     context = unwrap(context)
     if not valid_object(context) or type(StaticFindObject) ~= "function" then
@@ -677,6 +683,23 @@ function Overlay:_map_local_size()
                 return size
             end
         end
+    end
+    -- Canvas_MapBody is the zoomed/panned 8192² MainWorld texture space, not
+    -- the current viewport. Normalized anchors worked because CanvasPanel
+    -- resolved them against this same space. Convert explicitly so continuous
+    -- segments and scanline fills inherit Palworld's map transform correctly.
+    if is_main_world_map_body(self.map_body) then
+        self.projection_size = {
+            x = Overlay.MAIN_WORLD_LOCAL_SIZE.x,
+            y = Overlay.MAIN_WORLD_LOCAL_SIZE.y
+        }
+        self:_diagnostic("projection_size", string.format(
+            "PALTR_MAP_OVERLAY_LOCAL_SIZE | width=%.2f | height=%.2f"
+                .. " | source=main_world_texture",
+            self.projection_size.x,
+            self.projection_size.y
+        ))
+        return self.projection_size
     end
     if type(self.api.get_viewport_local_size) == "function" then
         local context = valid_object(self.map_base)
@@ -874,8 +897,7 @@ function Overlay:_find_projection_target()
 end
 
 local function main_world_bounds(map_body)
-    local identity = widget_name(map_body) .. " " .. full_name(map_body)
-    if identity:find("WBP_Map_Body_MW5", 1, true) == nil then return nil end
+    if not is_main_world_map_body(map_body) then return nil end
     return Overlay.MAIN_WORLD_BOUNDS.minimum,
         Overlay.MAIN_WORLD_BOUNDS.maximum
 end

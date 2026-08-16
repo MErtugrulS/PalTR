@@ -212,14 +212,14 @@ main_world_projection_overlay.map_body = main_world_body
 local main_world_projected = main_world_projection_overlay:_world_to_widget({
     x = -344668, y = 258391, z = 0
 })
-if main_world_projected == nil or main_world_projected.normalized ~= true then
-    error("MW5 uses verified map data when live bounds are unavailable")
+if main_world_projected == nil or main_world_projected.normalized == true then
+    error("MW5 uses verified texture space when live bounds are unavailable")
 end
 near(main_world_projected.x,
-    (258391 + 724400) / (724400 + 724400),
+    ((258391 + 724400) / (724400 + 724400)) * 8192,
     "MW5 fallback maps world Y horizontally")
 near(main_world_projected.y,
-    1 - ((-344668 + 1099400) / (349400 + 1099400)),
+    (1 - ((-344668 + 1099400) / (349400 + 1099400))) * 8192,
     "MW5 fallback maps world X vertically")
 
 local unknown_map_projection_overlay = Overlay.new({
@@ -1221,6 +1221,26 @@ near(viewport_projection.y, 180, "viewport fallback projects y in pixels")
 if viewport_projection.normalized == true then
     error("viewport fallback disables dotted normalized rendering")
 end
+local main_world_body = object({
+    name = "WBP_Map_Body_C /Test/WBP_Map_Body_MW5"
+})
+local main_world_overlay = Overlay.new({
+    get_local_size = function() return nil end,
+    get_viewport_local_size = function()
+        error("MainWorld must not use viewport coordinates")
+    end,
+    log = function() end
+})
+main_world_overlay.map_body = main_world_body
+main_world_overlay.parent_canvas = canvas
+local main_world_size = main_world_overlay:_map_local_size()
+near(main_world_size.x, 8192, "MainWorld uses map texture width")
+near(main_world_size.y, 8192, "MainWorld uses map texture height")
+local main_world_projection = main_world_overlay:_projection_to_pixels({
+    x = 0.50, y = 0.25
+})
+near(main_world_projection.x, 4096, "MainWorld projects x in texture space")
+near(main_world_projection.y, 2048, "MainWorld projects y in texture space")
 cleanup_overlay:_tick()
 near(cleanup_updates, 0,
     "initial render does not touch the unused packaged control pool")
