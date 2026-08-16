@@ -7,9 +7,21 @@ namespace PalTRLauncher.Services;
 public sealed class PalworldInstallLocator
 {
     private const string PalworldAppId = "1623730";
+    private readonly string? explicitGameRoot;
+
+    public PalworldInstallLocator(string? explicitGameRoot = null)
+    {
+        this.explicitGameRoot = explicitGameRoot;
+    }
 
     public string? FindGameRoot()
     {
+        if (!string.IsNullOrWhiteSpace(explicitGameRoot))
+        {
+            string candidate = Path.GetFullPath(explicitGameRoot);
+            return File.Exists(Path.Combine(candidate, "Palworld.exe")) ? candidate : null;
+        }
+
         foreach (string steamRoot in FindSteamRoots())
         {
             foreach (string libraryRoot in FindLibraryRoots(steamRoot))

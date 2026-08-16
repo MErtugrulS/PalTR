@@ -223,7 +223,7 @@ public sealed class GitHubPalTRInstallationService : IInstallationService, IDisp
     }
 
     private LocalPalTRInstallationService CreateCachedInstaller(string packageRoot)
-        => new(installLocator, packageRoot);
+        => new(installLocator, packageRoot, embeddedInstaller.DependencyRoot);
 
     private string GetPackageRoot(string version)
         => Path.Combine(cacheRoot, "Packages", SafeVersion(version));

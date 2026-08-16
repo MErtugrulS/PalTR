@@ -40,17 +40,21 @@ Ana sayfadaki **Kur / Güncelle / Onar** işlemi isteğe bağlı olarak çalış
 
 - Steam kayıtları ve `libraryfolders.vdf` üzerinden Palworld kurulumunu bulur.
 - Publish çıktısındaki `Payload/PalTRUI` içeriğini kaynak kabul eder.
+- Publish çıktısındaki doğrulanmış `Payload/Dependencies` dağıtımından UE4SS ve
+  `UE4SSExperimentalPW` bileşenlerini temiz Palworld kurulumuna otomatik ekler.
 - PalTRUI pak, Lua ve `Info.json` dosyalarını SHA-256 ile doğrular.
+- Mevcut `UE4SS-settings.ini`, `mods.txt` ve `mods.json` kullanıcı ayarlarını
+  korur; desteklenen çekirdek bağımlılık dosyalarını yedekleyerek onarır.
 - UE4SS `mods.txt` içindeki yalnız `PalTRUI` kaydını etkinleştirir; diğer modların
   durumunu ve yerleşik `Keybinds` sırasını korur.
 - Yalnız değişen dosyaları yedekleyerek geçici dosya üzerinden atomik değiştirir.
 - Bir hata oluşursa o işlemde değiştirdiği dosyaları geri alır.
 - Palworld çalışırken mod dosyalarını değiştirmez.
 
-PalTRUI payload'ı proje publish edilirken otomatik eklenir. UE4SS ve
-`UE4SSExperimentalPW` üçüncü taraf bağımlılıklardır; lisansı ve dağıtım kaynağı
-onaylanmadan launcher paketine gömülmez. Eksiklerse launcher kapanmaz, yalnız
-kurulum durumu açıkça engelli görünür ve sunucuya katılma başlatılmaz.
+PalTRUI, UE4SS ve `UE4SSExperimentalPW` payload'ları proje publish edilirken
+otomatik eklenir. UE4SS lisansı bağımlılık dizininde dağıtılır. Eksik bileşenler
+**Kur / Güncelle / Onar** işlemiyle birlikte kurulur; ayrı bir manuel mod
+kurulumu gerekmez.
 
 ## GitHub Releases üzerinden güncelleme
 

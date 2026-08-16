@@ -10,13 +10,21 @@ public sealed class LocalPalTRInstallationService : IInstallationService
 {
     private readonly PalworldInstallLocator installLocator;
     private readonly string payloadRoot;
+    private readonly Func<bool> isPalworldRunning;
+
+    internal string DependencyRoot { get; }
 
     public LocalPalTRInstallationService(
         PalworldInstallLocator installLocator,
-        string? applicationRoot = null)
+        string? applicationRoot = null,
+        string? dependencyRoot = null,
+        Func<bool>? isPalworldRunning = null)
     {
         this.installLocator = installLocator;
-        payloadRoot = Path.Combine(applicationRoot ?? AppContext.BaseDirectory, "Payload", "PalTRUI");
+        string root = applicationRoot ?? AppContext.BaseDirectory;
+        payloadRoot = Path.Combine(root, "Payload", "PalTRUI");
+        DependencyRoot = dependencyRoot ?? Path.Combine(root, "Payload", "Dependencies");
+        this.isPalworldRunning = isPalworldRunning ?? IsPalworldRunning;
     }
 
     public async Task<InstallationSnapshot> InspectAsync(CancellationToken cancellationToken = default)
@@ -54,17 +62,28 @@ public sealed class LocalPalTRInstallationService : IInstallationService
             return Blocked("PalTR paketi eksik", payloadError, gameRoot);
         }
 
+        if (!TryValidateDependencyPayload(out string dependencyPayloadError))
+        {
+            return Blocked("Kurulum bileşenleri eksik", dependencyPayloadError, gameRoot, packageVersion);
+        }
+
         string dependencyError = GetDependencyError(gameRoot);
         if (dependencyError.Length > 0)
         {
-            return Blocked("Gerekli bileşen eksik", dependencyError, gameRoot, packageVersion);
+            return new InstallationSnapshot(
+                InstallationState.InstallRequired,
+                "PalTR bileşenleri kurulacak",
+                $"{dependencyError} Launcher gerekli bileşenleri otomatik kuracak.",
+                gameRoot,
+                packageVersion);
         }
 
         IReadOnlyList<FileMapping> mappings = BuildMappings(gameRoot);
         foreach (FileMapping mapping in mappings)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            if (!File.Exists(mapping.Destination) || !FilesMatch(mapping.Source, mapping.Destination))
+            if (!File.Exists(mapping.Destination) ||
+                (!mapping.CopyOnlyIfMissing && !FilesMatch(mapping.Source, mapping.Destination)))
             {
                 return new InstallationSnapshot(
                     InstallationState.InstallRequired,
@@ -106,7 +125,7 @@ public sealed class LocalPalTRInstallationService : IInstallationService
             return new InstallationActionResult(false, inspection);
         }
 
-        if (IsPalworldRunning())
+        if (isPalworldRunning())
         {
             return new InstallationActionResult(false, Blocked(
                 "Palworld açık",
@@ -127,7 +146,8 @@ public sealed class LocalPalTRInstallationService : IInstallationService
             foreach (FileMapping mapping in BuildMappings(inspection.GameRoot))
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                if (File.Exists(mapping.Destination) && FilesMatch(mapping.Source, mapping.Destination))
+                if (File.Exists(mapping.Destination) &&
+                    (mapping.CopyOnlyIfMissing || FilesMatch(mapping.Source, mapping.Destination)))
                 {
                     continue;
                 }
@@ -197,18 +217,37 @@ public sealed class LocalPalTRInstallationService : IInstallationService
         return true;
     }
 
+    private bool TryValidateDependencyPayload(out string error)
+    {
+        string ue4ss = Path.Combine(DependencyRoot, "Mods", "NativeMods", "UE4SS", "UE4SS.dll");
+        string managedDependency = Path.Combine(
+            DependencyRoot,
+            "Mods",
+            "ManagedMods",
+            "UE4SSExperimentalPW",
+            "Info.json");
+        if (!File.Exists(ue4ss) || !File.Exists(managedDependency))
+        {
+            error = "Launcher dağıtımında UE4SS veya UE4SSExperimentalPW payload'ı eksik. Launcher paketini yeniden indir.";
+            return false;
+        }
+
+        error = string.Empty;
+        return true;
+    }
+
     private static string GetDependencyError(string gameRoot)
     {
         string ue4ss = Path.Combine(gameRoot, "Mods", "NativeMods", "UE4SS", "UE4SS.dll");
         string managedDependency = Path.Combine(gameRoot, "Mods", "ManagedMods", "UE4SSExperimentalPW", "Info.json");
         if (!File.Exists(ue4ss))
         {
-            return "UE4SS kurulu değil. Onaylı UE4SS dağıtımı launcher paketine eklenmeden otomatik kurulum yapılamaz.";
+            return "UE4SS kurulu değil.";
         }
 
         if (!File.Exists(managedDependency))
         {
-            return "UE4SSExperimentalPW bağımlılığı kurulu değil. Onaylı bağımlılık paketi gerekli.";
+            return "UE4SSExperimentalPW bağımlılığı kurulu değil.";
         }
 
         return string.Empty;
@@ -217,6 +256,7 @@ public sealed class LocalPalTRInstallationService : IInstallationService
     private IReadOnlyList<FileMapping> BuildMappings(string gameRoot)
     {
         List<FileMapping> mappings = new();
+        AddDependencyMappings(mappings, gameRoot);
         AddFile(mappings, "Info.json", Path.Combine("Mods", "NativeMods", "UE4SS", "Mods", "PalTRUI", "Info.json"));
         AddFile(mappings, Path.Combine("LogicMods", "PalTRUI.pak"), Path.Combine("Pal", "Content", "Paks", "LogicMods", "PalTRUI.pak"));
 
@@ -226,7 +266,11 @@ public sealed class LocalPalTRInstallationService : IInstallationService
             string relativeScript = Path.GetRelativePath(sourceScripts, source);
             string relativeSource = Path.Combine("Scripts", relativeScript);
             string relativeDestination = Path.Combine("Mods", "NativeMods", "UE4SS", "Mods", "PalTRUI", "Scripts", relativeScript);
-            mappings.Add(new FileMapping(source, Path.Combine(gameRoot, relativeDestination), relativeDestination));
+            mappings.Add(new FileMapping(
+                source,
+                Path.Combine(gameRoot, relativeDestination),
+                relativeDestination,
+                false));
         }
 
         return mappings;
@@ -235,7 +279,31 @@ public sealed class LocalPalTRInstallationService : IInstallationService
             => target.Add(new FileMapping(
                 Path.Combine(payloadRoot, relativeSource),
                 Path.Combine(gameRoot, relativeDestination),
-                relativeDestination));
+                relativeDestination,
+                false));
+    }
+
+    private void AddDependencyMappings(ICollection<FileMapping> mappings, string gameRoot)
+    {
+        foreach (string source in Directory.EnumerateFiles(DependencyRoot, "*", SearchOption.AllDirectories))
+        {
+            string relative = Path.GetRelativePath(DependencyRoot, source);
+            bool copyOnlyIfMissing = relative.Equals(
+                    Path.Combine("Mods", "NativeMods", "UE4SS", "UE4SS-settings.ini"),
+                    StringComparison.OrdinalIgnoreCase) ||
+                relative.Equals(
+                    Path.Combine("Mods", "NativeMods", "UE4SS", "Mods", "mods.json"),
+                    StringComparison.OrdinalIgnoreCase) ||
+                relative.Equals(
+                    Path.Combine("Mods", "NativeMods", "UE4SS", "Mods", "mods.txt"),
+                    StringComparison.OrdinalIgnoreCase);
+
+            mappings.Add(new FileMapping(
+                source,
+                Path.Combine(gameRoot, relative),
+                relative,
+                copyOnlyIfMissing));
+        }
     }
 
     private static bool FilesMatch(string first, string second)
@@ -352,5 +420,9 @@ public sealed class LocalPalTRInstallationService : IInstallationService
         string? packageVersion = null)
         => new(InstallationState.Blocked, title, detail, gameRoot, packageVersion);
 
-    private sealed record FileMapping(string Source, string Destination, string RelativeDestination);
+    private sealed record FileMapping(
+        string Source,
+        string Destination,
+        string RelativeDestination,
+        bool CopyOnlyIfMissing);
 }
