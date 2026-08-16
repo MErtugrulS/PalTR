@@ -113,6 +113,17 @@ for _, span in ipairs(spans) do
         "fill span stays inside polygon")
 end
 
+local normalized_spans = Model.scanline_spans({
+    { x = 0.10, y = 0.10 }, { x = 0.30, y = 0.10 },
+    { x = 0.30, y = 0.30 }, { x = 0.10, y = 0.30 }
+}, { spacing = 0.003, normalized = true, max_spans = 96 })
+equal(#normalized_spans > 0 and #normalized_spans <= 96, true,
+    "normalized fill produces a bounded anchor-space scan pool")
+for _, span in ipairs(normalized_spans) do
+    equal(span.x >= 0.10 and span.x + span.width <= 0.30, true,
+        "normalized fill span stays inside polygon")
+end
+
 local unknown = Model.build({
     player = { guild_key = "own" }, guild = { key = "own", name = "NWO" },
     territories = { boundaries = {}, nodes = {

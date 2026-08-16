@@ -44,6 +44,21 @@ end
 near(anchored.anchor_x, 0.3, "normalized segment anchor x")
 near(anchored.anchor_y, 0.5, "normalized segment anchor y")
 near(anchored.width, 0.45, "normalized boundary fallback stays subtle")
+local anchored_line = Overlay.segment_layout(
+    { x = 0.2, y = 0.4, normalized = true },
+    { x = 0.4, y = 0.6, normalized = true },
+    2,
+    { x = 2000, y = 1000 }
+)
+if anchored_line.normalized ~= true then
+    error("sized normalized segment keeps anchor positioning")
+end
+near(anchored_line.anchor_x, 0.3, "sized line anchor x")
+near(anchored_line.anchor_y, 0.5, "sized line anchor y")
+near(anchored_line.width, math.sqrt(400 * 400 + 200 * 200) + 2,
+    "sized normalized segment connects both anchored endpoints")
+near(anchored_line.angle, math.deg(math.atan(200, 400)),
+    "sized normalized segment follows the boundary angle")
 near(Overlay.NORMALIZED_CAPITAL_SIZE, 2.4, "normalized capital stays compact")
 near(Overlay.NORMALIZED_OUTPOST_SIZE, 1.4, "normalized outpost stays compact")
 local capital_label_layout = Overlay.node_label_layout(

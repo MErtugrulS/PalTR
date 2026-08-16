@@ -287,7 +287,7 @@ local function vector(value)
     return nil
 end
 
-function Overlay.segment_layout(first, second, thickness)
+function Overlay.segment_layout(first, second, thickness, anchor_size)
     if type(first) ~= "table" or type(second) ~= "table" then return nil end
     local first_x, first_y = tonumber(first.x), tonumber(first.y)
     local second_x, second_y = tonumber(second.x), tonumber(second.y)
@@ -295,6 +295,25 @@ function Overlay.segment_layout(first, second, thickness)
         return nil
     end
     if first.normalized == true and second.normalized == true then
+        anchor_size = vector(anchor_size)
+        if anchor_size ~= nil and anchor_size.x > 1 and anchor_size.y > 1 then
+            local dx = (second_x - first_x) * anchor_size.x
+            local dy = (second_y - first_y) * anchor_size.y
+            local length = math.sqrt(dx * dx + dy * dy)
+            if length >= 0.5 then
+                thickness = math.max(1, tonumber(thickness) or 3)
+                return {
+                    normalized = true,
+                    anchor_x = (first_x + second_x) / 2,
+                    anchor_y = (first_y + second_y) / 2,
+                    x = 0,
+                    y = 0,
+                    width = length + thickness,
+                    height = thickness,
+                    angle = math.deg(math.atan(dy, dx))
+                }
+            end
+        end
         return {
             normalized = true,
             anchor_x = (first_x + second_x) / 2,
@@ -372,7 +391,24 @@ local function configure_canvas_slot(control, layout)
     local slot = property(control, "Slot")
     if not valid_object(slot) then return false end
     local updated = pcall(function()
-        if layout.normalized == true then
+        if layout.normalized_stretch == true then
+            slot:SetAnchors({
+                Minimum = {
+                    X = layout.anchor_min_x,
+                    Y = layout.anchor_min_y
+                },
+                Maximum = {
+                    X = layout.anchor_max_x,
+                    Y = layout.anchor_max_y
+                }
+            })
+            slot:SetAlignment({ X = 0, Y = 0 })
+            -- SetOffsets is the native CanvasPanelSlot API for stretched
+            -- anchors. Keep the call isolated for lightweight test doubles.
+            pcall(function()
+                slot:SetOffsets({ Left = 0, Top = 0, Right = 0, Bottom = 0 })
+            end)
+        elseif layout.normalized == true then
             slot:SetAnchors({
                 Minimum = { X = layout.anchor_x, Y = layout.anchor_y },
                 Maximum = { X = layout.anchor_x, Y = layout.anchor_y }
@@ -388,8 +424,10 @@ local function configure_canvas_slot(control, layout)
             })
             slot:SetAlignment({ X = 0, Y = 0 })
         end
-        slot:SetPosition({ X = layout.x, Y = layout.y })
-        slot:SetSize({ X = layout.width, Y = layout.height })
+        if layout.normalized_stretch ~= true then
+            slot:SetPosition({ X = layout.x, Y = layout.y })
+            slot:SetSize({ X = layout.width, Y = layout.height })
+        end
         if layout.z_order ~= nil then
             slot:SetZOrder(layout.z_order)
         end
@@ -969,7 +1007,12 @@ function Overlay:_world_to_widget(world)
             world
         )
         if direct ~= nil then
-            local size = self:_map_local_size()
+            -- MainWorld anchors are the only coordinate space proven to
+            -- follow Palworld's own zoom/pan transform. Its CanvasPanel slot
+            -- size is useful for line length, but pixel positions in that
+            -- design space are clipped by the live map viewport.
+            local size = not is_main_world_map_body(self.map_body)
+                and self:_map_local_size() or nil
             if size ~= nil then
                 direct = {
                     x = direct.x * size.x,
@@ -1596,10 +1639,13 @@ function Overlay:_render_segments(throttle)
         if first ~= nil and second ~= nil then
             stats.projected = stats.projected + 1
         end
+        local anchor_size = first ~= nil and first.normalized == true
+            and self:_map_local_size() or nil
         local layout = Overlay.segment_layout(
             first,
             second,
-            Overlay.BORDER_THICKNESS
+            Overlay.BORDER_THICKNESS,
+            anchor_size
         )
         if valid_object(control) and valid_object(inner) and layout ~= nil
             and configure_canvas_slot(control, layout) then
@@ -1645,20 +1691,22 @@ function Overlay:_render_fills(throttle)
         for _, world in ipairs(boundary.points or {}) do
             local projected = self:_project_cached(world)
             if projected == nil then points = {}; break end
-            if projected.normalized == true then normalized = true; break end
+            if projected.normalized == true then normalized = true end
             table.insert(points, projected)
         end
-        if not normalized and #points >= 3 then
+        if #points >= 3 then
             local boundary_count = #boundaries - boundary_index + 1
             local quota = math.max(1, math.floor(remaining / boundary_count))
             local spans = TerritoryMapModel.scanline_spans(points, {
-                spacing = 4,
+                spacing = normalized and 0.003 or 4,
+                normalized = normalized,
                 max_spans = quota
             })
             for _, span in ipairs(spans) do
                 table.insert(entries, {
                     span = span,
-                    color = boundary.fill_color
+                    color = boundary.fill_color,
+                    normalized = normalized
                 })
             end
             remaining = Overlay.MAX_FILLS - #entries
@@ -1669,15 +1717,29 @@ function Overlay:_render_fills(throttle)
     for index, entry in ipairs(entries) do
         local control = self:_control(control_name("TerritoryFill", index))
         local span = entry.span
-        if valid_object(control) and span.width > 0
-            and configure_canvas_slot(control, {
+        local layout
+        if entry.normalized == true then
+            layout = {
+                normalized_stretch = true,
+                anchor_min_x = span.x,
+                anchor_min_y = span.y - span.height / 2,
+                anchor_max_x = span.x + span.width,
+                anchor_max_y = span.y + span.height / 2,
+                angle = 0,
+                z_order = Overlay.FILL_Z_ORDER
+            }
+        else
+            layout = {
                 x = span.x,
                 y = span.y - span.height / 2,
                 width = span.width,
                 height = span.height,
                 angle = 0,
                 z_order = Overlay.FILL_Z_ORDER
-            }) then
+            }
+        end
+        if valid_object(control) and span.width > 0
+            and configure_canvas_slot(control, layout) then
             set_color(control, entry.color)
             show(control)
             used = index

@@ -231,7 +231,8 @@ function Model.scanline_spans(points, options)
         min_y, max_y = math.min(min_y, point.y), math.max(max_y, point.y)
     end
     local maximum = math.max(1, tonumber(options.max_spans) or 384)
-    local spacing = math.max(2, tonumber(options.spacing) or 4)
+    local minimum_spacing = options.normalized == true and 0.0005 or 2
+    local spacing = math.max(minimum_spacing, tonumber(options.spacing) or 4)
     local function produce(step)
         local spans, y = {}, min_y + step / 2
         while y < max_y do
