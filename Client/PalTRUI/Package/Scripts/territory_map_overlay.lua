@@ -99,6 +99,17 @@ local function rendered_object(value)
     return true
 end
 
+local function physically_rendered_object(value)
+    value = unwrap(value)
+    if not valid_object(value) then return false end
+    local checked, rendered = pcall(function() return value:IsRendered() end)
+    if checked then return rendered == true end
+    local visible_checked, visible = pcall(function()
+        return value:IsVisible()
+    end)
+    return visible_checked and visible == true
+end
+
 local function full_name(value)
     value = unwrap(value)
     if value == nil then return "" end
@@ -612,6 +623,13 @@ function Overlay:_map_local_size()
         end)
     end
     local candidates = {}
+    -- The overlay is stretched to the exact canvas that receives the map
+    -- projection. Once it has completed one Slate layout pass its cached
+    -- geometry is the most reliable size source. Map body children often
+    -- report a zero desired size through UE4SS even while visibly rendered.
+    if valid_object(self.widget) then table.insert(candidates, self.widget) end
+    local overlay_root = self:_control("TerritoryOverlayCanvas")
+    if valid_object(overlay_root) then table.insert(candidates, overlay_root) end
     if valid_object(image) then table.insert(candidates, image) end
     if valid_object(self.parent_canvas) then
         table.insert(candidates, self.parent_canvas)
@@ -1187,7 +1205,8 @@ end
 function Overlay:request_discovery(source)
     self.map_expected_open = true
     self.last_visibility_check_at = nil
-    if valid_object(self.widget) and self:_restore_known_map() then
+    if valid_object(self.widget) and self:_restore_known_map()
+        and self:_map_is_rendered(true) then
         show(self.widget)
         self.map_was_rendered = true
         self.render_dirty = true
@@ -1200,6 +1219,9 @@ function Overlay:request_discovery(source)
     if self:_restore_known_map() and self:_map_is_rendered(true) then
         return true, "cached"
     end
+    -- UMG map instances can remain UObject-valid after the screen closes.
+    -- Never reattach to that stale canvas: remove the old overlay and discover
+    -- the newly rendered map instance after the key-open layout delay.
     if valid_object(self.widget) then self:_clear_runtime(false) end
     self.known_map_base = nil
     self.known_map_body = nil
@@ -1369,7 +1391,13 @@ function Overlay:_map_is_rendered(physical_only)
             and valid_object(self.parent_canvas)
     end
     if valid_object(self.map_base) then
+        if physical_only == true then
+            return physically_rendered_object(self.map_base)
+        end
         return rendered_object(self.map_base)
+    end
+    if physical_only == true then
+        return physically_rendered_object(self.map_body)
     end
     return rendered_object(self.map_body)
 end

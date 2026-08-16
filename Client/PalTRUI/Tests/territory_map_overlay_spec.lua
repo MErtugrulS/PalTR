@@ -866,9 +866,13 @@ local reopened, reopen_result = explicit_overlay:set_map_expected_open(
     true,
     "test_key"
 )
-if reopened ~= true or reopen_result ~= "cached_widget"
-    or explicit_visibility ~= 3 or explicit_attach_calls ~= 1 then
-    error("explicit map reopen reuses the cached overlay widget")
+if reopened ~= true or reopen_result ~= "queued"
+    or explicit_overlay.widget ~= nil
+    or explicit_overlay.discovery_pending ~= true then
+    error("explicit map reopen discards the physically hidden widget: "
+        .. tostring(reopened) .. "/" .. tostring(reopen_result)
+        .. "/widget=" .. tostring(explicit_overlay.widget)
+        .. "/pending=" .. tostring(explicit_overlay.discovery_pending))
 end
 
 local scan_calls = 0
@@ -1031,10 +1035,18 @@ end
 
 local stale_overlay = Overlay.new({ log = function() end })
 stale_overlay.known_map_base = hidden_base
+stale_overlay.map_base = hidden_base
+stale_overlay.map_body = body
+stale_overlay.parent_canvas = canvas
+stale_overlay.widget = object({
+    name = "WBP_PalTRMapOverlay_C Stale",
+    RemoveFromParent = function() end
+})
 local stale_queued, stale_result = stale_overlay:request_discovery("test")
 if stale_queued ~= true or stale_result ~= "queued"
-    or stale_overlay.discovery_pending ~= true then
-    error("hidden cached map queues a fresh bounded discovery")
+    or stale_overlay.discovery_pending ~= true
+    or stale_overlay.widget ~= nil then
+    error("hidden cached map removes stale overlay and queues discovery")
 end
 if stale_overlay.known_map_base ~= nil then
     error("hidden cached map is discarded before discovery")
@@ -1154,6 +1166,37 @@ for index = 1, Overlay.MAX_FILLS do
     local control = object({})
     function control:SetVisibility() cleanup_updates = cleanup_updates + 1 end
     cleanup_overlay.controls[string.format("TerritoryFill%03d", index)] = control
+end
+
+local overlay_geometry_widget = object({
+    name = "WBP_PalTRMapOverlay_C GeometrySource"
+})
+local overlay_geometry_root = object({
+    name = "CanvasPanel TerritoryOverlayCanvas"
+})
+local geometry_overlay = Overlay.new({
+    get_local_size = function(candidate)
+        if candidate == overlay_geometry_root then
+            return { x = 1600, y = 900 }
+        end
+        return nil
+    end,
+    log = function() end
+})
+geometry_overlay.widget = overlay_geometry_widget
+geometry_overlay.parent_canvas = canvas
+geometry_overlay.map_body = body
+geometry_overlay.controls.TerritoryOverlayCanvas = overlay_geometry_root
+local geometry_size = geometry_overlay:_map_local_size()
+near(geometry_size.x, 1600, "stretched overlay root supplies map width")
+near(geometry_size.y, 900, "stretched overlay root supplies map height")
+local pixel_projection = geometry_overlay:_projection_to_pixels({
+    x = 0.25, y = 0.50
+})
+near(pixel_projection.x, 400, "overlay geometry converts normalized x")
+near(pixel_projection.y, 450, "overlay geometry converts normalized y")
+if pixel_projection.normalized == true then
+    error("overlay geometry enables continuous pixel rendering")
 end
 cleanup_overlay:_tick()
 near(cleanup_updates, 0,
