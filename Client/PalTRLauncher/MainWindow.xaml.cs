@@ -18,7 +18,7 @@ public partial class MainWindow : Window
         LocalPalTRInstallationService embeddedInstaller = new(installLocator);
         viewModel = new LauncherViewModel(
             new DemoLauncherService(),
-            new HttpAccountService(),
+            new DemoAccountService(new HttpAccountService()),
             new SystemExternalLinkService(),
             new LocalRememberedSessionStore(),
             new UnavailableSteamAccountLinkService(),
