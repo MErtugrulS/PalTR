@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Security.Cryptography;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using PalTRLauncher.Models;
 
 namespace PalTRLauncher.Services;
@@ -514,14 +515,23 @@ public sealed class LocalPalTRInstallationService : IInstallationService
 
     private static bool IsPalTRUIEnabled(string gameRoot)
     {
-        string modsFile = GetModsFile(gameRoot);
-        if (!File.Exists(modsFile))
+        string legacyModsFile = GetLegacyModsFile(gameRoot);
+        if (!File.Exists(legacyModsFile) || !File.ReadLines(legacyModsFile).Any(line =>
+                line.Trim().Equals("PalTRUI : 1", StringComparison.OrdinalIgnoreCase)))
         {
             return false;
         }
 
-        return File.ReadLines(modsFile).Any(line =>
-            line.Trim().Equals("PalTRUI : 1", StringComparison.OrdinalIgnoreCase));
+        string modsJsonFile = GetModsJsonFile(gameRoot);
+        if (!File.Exists(modsJsonFile))
+        {
+            return false;
+        }
+
+        JsonNode? root = JsonNode.Parse(File.ReadAllText(modsJsonFile));
+        return root is JsonArray mods && mods
+            .OfType<JsonObject>()
+            .Any(IsEnabledPalTRUIEntry);
     }
 
     private static void EnsurePalTRUIEnabled(
@@ -534,7 +544,16 @@ public sealed class LocalPalTRInstallationService : IInstallationService
             return;
         }
 
-        string modsFile = GetModsFile(gameRoot);
+        EnsureLegacyPalTRUIEnabled(gameRoot, backupRoot, changedFiles);
+        EnsureJsonPalTRUIEnabled(gameRoot, backupRoot, changedFiles);
+    }
+
+    private static void EnsureLegacyPalTRUIEnabled(
+        string gameRoot,
+        string backupRoot,
+        ICollection<(string Destination, string? Backup)> changedFiles)
+    {
+        string modsFile = GetLegacyModsFile(gameRoot);
         Directory.CreateDirectory(Path.GetDirectoryName(modsFile)!);
         string? backup = null;
         List<string> lines = new();
@@ -572,8 +591,68 @@ public sealed class LocalPalTRInstallationService : IInstallationService
         changedFiles.Add((modsFile, backup));
     }
 
-    private static string GetModsFile(string gameRoot)
+    private static void EnsureJsonPalTRUIEnabled(
+        string gameRoot,
+        string backupRoot,
+        ICollection<(string Destination, string? Backup)> changedFiles)
+    {
+        string modsFile = GetModsJsonFile(gameRoot);
+        Directory.CreateDirectory(Path.GetDirectoryName(modsFile)!);
+
+        JsonArray mods;
+        if (File.Exists(modsFile))
+        {
+            JsonNode? root = JsonNode.Parse(File.ReadAllText(modsFile));
+            mods = root as JsonArray ?? throw new InvalidDataException("UE4SS mods.json kökü bir dizi değil.");
+        }
+        else
+        {
+            mods = new JsonArray();
+        }
+
+        JsonObject? existing = mods
+            .OfType<JsonObject>()
+            .FirstOrDefault(IsPalTRUIEntry);
+        if (existing is not null && IsEnabledPalTRUIEntry(existing))
+        {
+            return;
+        }
+
+        if (existing is null)
+        {
+            mods.Add(new JsonObject
+            {
+                ["mod_name"] = "PalTRUI",
+                ["mod_enabled"] = true
+            });
+        }
+        else
+        {
+            existing["mod_enabled"] = true;
+        }
+
+        string? backup = BackUpFile(modsFile, backupRoot, gameRoot);
+        string temporary = modsFile + ".paltr-new";
+        File.WriteAllText(temporary, mods.ToJsonString(new JsonSerializerOptions
+        {
+            WriteIndented = true
+        }));
+        File.Move(temporary, modsFile, true);
+        changedFiles.Add((modsFile, backup));
+    }
+
+    private static bool IsPalTRUIEntry(JsonObject entry)
+        => entry["mod_name"]?.GetValue<string>()
+            .Equals("PalTRUI", StringComparison.OrdinalIgnoreCase) == true;
+
+    private static bool IsEnabledPalTRUIEntry(JsonObject entry)
+        => IsPalTRUIEntry(entry) && entry["mod_enabled"]?.GetValue<bool>() == true;
+
+    private static string GetLegacyModsFile(string gameRoot)
         => Path.Combine(gameRoot, "Mods", "NativeMods", "UE4SS", "Mods", "mods.txt");
+
+    private static string GetModsJsonFile(string gameRoot)
+        => Path.Combine(gameRoot, "Mods", "NativeMods", "UE4SS", "Mods", "mods.json");
 
     private static string GetPalModSettingsFile(string gameRoot)
         => Path.Combine(gameRoot, "Mods", "PalModSettings.ini");

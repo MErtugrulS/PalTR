@@ -45,8 +45,8 @@ Ana sayfadaki **Kur / Güncelle / Onar** işlemi isteğe bağlı olarak çalış
 - PalTRUI pak, Lua ve `Info.json` dosyalarını SHA-256 ile doğrular.
 - Mevcut `UE4SS-settings.ini`, `mods.txt` ve `mods.json` kullanıcı ayarlarını
   korur; desteklenen çekirdek bağımlılık dosyalarını yedekleyerek onarır.
-- UE4SS `mods.txt` içindeki yalnız `PalTRUI` kaydını etkinleştirir; diğer modların
-  durumunu ve yerleşik `Keybinds` sırasını korur.
+- UE4SS `mods.json` ve geriye dönük `mods.txt` içindeki yalnız `PalTRUI` kaydını
+  etkinleştirir; diğer modların durumunu ve yerleşik `Keybinds` sırasını korur.
 - Palworld resmi mod yöneticisinin `PalModSettings.ini` kaydında
   `UE4SSExperimentalPW` bağımlılığını etkinleştirir ve eksik yönetilen mod
   `InstallManifest.json` dosyasını üretir; mevcut diğer aktif mod kayıtlarını korur.
