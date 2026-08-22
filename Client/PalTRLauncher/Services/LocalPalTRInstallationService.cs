@@ -110,16 +110,18 @@ public sealed class LocalPalTRInstallationService : IInstallationService
         {
             return new InstallationSnapshot(
                 InstallationState.InstallRequired,
-                "PalTR etkinleştirilecek",
-                $"PalTR {packageVersion} dosyaları hazır; UE4SS mod kaydı etkinleştirilecek.",
+                "F6 paneli etkinleştirilecek",
+                $"PalTR {packageVersion} dosyaları var fakat UE4SS çalışma kaydı eksik. " +
+                "KUR / GÜNCELLE'ye bas; işlem bitince oyunu launcher'dan başlat ve dünyaya girdikten sonra F6'ya bas.",
                 gameRoot,
                 packageVersion);
         }
 
         return new InstallationSnapshot(
             InstallationState.Ready,
-            "PalTR güncel",
-            $"PalTR {packageVersion} dosyaları doğrulandı.",
+            "F6 paneli hazır",
+            $"PalTR {packageVersion}, UE4SS ve F6 çalışma kaydı doğrulandı. " +
+            "Oyunu launcher'dan başlat; dünyaya girdikten sonra F6'ya bas.",
             gameRoot,
             packageVersion);
     }

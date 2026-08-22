@@ -267,8 +267,11 @@
                                 </Grid>
                                 <Grid Grid.Row="4" Margin="0,10,0,0">
                                     <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-                                    <TextBlock Text="PALTR KURULUMU" Style="{StaticResource Eyebrow}"
-                                               VerticalAlignment="Center" />
+                                    <StackPanel Margin="0,0,12,0" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding Installation.Title}" Style="{StaticResource Eyebrow}" />
+                                        <TextBlock Text="{Binding Installation.Detail}" Style="{StaticResource Caption}"
+                                                   Margin="0,4,0,0" TextWrapping="Wrap" MaxWidth="255" />
+                                    </StackPanel>
                                      <Button Grid.Column="1" Content="{Binding InstallationActionText}" Style="{StaticResource SecondaryButton}"
                                              Padding="12,8" Command="{Binding InstallOrRepairCommand}"
                                              IsEnabled="{Binding CanInstallOrRepair}"
@@ -639,7 +642,7 @@
                 <Grid Grid.Row="2">
                     <TextBlock Text="PalTR hesabı demo doğrulaması • Bilgiler uzak sunucuya gönderilmez"
                                Style="{StaticResource Caption}" VerticalAlignment="Center" />
-                    <TextBlock Text="PALTR LAUNCHER  •  UI FAZ-00" Style="{StaticResource Eyebrow}" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                    <TextBlock Text="PALTR LAUNCHER 0.1.7  •  UI FAZ-00" Style="{StaticResource Eyebrow}" HorizontalAlignment="Right" VerticalAlignment="Center" />
                 </Grid>
             </Grid>
         </Grid>
