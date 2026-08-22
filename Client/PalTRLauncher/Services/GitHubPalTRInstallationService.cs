@@ -319,9 +319,10 @@ public sealed class GitHubPalTRInstallationService : IInstallationService, IDisp
     {
         string infoPath = Path.Combine(
             gameRoot,
-            "Mods",
-            "NativeMods",
-            "UE4SS",
+            "Pal",
+            "Binaries",
+            "Win64",
+            "ue4ss",
             "Mods",
             "PalTRUI",
             "Info.json");

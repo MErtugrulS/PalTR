@@ -30,9 +30,5 @@
     {
         "mod_name": "Keybinds",
         "mod_enabled": true
-    },
-    {
-        "mod_name": "PalTRUI",
-        "mod_enabled": true
     }
 ]

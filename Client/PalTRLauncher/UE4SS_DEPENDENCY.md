@@ -1,16 +1,17 @@
 # PalTR Launcher dependency payload
 
 This directory contains the Palworld-compatible UE4SS distribution required by
-PalTRUI. It was staged from the verified local Steam Workshop installation:
+PalTRUI. The runtime is installed under `Pal/Binaries/Win64` so the proxy DLL
+can load UE4SS before PalTRUI starts:
 
-- Package: `UE4SSExperimentalPW`
-- Version: `experimental-palworld-6`
-- Author: `Oak`
+- Runtime package: `Okaetsu/RE-UE4SS`, release `experimental-palworld`
+- Asset: `UE4SS-Palworld.zip`
+- Published: `2025-02-20`
 - Steam Workshop ID: `3625223587`
-- UE4SS.dll SHA-256:
-  `D0107F63E567313CB6A15C505B5DB2BDBA38130964A04E019BDA7611C6178022`
+- Archive SHA-256:
+  `768A45718FBB9E429AC5CC3CE4A139A1B7B468BFF31B4A136AE483D725ACA1CA`
 
 The upstream UE4SS license is distributed at
-`Mods/NativeMods/UE4SS/LICENSE`. Launcher installation preserves an existing
-`UE4SS-settings.ini`, `mods.txt`, and `mods.json` while backing up other files
-before replacement.
+`Pal/Binaries/Win64/ue4ss/LICENSE`. Launcher installation preserves an existing
+`UE4SS-settings.ini`, `mods.txt`, and `mods.json`, backs up replaced files, and
+disables the conflicting Workshop `UE4SS.dll` instead of double-loading it.

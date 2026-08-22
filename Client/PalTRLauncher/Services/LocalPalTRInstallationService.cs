@@ -149,9 +149,13 @@ public sealed class LocalPalTRInstallationService : IInstallationService
             "Backups",
             DateTime.UtcNow.ToString("yyyyMMdd-HHmmss"));
         List<(string Destination, string? Backup)> changedFiles = new();
+        List<(string Destination, string Backup)> changedDirectories = new();
 
         try
         {
+            DisableConflictingWorkshopRuntime(inspection.GameRoot, backupRoot, changedFiles);
+            RemoveLegacyPalTRUIDirectory(inspection.GameRoot, backupRoot, changedDirectories);
+
             foreach (FileMapping mapping in BuildMappings(inspection.GameRoot))
             {
                 cancellationToken.ThrowIfCancellationRequested();
@@ -199,6 +203,7 @@ public sealed class LocalPalTRInstallationService : IInstallationService
         catch (Exception exception)
         {
             RollBack(changedFiles);
+            RollBackDirectories(changedDirectories);
             return new InstallationActionResult(false, new InstallationSnapshot(
                 InstallationState.Failed,
                 "Güncelleme tamamlanamadı",
@@ -230,14 +235,15 @@ public sealed class LocalPalTRInstallationService : IInstallationService
 
     private bool TryValidateDependencyPayload(out string error)
     {
-        string ue4ss = Path.Combine(DependencyRoot, "Mods", "NativeMods", "UE4SS", "UE4SS.dll");
+        string proxy = Path.Combine(DependencyRoot, "Pal", "Binaries", "Win64", "dwmapi.dll");
+        string ue4ss = Path.Combine(DependencyRoot, "Pal", "Binaries", "Win64", "ue4ss", "UE4SS.dll");
         string managedDependency = Path.Combine(
             DependencyRoot,
             "Mods",
             "ManagedMods",
             "UE4SSExperimentalPW",
             "Info.json");
-        if (!File.Exists(ue4ss) || !File.Exists(managedDependency))
+        if (!File.Exists(proxy) || !File.Exists(ue4ss) || !File.Exists(managedDependency))
         {
             error = "Launcher dağıtımında UE4SS veya UE4SSExperimentalPW payload'ı eksik. Launcher paketini yeniden indir.";
             return false;
@@ -249,16 +255,22 @@ public sealed class LocalPalTRInstallationService : IInstallationService
 
     private static string GetDependencyError(string gameRoot)
     {
-        string ue4ss = Path.Combine(gameRoot, "Mods", "NativeMods", "UE4SS", "UE4SS.dll");
+        string proxy = Path.Combine(gameRoot, "Pal", "Binaries", "Win64", "dwmapi.dll");
+        string ue4ss = Path.Combine(gameRoot, "Pal", "Binaries", "Win64", "ue4ss", "UE4SS.dll");
         string managedDependency = Path.Combine(gameRoot, "Mods", "ManagedMods", "UE4SSExperimentalPW", "Info.json");
-        if (!File.Exists(ue4ss))
+        if (!File.Exists(proxy) || !File.Exists(ue4ss))
         {
-            return "UE4SS kurulu değil.";
+            return "Palworld UE4SS çalışma zinciri kurulu değil.";
         }
 
         if (!File.Exists(managedDependency))
         {
             return "UE4SSExperimentalPW bağımlılığı kurulu değil.";
+        }
+
+        if (File.Exists(GetConflictingWorkshopRuntimeFile(gameRoot)))
+        {
+            return "Eski Workshop UE4SS çalışma DLL'si yeni runtime ile çakışıyor.";
         }
 
         return string.Empty;
@@ -290,11 +302,73 @@ public sealed class LocalPalTRInstallationService : IInstallationService
         return string.Empty;
     }
 
+    private static void DisableConflictingWorkshopRuntime(
+        string gameRoot,
+        string backupRoot,
+        ICollection<(string Destination, string? Backup)> changedFiles)
+    {
+        string activeRuntime = GetConflictingWorkshopRuntimeFile(gameRoot);
+        if (!File.Exists(activeRuntime))
+        {
+            return;
+        }
+
+        string disabledRuntime = activeRuntime + ".paltr-workshop-disabled";
+        string? disabledBackup = BackUpFile(disabledRuntime, backupRoot, gameRoot);
+        string temporary = disabledRuntime + ".paltr-new";
+        File.Copy(activeRuntime, temporary, true);
+        File.Move(temporary, disabledRuntime, true);
+        changedFiles.Add((disabledRuntime, disabledBackup));
+
+        string? activeBackup = BackUpFile(activeRuntime, backupRoot, gameRoot);
+        File.Delete(activeRuntime);
+        changedFiles.Add((activeRuntime, activeBackup));
+    }
+
+    private static void RemoveLegacyPalTRUIDirectory(
+        string gameRoot,
+        string backupRoot,
+        ICollection<(string Destination, string Backup)> changedDirectories)
+    {
+        string legacyDirectory = Path.Combine(
+            gameRoot,
+            "Mods",
+            "NativeMods",
+            "UE4SS",
+            "Mods",
+            "PalTRUI");
+        if (!Directory.Exists(legacyDirectory))
+        {
+            return;
+        }
+
+        string backup = Path.Combine(backupRoot, Path.GetRelativePath(gameRoot, legacyDirectory));
+        CopyDirectory(legacyDirectory, backup);
+        Directory.Delete(legacyDirectory, true);
+        changedDirectories.Add((legacyDirectory, backup));
+    }
+
+    private static void CopyDirectory(string source, string destination)
+    {
+        Directory.CreateDirectory(destination);
+        foreach (string directory in Directory.EnumerateDirectories(source, "*", SearchOption.AllDirectories))
+        {
+            Directory.CreateDirectory(Path.Combine(destination, Path.GetRelativePath(source, directory)));
+        }
+
+        foreach (string file in Directory.EnumerateFiles(source, "*", SearchOption.AllDirectories))
+        {
+            string target = Path.Combine(destination, Path.GetRelativePath(source, file));
+            Directory.CreateDirectory(Path.GetDirectoryName(target)!);
+            File.Copy(file, target, true);
+        }
+    }
+
     private IReadOnlyList<FileMapping> BuildMappings(string gameRoot)
     {
         List<FileMapping> mappings = new();
         AddDependencyMappings(mappings, gameRoot);
-        AddFile(mappings, "Info.json", Path.Combine("Mods", "NativeMods", "UE4SS", "Mods", "PalTRUI", "Info.json"));
+        AddFile(mappings, "Info.json", Path.Combine("Pal", "Binaries", "Win64", "ue4ss", "Mods", "PalTRUI", "Info.json"));
         AddFile(mappings, Path.Combine("LogicMods", "PalTRUI.pak"), Path.Combine("Pal", "Content", "Paks", "LogicMods", "PalTRUI.pak"));
 
         string sourceScripts = Path.Combine(payloadRoot, "Scripts");
@@ -302,7 +376,7 @@ public sealed class LocalPalTRInstallationService : IInstallationService
         {
             string relativeScript = Path.GetRelativePath(sourceScripts, source);
             string relativeSource = Path.Combine("Scripts", relativeScript);
-            string relativeDestination = Path.Combine("Mods", "NativeMods", "UE4SS", "Mods", "PalTRUI", "Scripts", relativeScript);
+            string relativeDestination = Path.Combine("Pal", "Binaries", "Win64", "ue4ss", "Mods", "PalTRUI", "Scripts", relativeScript);
             mappings.Add(new FileMapping(
                 source,
                 Path.Combine(gameRoot, relativeDestination),
@@ -326,13 +400,13 @@ public sealed class LocalPalTRInstallationService : IInstallationService
         {
             string relative = Path.GetRelativePath(DependencyRoot, source);
             bool copyOnlyIfMissing = relative.Equals(
-                    Path.Combine("Mods", "NativeMods", "UE4SS", "UE4SS-settings.ini"),
+                    Path.Combine("Pal", "Binaries", "Win64", "ue4ss", "UE4SS-settings.ini"),
                     StringComparison.OrdinalIgnoreCase) ||
                 relative.Equals(
-                    Path.Combine("Mods", "NativeMods", "UE4SS", "Mods", "mods.json"),
+                    Path.Combine("Pal", "Binaries", "Win64", "ue4ss", "Mods", "mods.json"),
                     StringComparison.OrdinalIgnoreCase) ||
                 relative.Equals(
-                    Path.Combine("Mods", "NativeMods", "UE4SS", "Mods", "mods.txt"),
+                    Path.Combine("Pal", "Binaries", "Win64", "ue4ss", "Mods", "mods.txt"),
                     StringComparison.OrdinalIgnoreCase);
 
             mappings.Add(new FileMapping(
@@ -562,9 +636,7 @@ public sealed class LocalPalTRInstallationService : IInstallationService
         if (File.Exists(modsFile))
         {
             lines.AddRange(File.ReadAllLines(modsFile));
-            backup = Path.Combine(backupRoot, "Mods", "NativeMods", "UE4SS", "Mods", "mods.txt");
-            Directory.CreateDirectory(Path.GetDirectoryName(backup)!);
-            File.Copy(modsFile, backup, true);
+            backup = BackUpFile(modsFile, backupRoot, gameRoot);
         }
 
         int existing = lines.FindIndex(line =>
@@ -651,10 +723,13 @@ public sealed class LocalPalTRInstallationService : IInstallationService
         => IsPalTRUIEntry(entry) && entry["mod_enabled"]?.GetValue<bool>() == true;
 
     private static string GetLegacyModsFile(string gameRoot)
-        => Path.Combine(gameRoot, "Mods", "NativeMods", "UE4SS", "Mods", "mods.txt");
+        => Path.Combine(gameRoot, "Pal", "Binaries", "Win64", "ue4ss", "Mods", "mods.txt");
 
     private static string GetModsJsonFile(string gameRoot)
-        => Path.Combine(gameRoot, "Mods", "NativeMods", "UE4SS", "Mods", "mods.json");
+        => Path.Combine(gameRoot, "Pal", "Binaries", "Win64", "ue4ss", "Mods", "mods.json");
+
+    private static string GetConflictingWorkshopRuntimeFile(string gameRoot)
+        => Path.Combine(gameRoot, "Mods", "NativeMods", "UE4SS", "UE4SS.dll");
 
     private static string GetPalModSettingsFile(string gameRoot)
         => Path.Combine(gameRoot, "Mods", "PalModSettings.ini");
@@ -680,6 +755,28 @@ public sealed class LocalPalTRInstallationService : IInstallationService
             catch
             {
                 // İlk hatayı korumak için rollback hataları burada bastırılır.
+            }
+        }
+    }
+
+    private static void RollBackDirectories(IEnumerable<(string Destination, string Backup)> changedDirectories)
+    {
+        foreach ((string destination, string backup) in changedDirectories.Reverse())
+        {
+            try
+            {
+                if (Directory.Exists(destination))
+                {
+                    Directory.Delete(destination, true);
+                }
+                if (Directory.Exists(backup))
+                {
+                    CopyDirectory(backup, destination);
+                }
+            }
+            catch
+            {
+                // Preserve the original installation error.
             }
         }
     }

@@ -40,13 +40,17 @@ Ana sayfadaki **Kur / Güncelle / Onar** işlemi isteğe bağlı olarak çalış
 
 - Steam kayıtları ve `libraryfolders.vdf` üzerinden Palworld kurulumunu bulur.
 - Publish çıktısındaki `Payload/PalTRUI` içeriğini kaynak kabul eder.
-- Publish çıktısındaki doğrulanmış `Payload/Dependencies` dağıtımından UE4SS ve
-  `UE4SSExperimentalPW` bileşenlerini temiz Palworld kurulumuna otomatik ekler.
+- Publish çıktısındaki doğrulanmış `Payload/Dependencies` dağıtımından Win64
+  UE4SS proxy/runtime zincirini ve `UE4SSExperimentalPW` kaydını otomatik ekler.
 - PalTRUI pak, Lua ve `Info.json` dosyalarını SHA-256 ile doğrular.
-- Mevcut `UE4SS-settings.ini`, `mods.txt` ve `mods.json` kullanıcı ayarlarını
-  korur; desteklenen çekirdek bağımlılık dosyalarını yedekleyerek onarır.
-- UE4SS `mods.json` ve geriye dönük `mods.txt` içindeki yalnız `PalTRUI` kaydını
-  etkinleştirir; diğer modların durumunu ve yerleşik `Keybinds` sırasını korur.
+- Win64 runtime içindeki mevcut `UE4SS-settings.ini`, `mods.txt` ve `mods.json`
+  kullanıcı ayarlarını korur; çekirdek bağımlılık dosyalarını yedekleyerek onarır.
+- Win64 UE4SS `mods.json` ve geriye dönük `mods.txt` içindeki yalnız `PalTRUI`
+  kaydını etkinleştirir; diğer modların durumunu ve yerleşik `Keybinds` sırasını
+  korur.
+- Çift yüklemeyi önlemek için eski Workshop `UE4SS.dll` dosyasını yedekli ve
+  geri alınabilir bir adla devre dışı bırakır; eski PalTRUI Lua dizinini yedekleyip
+  doğru Win64 runtime dizinine taşır.
 - Palworld resmi mod yöneticisinin `PalModSettings.ini` kaydında
   `UE4SSExperimentalPW` bağımlılığını etkinleştirir ve eksik yönetilen mod
   `InstallManifest.json` dosyasını üretir; mevcut diğer aktif mod kayıtlarını korur.
